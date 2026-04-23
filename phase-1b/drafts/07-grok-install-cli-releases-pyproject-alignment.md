@@ -203,3 +203,68 @@ that resolves to the correct artefact.
       (`grok-install>=0.1,<0.2`) inline.
 
 - [ ] **Pin action consumers must update** deferred to Part B.
+
+### Part B — Align `grok-install-action`'s pin (cross-repo follow-up)
+
+This part lands in `grok-install-action`, not `grok-install-cli`.
+File as a short cross-ref issue pointing at this primary's URL
+**after** this primary's first release ships.
+
+The correct action-pin form depends on which of §2 #6's three
+acceptance options wins. All three possibilities are enumerated
+below; pick the branch that matches the landed #6 outcome. This
+draft is speculative — the actual cross-ref issue body contains
+only the one branch that applies.
+
+#### If §2 #6 Option A (Python canonical) landed
+
+- [ ] `grok-install-action/action.yml` replaces
+      `setup-node@v4` + `npm install -g grok-install-cli@${{
+      inputs.cli-version }}` with:
+      ```yaml
+      - uses: actions/setup-python@<SHA>  # v5
+        with: { python-version: '3.12' }
+      - run: pip install "grok-install==${{ inputs.cli-version }}"
+      ```
+- [ ] `action.yml` input `cli-version`'s default is updated to
+      the tag published in Part A (e.g. `0.1.0`).
+- [ ] README + `workflows-examples/` in `grok-install-action`
+      use the new command.
+- [ ] `grok-install-action/CHANGELOG.md` gets a migration note
+      under `[Unreleased]`.
+
+#### If §2 #6 Option B (npm wrapper canonical) landed
+
+- [ ] The npm package's published versions must match this
+      repo's tagged releases (lockstep); Part A's `publish.yml`
+      above adds an npm-publish step alongside the PyPI publish.
+      The npm wrapper's `postinstall` shells out to `pip
+      install grok-install==${{npm tag}}` — keeping source of
+      truth in Python.
+- [ ] `grok-install-action/action.yml` keeps `npm install -g
+      grok-install-cli@${{ inputs.cli-version }}` but updates
+      the default `cli-version` to the first tagged release
+      (e.g. `0.1.0`).
+- [ ] `grok-install-action` README updated to reflect the wrapper
+      semantics.
+
+#### If §2 #6 Option C (both canonical) landed
+
+- [ ] PyPI and npm publish from the same `publish.yml` run;
+      Part A's workflow extends to publish both with a shared
+      `VERSION` file.
+- [ ] `grok-install-action/action.yml` picks **one** channel
+      explicitly and documents why (e.g. npm for zero-Python-
+      toolchain dependency on the runner). `cli-version`
+      default updated to the first tagged release.
+- [ ] `grok-install-action` README documents both install paths.
+
+#### Common to all three branches
+
+- [ ] **Cross-ref in commit message** + linked issue comment on
+      this primary when the action PR ships: "*Tracks
+      <this-primary-issue-URL>; closes VER-3 at the pin layer.*"
+- [ ] **SUP-4** in `98-risk-register.md` moves from `open` to
+      `mitigated-partial` on this PR landing. Full `mitigated`
+      once §2 #3 (Renovate / Dependabot) lands in the action
+      repo — cross-ref §2 #3's primary draft.
