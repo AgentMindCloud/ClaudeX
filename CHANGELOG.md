@@ -29,6 +29,9 @@ All notable changes to this repository are logged here. Format follows [Keep a C
 - `phase-1b/drafts/18-ci-template-baseline.md` — upstream issue draft for §2 #18 (promote `grok-build-bridge`'s CI workflow as ecosystem baseline; primary target grok-build-bridge + 7-adopter checklist; delivers SEC-2 / SUP-1 closure across adopters once the posture fixes from #3 + #13 land at the source).
 - `phase-1b/filing-packets/README.md` — two filing paths (widened-MCP-scope agent session vs. manual GitHub UI), ready-to-paste kickoff prompt for the next session, filing order, back-fill discipline for `ISSUES.md`, and troubleshooting notes.
 - `phase-1b/filing-packets/01-grok-install.md` … `11-x-platform-toolkit.md` — 11 per-repo filing packets carrying title / suggested labels / body pointer (to `phase-1b/drafts/<file>.md`) for each Phase-1B primary and cross-ref targeting that repo. Numbering matches `audits/NN-*.md`; `12-claudex.md` is intentionally absent (own MCP scope).
+- `phase-1b/drafts/05-safety-profile-rubric.md` — upstream issue draft for §2 #5 (unified safety-profile rubric with conformance tests; target `grok-yaml-standards`; four-part acceptance covering rubric contents, location, conformance-test format, and consumer contract for grok-install-cli / awesome-grok-agents / grok-build-bridge / grok-agent-orchestra; closes partial UNV-3 S3 and enables UNV-4 S3 closure).
+- `phase-1b/drafts/08-grok-yaml-standards-draft-2020-12-migration.md` — upstream issue draft for §2 #8 (migrate `grok-yaml-standards` schemas to JSON Schema draft-2020-12 for v1.3; two-part acceptance covering core migration + downstream smoke-test coordination; closes VER-2 S2 outright).
+- `phase-1b/drafts/20-grok-agents-marketplace-pr-triage-codeowners.md` — upstream issue draft for §2 #20 (triage the 12 open PRs + publish `.github/CODEOWNERS` + `SECURITY.md` + `CONTRIBUTING.md` + document a review SLA; three-part acceptance, each independently mergeable; closes GOV-2 S2 outright).
 
 ### Changed
 - Renamed `CLAUDE.me` → `CLAUDE.md` to match Claude Code's canonical filename.
@@ -36,4 +39,6 @@ All notable changes to this repository are logged here. Format follows [Keep a C
 ### Open / deferred
 - `CLAUDE.md` "Primary Repos & Focus Areas" (lines 8–15) remains a placeholder; needs real repo URLs from the user (tracked as `99 §3.3` row 2 and risk register `GOV-5`).
 - Phase 1B first + second pass drafts (9 files total) await upstream filing by the user (MCP scope is `agentmindcloud/claudex`-only; the agent cannot file them). See `phase-1b/README.md §Filing workflow` and `phase-1b/ISSUES.md`.
-- Phase 1B third-pass candidates (§2 #5, #8, #20) + post-filing follow-ups (§2 #7, #12, #4, #16, #1, #11, #17) await user go-ahead — see `PROGRESS.md` Phase-1B second-pass session "Next suggested action".
+- Phase 1B third-pass drafts (§2 #5, #8, #20 — 3 files) shipped 2026-04-23; cumulative 12 drafts across 10 of 20 §2 recs still await upstream filing.
+- Phase 1B Session-2 speculative drafts (§2 #7, #12, #16, and the #1/#11/#17 trio — all gated on in-repo prerequisites rather than upstream merges) await user go-ahead — see `PROGRESS.md` Phase-1B third-pass session "Next suggested action" for the three user-decision questions.
+- Phase 1B post-filing follow-up §2 #4 remains blocked on §2 #10 (not drafted; L-effort) — user decision required before #4 can be drafted. Flagged in `phase-1b/ISSUES.md §Post-filing follow-ups`.
