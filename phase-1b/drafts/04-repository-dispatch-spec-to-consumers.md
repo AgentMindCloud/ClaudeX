@@ -445,3 +445,92 @@ from Part A lives only in `grok-install`. Subscribers use
 their default `GITHUB_TOKEN`. Spell this out in each
 subscriber's follow-up body so reviewers don't over-scope
 tokens.
+
+## Notes
+
+- **Why `repository_dispatch` and not `workflow_dispatch`
+  across repos.** `workflow_dispatch` only triggers workflows
+  in the *same* repo. `repository_dispatch` is the
+  GitHub-documented pattern for cross-repo triggers. Also
+  considered: webhook to a neutral orchestrator (overkill for
+  three subscribers), PR-opens-another-PR pattern (brittle).
+  `repository_dispatch` is the clean fit.
+
+- **Why 3 subscribers, not more.** `grok-yaml-standards` is
+  intentionally NOT a subscriber — the daily sync in
+  `grok-docs/sync-schemas.yml` already reaches it indirectly
+  (the sync job pulls from `grok-yaml-standards@main`;
+  `grok-yaml-standards` itself needs no trigger from a
+  `grok-install` release). `grok-install-cli` and
+  `grok-build-bridge` have release cadences independent of
+  the spec's; adding them as subscribers creates noise, not
+  signal. `awesome-grok-agents` is a subscriber candidate
+  long-term (once §2 #12 lands and CI validates templates
+  against the live CLI) but not in this first cut.
+
+- **Interaction with §2 #10 (the prerequisite).** §2 #10
+  ships v2.14 content + the `mkdocs.yml extra.spec_version`
+  convention Part B's `grok-docs` subscriber bumps. If §10's
+  convention changes name (e.g. `extra.grok_install_version`
+  instead of `extra.spec_version`), update Part B's `sed`
+  accordingly. Re-review trigger captured in the metadata
+  header.
+
+- **What this closes vs. what §2 #10 closes on VER-4.** §2
+  #10 eliminates the *content lag* — v2.12 content is
+  replaced with v2.14 in one PR. §2 #4 eliminates the
+  *recurrence of lag* — the next spec bump (v2.15, v3.0, …)
+  doesn't create a new 24h window. VER-4 fully closes when
+  both land.
+
+- **Drift-window tightening.** Before this rec: up to 24h
+  (cron). After this rec's happy path: seconds. After a
+  missed dispatch: the existing 03:00 UTC cron still runs in
+  `grok-docs/sync-schemas.yml` — so the floor remains 24h,
+  not undefined. Defensive.
+
+- **PAT rotation.** Fine-grained PATs on GitHub expire
+  (default 90-day windows unless explicitly extended). Set a
+  calendar reminder to rotate `FANOUT_DISPATCH_PAT` before
+  expiry; a missed dispatch is visible in the
+  `grok-install/actions` runs view as a 401 response. Flag
+  this in the `docs/ci-dispatch.md` that Part A creates so
+  future maintainers inherit the convention.
+
+- **Alternative: GitHub App instead of PAT.** If the
+  AgentMindCloud org has a maintained internal GitHub App,
+  installing it on the four repos and using
+  `actions/create-github-app-token` in the publisher
+  workflow is cleaner (no PAT rotation, scoped installation).
+  Not required for v1 of this rec; documented as a
+  migration path.
+
+- **Out of scope here.**
+  - Adding `grok-yaml-standards` as a subscriber (see above).
+  - Adding `awesome-grok-agents` as a subscriber (deferred
+    until §2 #12 lands).
+  - Retry logic on the publisher side (the cron safety net
+    is the retry).
+  - Multi-version fan-out (e.g. also dispatching on v2.13
+    patch-releases). The publisher workflow fires on every
+    GitHub Release; if the org publishes v2.13.1 as a patch
+    release, subscribers receive it. Part B's subscribers
+    handle that gracefully — they just bump to whatever
+    `version` the payload carries.
+  - §2 #3 SHA-pinning of the new workflows (separate rec).
+
+- **Filing strategy.** Primary issue in `grok-install`.
+  Three subscriber cross-ref issues (one per consumer repo)
+  opened **after** the primary merges. Each cross-ref issue
+  body contains only its own subscriber's Part B section,
+  not the whole draft — reviewers only need the relevant
+  snippet. `phase-1b/filing-packets/` entries for packets
+  01 (primary), 04, 05, 08 are updated to reflect the
+  subscriber follow-up pattern.
+
+- **Speculative-draft honesty.** This draft is speculative
+  only on §2 #10 (per the metadata header). If #10 ships
+  without the `mkdocs.yml extra.spec_version` convention
+  Part B's `grok-docs` subscriber assumes, rewrite that one
+  subscriber's section. The rest of the draft stands unchanged.
+
