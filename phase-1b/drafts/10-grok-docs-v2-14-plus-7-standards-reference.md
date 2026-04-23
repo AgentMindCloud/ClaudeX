@@ -222,3 +222,120 @@ content refresh of what already exists upstream.
 
 - [ ] **Link-check**: the existing `link-check.yml` workflow
       runs on the PR; no new config needed.
+
+### Part B — Add reference pages for the 7 undocumented standards
+
+Seven new Markdown files under `docs/spec/` (or wherever
+existing per-standard pages live; path confirmed during PR).
+Each follows the same structure so the user experience is
+uniform.
+
+**Page template** (identical structure for all 7):
+
+```markdown
+# <Standard name> (e.g. grok-config)
+
+<!-- front-matter -->
+- **Trigger**: `@grok <command>` (e.g. `@grok config`)
+- **Status**: 8-core | 4-extension (per standards-overview.md)
+- **Security level**: Low | Medium | High | Critical
+  (per grok-yaml-standards/standards-overview.md)
+- **Schema**: `schemas/grok-<name>.json` (v1.3+ draft-2020-12;
+  fetched daily by sync-schemas.yml from grok-yaml-standards)
+
+## Overview
+
+One paragraph: what this standard is for, which agent lifecycle
+moment it governs, why it exists as a separate standard rather
+than a field in grok-install.yaml.
+
+## When to use
+
+Two or three bullets of concrete examples (lifted from
+grok-yaml-standards/grok-<name>/example.yaml where available).
+
+## Schema reference
+
+```json
+--8<-- "docs/assets/schemas/latest/grok-<name>.json"
+```
+
+## Example
+
+```yaml
+--8<-- "docs/assets/schemas/latest/examples/grok-<name>.yaml"
+```
+(If no canonical example exists in the mirrored schemas path,
+reference the example from grok-yaml-standards/grok-<name>/
+example.yaml and flag that the doc site may want its own
+canonical example long-term.)
+
+## Fields
+
+Table: field name | type | required | description | default.
+Generated from the schema reference above; MkDocs Material has
+a `json-schema-to-markdown`-style plugin pattern the team may
+want to adopt later — for v2.14 docs, hand-authoring the table
+is acceptable.
+
+## Related standards
+
+Bullet list of 1–3 adjacent standards and why they're related
+(e.g. grok-test references grok-agent; grok-deploy interacts
+with grok-security). Links are internal
+`[grok-agent](grok-agent.md)` style.
+
+## See also
+
+- Source spec: `grok-yaml-standards/grok-<name>/`
+- Schema: `schemas/grok-<name>.json` on grok-yaml-standards
+- CHANGELOG entry (if any): link to the version section that
+  added / modified this standard
+```
+
+**Concrete pages to write:**
+
+- [ ] **`docs/spec/grok-config.md`** — `@grok config`; governs
+      agent-level configuration that isn't profile-specific.
+      Security level: Medium per
+      `grok-yaml-standards/standards-overview.md`.
+- [ ] **`docs/spec/grok-update.md`** — `@grok update`; governs
+      how an installed agent pulls and applies spec/CLI
+      updates. Security level: Medium.
+- [ ] **`docs/spec/grok-test.md`** — `@grok test`; governs
+      test configuration and expectations. Security level:
+      Low.
+- [ ] **`docs/spec/grok-tools.md`** — `@grok tools`; governs
+      tool declarations (function schemas). Security level:
+      Medium. 4-extension standard.
+- [ ] **`docs/spec/grok-deploy.md`** — `@grok deploy`; governs
+      deployment target configuration. Security level: High
+      (touches external infra). 4-extension standard.
+- [ ] **`docs/spec/grok-analytics.md`** — `@grok analytics`;
+      governs telemetry / metrics emission. Security level:
+      Medium. 4-extension standard.
+- [ ] **`docs/spec/grok-ui.md`** — `@grok ui`; governs the
+      visuals / UI layer introduced in v2.14. Security level:
+      Low. 4-extension standard; tightly coupled to v2.14's
+      `visuals:` block in `grok-install.yaml`.
+
+**Authorship notes:**
+
+- Each page is ~150–300 words of original prose (overview +
+  when-to-use + fields table commentary). The schema +
+  example code blocks are embedded via `--8<--` snippets,
+  not duplicated.
+- Every claim about a standard's *purpose* or *boundary*
+  should cite `grok-yaml-standards/grok-<name>/` or the
+  catalogue entry in `standards-overview.md`. If a claim
+  cannot be sourced, flag during PR review — the docs site
+  should not introduce new semantics the spec doesn't
+  already establish.
+- Security-level values are authoritatively in
+  `grok-yaml-standards/standards-overview.md`; mirror
+  exactly, do not paraphrase.
+- Field tables for each schema: the initial pass can
+  hand-author them from the embedded schema block.
+  Auto-generation is a follow-up (tracked as
+  `audits/99-recommendations.md §3.2` style hygiene — not
+  blocking v2.14).
