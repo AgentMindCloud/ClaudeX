@@ -277,3 +277,61 @@ guard-rail that keeps it closed.
       to land Part A first and Part B as a follow-up PR, that
       is fine. Keeping them together is cheaper; landing Part
       A alone is still a net win.
+
+## Notes
+
+- **Why internal-CI is a better exemplar than a hypothetical
+  customer-facing permissive agent.** Permissive-for-customer-
+  facing is a policy decision most operators should refuse.
+  Modeling that in a gallery template is dangerous — newcomers
+  copy templates. An internal-CI-assistant exemplar teaches
+  "here is when permissive is honest: when the environment
+  already sandboxes you". That framing is durable.
+
+- **Alternative exemplars that are also honest.** A local-dev
+  Grok-chat helper (runs on the operator's machine only); a
+  scheduled data-export tool writing to an internal object
+  store; a self-hosted dashboard agent. The PR can pick any
+  of these; the internal-CI choice is the recommendation, not
+  the only valid one.
+
+- **Relationship to §2 #5.** The rubric defines `permissive`;
+  this exemplar shows `permissive` in practice. Both needed
+  for the profile to be usable. If §5's rubric substantively
+  changes during review, update this template's
+  `grok-install.yaml` to match (speculative-draft discipline).
+
+- **Relationship to §2 #12.** Until §12 replaces the
+  `grok_install_stub`, the new template is validated against
+  the stub — same limitation the 10 existing templates have.
+  After §12, it is validated against the real CLI and the
+  round-trip test `00 §6.2` called out becomes real.
+
+- **Relationship to §2 #1.** No direct interaction: the
+  exemplar is a YAML template, not code. The shared package
+  only affects the CLI that validates it.
+
+- **Filing strategy.** Single primary issue in
+  `awesome-grok-agents`. No cross-ref — everything lives in
+  this repo. File only after §2 #5's rubric merges upstream;
+  otherwise the template's `grok-install.yaml` may be honest
+  against a version of `permissive` that doesn't ship.
+
+- **Out of scope here.**
+  - Tightening `spec-version` to require v2.14 (audit 06 §9
+    row 3) — separate row.
+  - Schema ownership / `schemas/` publication (audit 06 §9 row
+    5) — separate row.
+  - Adding more templates to fill out other categories — the
+    gallery is curated, not a completionist exercise. One
+    permissive exemplar closes the 6/4/0 gap; three more
+    permissive templates does not make the gallery "better",
+    just bigger.
+
+- **Speculative-draft honesty.** This draft's Part-A template
+  body mirrors §2 #5's seven-axis `permissive` row. If that row
+  changes during upstream review (e.g. axis renamed, value
+  reworded, new axis added), the template body changes with
+  it. The re-review trigger in the metadata header catches
+  this.
+
