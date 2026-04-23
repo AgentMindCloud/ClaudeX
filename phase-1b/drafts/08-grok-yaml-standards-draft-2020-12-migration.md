@@ -58,3 +58,78 @@ The migration itself is mechanical in the hot path (swap
 between drafts). The M-effort rating comes from the
 coordination around the v1.3 release: CI changes, ajv-cli version
 confirmation, smoke-testing against consumers.
+
+## Evidence
+
+From `main` snapshots on 2026-04-23 (WebFetch; paths stable).
+
+**In this repo** (`grok-yaml-standards` v1.2.0):
+
+| Path | Current draft | Source |
+|------|---------------|--------|
+| `schemas/grok-agent.json` | draft-07 | `audits/02-grok-yaml-standards.md §2, §5, §11 row 3` |
+| `schemas/grok-analytics.json` | draft-07 | same |
+| `schemas/grok-config.json` | draft-07 | same |
+| `schemas/grok-deploy.json` | draft-07 | same |
+| `schemas/grok-docs.json` | draft-07 | same |
+| `schemas/grok-prompts.json` | draft-07 | same |
+| `schemas/grok-security.json` | draft-07 | same |
+| `schemas/grok-test.json` | draft-07 | same |
+| `schemas/grok-tools.json` | draft-07 | same |
+| `schemas/grok-ui.json` | draft-07 | same |
+| `schemas/grok-update.json` | draft-07 | same |
+| `schemas/grok-workflow.json` | draft-07 | same |
+| `.github/workflows/validate-schemas.yml` — `schema-smoke` job | asserts `$schema` is draft-07 (will need flip) | `audits/02-grok-yaml-standards.md §5` |
+| `.github/workflows/validate-schemas.yml` — `ajv-validate` job | `ajv-cli@5.0.0` + `ajv-formats` (supports draft-2020-12) | `audits/02-grok-yaml-standards.md §5, §11 row 5` |
+
+**Migration target already visible downstream:**
+
+- `grok-install/schemas/v2.14/schema.json` — draft-2020-12,
+  validated via `ajv-cli` in `schema-v2-14` CI job (1 of 6
+  examples validated against it). *Source: `audits/01-grok-
+  install.md §7, §11; audits/00-ecosystem-overview.md §4
+  table row 1`.*
+- `grok-build-bridge/grok_build_bridge/schema/bridge.schema.json`
+  — draft-2020-12, validated via Python
+  `jsonschema.Draft202012Validator` in the `schema-check` CI
+  job. *Source: `audits/09-grok-build-bridge.md §5, §7`.*
+
+**Mirror / sync jobs that follow this repo's draft choice
+automatically** (they will pick up the new draft without code
+changes once `$schema` flips):
+
+- `grok-docs/.github/workflows/sync-schemas.yml` — daily mirror
+  of `grok-yaml-standards/schemas/` to
+  `docs/assets/schemas/`. *Source: `audits/05-grok-docs.md §5,
+  §11 row 2`.*
+- `awesome-grok-agents/.github/workflows/validate-templates.yml`
+  — `ajv-cli@5 + ajv-formats@3` honours whatever `$schema` the
+  schema declares. *Source: `audits/06-awesome-grok-agents.md §5`.*
+
+**Risk register** — `audits/98-risk-register.md`:
+
+- **VER-2** (S2, L-med, `open`): "`grok-yaml-standards` is on
+  JSON Schema **draft-07**; `grok-install` v2.14 is on
+  **draft-2020-12**. The two spec roots disagree on the
+  meta-schema; alignment explicitly deferred to v1.3 in
+  `standards-overview.md`."
+
+**Syntactic differences between drafts that touch this repo**
+(authoring-time checklist, see Part A):
+
+- `$id` — same in both drafts; keep existing values.
+- `definitions` → `$defs` — draft-07 uses `definitions`,
+  draft-2020-12 uses `$defs`. Any schema using `definitions`
+  needs renaming and `$ref` path updates.
+- `examples` — draft-2020-12 standardises; any schema using
+  it should gain a keyword-version check.
+- `dependencies` → `dependentRequired` + `dependentSchemas` —
+  split in draft-2019-09+. Any schema using `dependencies`
+  needs rewriting.
+- `exclusiveMinimum` / `exclusiveMaximum` — boolean in draft-07,
+  numeric in draft-2020-12. Already numeric in every modern
+  schema; no-op if the authors followed draft-07's newer
+  behaviour.
+
+(Not every schema will touch every construct above; the
+migration PR's diff is the ground truth.)
