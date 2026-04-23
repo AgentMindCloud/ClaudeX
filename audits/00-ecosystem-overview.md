@@ -132,7 +132,34 @@ Two repos appear in two clusters: `grok-agent-orchestra` is both an xAI-SDK peer
 
 ## 2. Spec-version pin matrix
 
-_(filled in unit 3)_
+What each repo declares or pins, across the three version axes that matter: the **grok-install spec**, the **grok-install-cli package**, and the **grok-yaml-standards** file-type standards catalogue. "—" = not applicable to this repo's role.
+
+| Repo | grok-install spec | grok-install-cli | grok-yaml-standards | Own version | Source |
+|------|-------------------|------------------|---------------------|-------------|--------|
+| `grok-install` | **v2.14** shipped; v2.13 + v2.12 retained side-by-side | — | — | tracks spec | [→ 01, §2 spec/v2.14/, §8] |
+| `grok-yaml-standards` | extends grok-install.yaml | — | **v1.2.0** shipped | v1.2.0 (2026-04-17) | [→ 02, §8, CHANGELOG] |
+| `grok-install-cli` | implicit v2.14 target (jsonschema>=4.21; schema URL usage unverified) | **`0.1.0`** in `pyproject.toml`; **no GitHub releases** | not directly referenced | 0.1.0 | [→ 03, §8, pyproject.toml] |
+| `grok-install-action` | v2.14 (via CLI) | pins CLI **`2.14.0`** via `npm install -g grok-install-cli@${{ inputs.cli-version }}` | — | v1.0.0 (2026-04-21) | [→ 04, §3 action.yml, §8] |
+| `grok-docs` | advertises **v2.12** (lags spec by 2 minor) | — | syncs v1.2.0 daily (03:00 UTC cron) | no version | [→ 05, §1, §5 sync-schemas.yml] |
+| `awesome-grok-agents` | accepts **v2.12 OR v2.13 OR v2.14** in template `grok-install.yaml` (CI `spec-version` job) | validates via in-repo `grok_install_stub/`, not real CLI | implicit (templates use 12 file types) | no releases | [→ 06, §5, §8] |
+| `vscode-grok-yaml` | (intended, not shipped) | (intended) | landing says "**14** standards" | repo = shell | [→ 07, §1 landing desc] |
+| `grok-agents-marketplace` | v2.14 "Visuals Renderer" in README | — | — | v0.1.0 | [→ 08, §8, package.json] |
+| `grok-build-bridge` | decoupled — own `bridge.schema.json` | not a consumer of grok-install-cli | — | v0.1.0; uses model ID `grok-4.20-0309` | [→ 09, §1, §8] |
+| `grok-agent-orchestra` | (intended via xAI SDK) | — | — | 1-commit shell | [→ 10, §8] |
+| `x-platform-toolkit` | — | — | — | no versioning; 4 commits | [→ 11, §8] |
+| `ClaudeX` | — | — | — | no version | [→ 12, §8] |
+
+### Version-coherence findings
+
+1. **CLI version mismatch** — `grok-install-cli/pyproject.toml` says `version = "0.1.0"` and has no GitHub release tags, but `grok-install-action/action.yml` hard-defaults to pinning CLI `2.14.0`. One of three things is true, each blocking reproducible installs: (a) a separate PyPI artefact at 2.14.0 exists and the `main` branch's `pyproject.toml` lags; (b) the action pins a version the repo has never produced; (c) an npm package named `grok-install-cli@2.14.0` exists, separate from the Python CLI. Unresolved — needs PyPI + npm registry check. [→ 03, §1 & §10; → 04, §1 & §10]
+
+2. **grok-docs lags 2 minor versions** — docs advertise v2.12; spec is at v2.14. 5 of 12 standards documented. [→ 05, §4]
+
+3. **Multi-version tolerance in templates** — `awesome-grok-agents` CI accepts v2.12/v2.13/v2.14 simultaneously. Useful for contributors, but means templates never pressure-test the latest spec. [→ 06, §5, §8]
+
+4. **grok-install's own v2.14 validation is 1-of-6** — the `schema-v2-14` CI job validates only `examples/janvisuals/grok-install.yaml`; the five other top-level examples are still validated against v2.13 (draft-07). The v2.14 migration is half-done at the source. [→ 01, §1, §5]
+
+5. **xAI-SDK layer is decoupled** — `grok-build-bridge` and `grok-agent-orchestra` neither consume nor produce `grok-install.yaml`; they pin to xAI SDK model IDs like `grok-4.20-0309` instead. This is a *design* choice, not drift — but it means "ecosystem-wide" changes to `grok-install` have no leverage over the xAI-SDK cluster. [→ 09, §3; → 10, §3]
 
 ## 3. JSON Schema draft matrix
 
