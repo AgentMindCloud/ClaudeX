@@ -1,6 +1,6 @@
 # Audit Methodology — Phase 1A
 
-> Reproducibility + honesty anchor. Finalised at iteration 17 (this file starts as a skeleton and is completed at phase close).
+> Reproducibility + honesty anchor. Started as a Phase-1A-opening skeleton; completed at phase close once the 12 per-repo audits and three other cross-cut files (`00`, `98`, `99`) had been written.
 
 ## Purpose
 
@@ -76,24 +76,25 @@ Deferred to later phases:
 - Commit-by-commit provenance analysis.
 - Cross-repo grep for duplicated safety-profile logic (would need clone).
 
-## URL counts per repo
+## Evidence-log rows per repo
 
-Filled at iter 17.
+The column header is "Evidence-log rows" rather than "URLs fetched" because audit 12 (ClaudeX self-audit) cites local file paths and shell commands instead of URLs. For audits 01–11 the count is the number of distinct WebFetch URLs; for 12 it is the number of local-evidence rows.
 
-| Audit | URLs fetched | Notes |
-|-------|--------------|-------|
-| 01-grok-install |  |  |
-| 02-grok-yaml-standards |  |  |
-| 03-grok-install-cli |  |  |
-| 04-grok-install-action |  |  |
-| 05-grok-docs |  |  |
-| 06-awesome-grok-agents |  |  |
-| 07-vscode-grok-yaml |  |  |
-| 08-grok-agents-marketplace |  |  |
-| 09-grok-build-bridge |  |  |
-| 10-grok-agent-orchestra |  | 1-commit upstream; shallow expected |
-| 11-x-platform-toolkit |  |  |
-| 12-claudex |  | local, no WebFetch |
+| Audit | Evidence-log rows | Notes |
+|-------|:-:|-------|
+| 01-grok-install | 10 | Spec root; deepest fetch budget. |
+| 02-grok-yaml-standards | 7 | |
+| 03-grok-install-cli | 8 | Pulled in two CI workflow URLs + `pyproject.toml`. |
+| 04-grok-install-action | 5 | Action surface is small. |
+| 05-grok-docs | 5 | MkDocs config + sync workflow + landing pages. |
+| 06-awesome-grok-agents | 6 | |
+| 07-vscode-grok-yaml | 3 | Shell repo (LICENSE + README only); minimum-3 floor met exactly. |
+| 08-grok-agents-marketplace | 5 | |
+| 09-grok-build-bridge | 6 | |
+| 10-grok-agent-orchestra | 1 | **Documented exception to the 3-URL floor**: upstream is a single commit (LICENSE + README only) — no third resource exists to fetch. |
+| 11-x-platform-toolkit | 8 | Per-tool indexing pulled extra HTML files. |
+| 12-claudex | 7 | Local file paths and `git`/`find` outputs (no WebFetch). |
+| **Total** | **71** | Across 11 WebFetch audits + 1 local audit. |
 
 ## Reproducibility
 
