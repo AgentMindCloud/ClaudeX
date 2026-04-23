@@ -249,3 +249,59 @@ job that exercises each template against its declared
       CLI is the source, `grok-safety-rules` is the shared
       library the CLI consumes. UNV-4 closes fully at that
       point.
+
+## Notes
+
+- **Why this is an S-effort "ambush"** of §2 #6 + #7. The actual
+  workflow edit is small. All the weight is in waiting — #6 has
+  to pick an install channel, #7 has to publish the first tagged
+  release on that channel, both have to merge upstream, *then*
+  this rec becomes 30 minutes of mechanical edits. Don't draft
+  the upstream issue until both prerequisites have merged;
+  otherwise you'll rewrite Part A.
+
+- **Why Part A deletes the stub instead of leaving it as a
+  fallback.** A fallback path that no one exercises rots. If CI
+  only exercises the real CLI, the stub is dead code that looks
+  alive. Better to remove it cleanly and have a CI failure tell
+  you when the real CLI breaks — which is the whole point of
+  this rec.
+
+- **What happens if the real CLI is unavailable at CI run
+  time** (network blip, PyPI outage). Before: CI silently used
+  the stub. After: CI fails noisily. The noise is the feature —
+  you find out your CLI-install path is brittle *before* users
+  do. Mitigate with CI caching (PyPI wheels cached per Python
+  version) rather than resurrecting the stub.
+
+- **Relationship to §2 #1 (shared `grok-safety-rules`).** #12
+  removes the stub (one of three parallel safety implementations
+  in the ecosystem). #1 then consolidates the remaining two
+  (`grok-install-cli/safety/rules.py` +
+  `grok-build-bridge/_patterns.py`) into a shared package.
+  Filing order: #12 first (deletes one); #1 next (consolidates
+  the other two). Filing #1 before #12 is also fine — the stub
+  just gets replaced by a consumer of the new shared package,
+  same end state.
+
+- **Relationship to §2 #5 (safety-profile rubric).** #5 is
+  orthogonal to the stub removal; the rubric disciplines how
+  the real CLI *behaves*, not whether a stub stands in for it.
+  Part B above shows how the gallery can *additionally* enforce
+  rubric conformance once #5 ships. Not required to close #12.
+
+- **Out of scope here.**
+  - Adding `safety_profile` distribution report to CI summary
+    (audit 06 §9 row 4) — separate row; does not require real-CLI
+    integration to implement.
+  - Tightening `spec-version` to require v2.14 after a grace
+    period (audit 06 §9 row 3) — separate row.
+  - Publishing `schemas/` to `grok-yaml-standards` (audit 06 §9
+    row 5) — separate row.
+
+- **Filing strategy.** Single primary issue in
+  `awesome-grok-agents`. No cross-ref — `grok-install-cli` is
+  consumed, not modified. File only after #6 AND #7 have merged
+  upstream, so Part A's command+pin is concrete rather than
+  speculative.
+
