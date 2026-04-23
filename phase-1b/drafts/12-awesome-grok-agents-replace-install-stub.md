@@ -55,3 +55,72 @@ install channel (Python / npm / both) and §2 #7 cuts a tagged
 release on that channel, there is nothing stable to pin against.
 Once both merge upstream, this rec becomes a small workflow
 edit.
+
+## Evidence
+
+From `main` snapshot on 2026-04-23 (WebFetch; paths stable).
+
+**`awesome-grok-agents` CI state** —
+`audits/06-awesome-grok-agents.md §5, §11 row 5`:
+- `.github/workflows/validate-templates.yml` has 7 jobs:
+  `discover`, `yamllint`, `registry`, `schema`, `spec-version`,
+  `links`, `validate` (matrix).
+- The `validate` matrix step runs, per template:
+  `validate_template.py` + `scan_template.py` + `mock_run_template.py`.
+- `scan_template.py` **fails on warnings** (strictest signal
+  in the ecosystem).
+- Python 3.12, Node 20, `ajv-cli@5 + ajv-formats@3`, lychee.
+- `scripts/grok_install_stub/` is explicitly audited as the
+  stub that `validate_template.py` + `scan_template.py` + `mock_run_template.py`
+  consume (see audit 06 §5 "Stub-based validation" caveat).
+
+**Tradeoff audit captured at audit time** —
+`audits/06-awesome-grok-agents.md §5` (verbatim):
+- *"Stub-based validation: the `grok_install_stub` package in
+  `scripts/` means templates are not validated against the
+  actual CLI; drift between stub and real CLI goes undetected
+  here (tradeoff noted)."*
+
+**Risk register** — `audits/98-risk-register.md`:
+- **UNV-4** (S3, L-med, `needs-info`): "Whether `grok-install-cli`'s
+  safety rules are a re-implementation of the `grok-yaml-standards/
+  grok-security` schema or a divergent ruleset is not stated —
+  risks two safety surfaces drifting apart unobserved."
+- The stub is a *third* parallel safety implementation
+  (alongside `grok-install-cli/safety/rules.py` and
+  `grok-build-bridge/_patterns.py`). §2 #1 addresses the
+  underlying three-way drift; §2 #12 removes one of the three
+  by making the stub consume the real CLI instead of
+  re-implementing its behaviour.
+
+**Open questions from audit** —
+`audits/06-awesome-grok-agents.md §10`:
+- "What does `grok_install_stub/` implement (enough of the CLI
+  surface to be meaningful)?" — answered implicitly once the
+  stub is removed.
+- "Does `scan_template.py` reuse logic from `grok-install-cli/
+  src/grok_install/safety/scanner.py`, or is it a parallel
+  implementation?" — answered definitively post-migration:
+  `scan_template.py` becomes a thin wrapper around `grok-install
+  scan`.
+
+**Prerequisite state**:
+- §2 #6 draft: [`phase-1b/drafts/06-cli-install-mechanism.md`](06-cli-install-mechanism.md)
+  — three acceptance options, none merged upstream at this
+  writing.
+- §2 #7 draft: [`phase-1b/drafts/07-grok-install-cli-releases-pyproject-alignment.md`](07-grok-install-cli-releases-pyproject-alignment.md)
+  — release pipeline + action-pin alignment. Itself speculative
+  on #6. Not merged upstream at this writing.
+
+**Related §2 cross-refs**:
+- §2 #1 (shared `grok-safety-rules` package) — the stub, the
+  CLI's `rules.py`, and the bridge's `_patterns.py` are the
+  three parallel implementations #1 extracts. #12 is the
+  predecessor: remove the stub before extraction, so the
+  extraction works on two parallel implementations rather than
+  three.
+- §2 #5 (safety-profile rubric) — once shipped, the real CLI's
+  behaviour under `scan` is disciplined by the rubric; the
+  stub's behaviour is not. Replacing the stub with the real CLI
+  means the gallery inherits rubric-disciplined validation for
+  free.
