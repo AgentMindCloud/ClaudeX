@@ -33,6 +33,27 @@ If the scope is widened in a later session, the drafts in this directory
 become the direct source for `mcp__github__issue_write` calls — no
 intermediate translation required.
 
+## Filing the drafts: see `filing-packets/`
+
+`phase-1b/filing-packets/` is the operational counterpart to this
+drafting phase. It contains:
+
+- `filing-packets/README.md` — two filing paths:
+  **(A)** widen the GitHub MCP scope so a future Claude session can
+  call `mcp__github__issue_write` directly, with a ready-to-paste
+  kickoff prompt; or **(B)** file manually from the GitHub UI.
+- `filing-packets/01-grok-install.md` … `11-x-platform-toolkit.md` —
+  one packet per upstream AgentMindCloud repo. Each packet lists the
+  Phase-1B issues to file against that repo: title, suggested labels,
+  and a pointer back to the relevant `drafts/*.md` body. Cross-ref /
+  adopter follow-ups (e.g. the §2 #18 adopter pointers for the 7
+  adopter repos) are listed separately and flagged "open only after
+  primary lands".
+
+The filing-packets layer is *view-of-the-same-data*, not a separate
+scope: each packet entry traces back to a row of `ISSUES.md` (which
+traces back to a row of `audits/99-recommendations.md §2`).
+
 ## Mapping rules
 
 Every draft in `phase-1b/drafts/` carries four links back to its origin:

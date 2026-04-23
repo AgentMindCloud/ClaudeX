@@ -5,6 +5,11 @@ draft in `phase-1b/drafts/` to its `audits/99-recommendations.md §2` source
 and, once filed, to the resulting upstream issue URL.
 
 Filing workflow: see `phase-1b/README.md §Filing workflow (for the user)`.
+Per-upstream-repo filing packets (paste-ready title / labels / body
+pointers, ordered by recommended filing sequence): see
+`phase-1b/filing-packets/` — `README.md` covers the two filing paths
+(widened-scope agent session vs. manual GitHub UI) and the 11 per-repo
+files carry the actual packet content.
 
 ## Status legend
 

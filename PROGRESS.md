@@ -265,3 +265,51 @@ Pick one:
 - `"Begin third-pass drafts — §2 #5, #8, #20."` *(no prerequisites; #5 is the highest-fanout unblocker in the §2 graph.)*
 - `"Begin §2 #5 alone."` *(minimal next step — unblocks #1, #11, #17 which can then be drafted as a coordinated trio once #5 lands upstream.)*
 - `"Pause Phase 1B."` *(leave the 9 drafts as-is; resume later.)*
+
+---
+
+## Session: 2026-04-23 (cont.) — Phase 1B addendum: filing-packets/ scaffold
+
+### Status: Filing path unblocked — per-repo filing packets written for all 11 upstream repos
+
+### Context
+User selected "File the 9 drafts first" → clarified they wanted Option D (widen MCP scope). Drafting a session-restart protocol required organising the drafts by *target repo* (not by §2 rec), since widening the scope is done per-repo and so is filing. The existing `drafts/` layout is by §2 rec — useful during drafting, awkward for filing. Created `phase-1b/filing-packets/` as the by-target-repo view of the same data.
+
+### What was done
+1. Created `phase-1b/filing-packets/` with:
+   - `README.md` — two filing paths: **(A)** widened-MCP-scope agent session (with the exact GitHub App steps, the permissions needed, and a ready-to-paste kickoff prompt for the next session) or **(B)** manual filing via the GitHub UI. Includes filing order (first-pass primaries → second-pass primaries, prefer #3 → #13 → #18 → cross-refs/adopter follow-ups), back-fill discipline for `ISSUES.md`, and troubleshooting (missing labels, cross-draft references, maintainer rewrites, coordination-issue vs. 8-variant choice for §2 #3 and #18).
+   - `01-grok-install.md` … `11-x-platform-toolkit.md` — one packet per upstream repo, numbered to match `audits/NN-*.md`. Each packet lists: target repo URL, "New issue" URL, count of primary drafts and cross-refs/adopter follow-ups targeting this repo, then for each entry: title (paste verbatim), suggested labels, body pointer (`phase-1b/drafts/<file>.md` below `---`), and filing notes. 12-claudex is intentionally absent (own MCP scope).
+2. Cross-linked from `phase-1b/README.md` (new §"Filing the drafts: see `filing-packets/`") and `phase-1b/ISSUES.md` (one-line pointer under the intro).
+3. Updated `PROGRESS.md` / `CHANGELOG.md` / `ROADMAP.md` to reflect the addendum.
+
+### Why this is an addendum, not a third pass
+Third-pass drafts (§2 #5 / #8 / #20) would add new *content*. Filing-packets add new *navigation* over the same content. They exist entirely because the MCP-scope constraint forces filing out of this session; if scope is widened next session, the packets become the agent's instruction set for `mcp__github__issue_write`.
+
+### Metrics
+- Filing-packet files created: **12** (1 README + 11 per-repo).
+- Per-repo filing-packet distribution:
+  - Primaries + cross-refs: `grok-install` (2 primary + 1 cross-ref); `grok-install-cli` (2P + 2X); `grok-install-action` (1P + 3X); `vscode-grok-yaml` (2P + 0X); `grok-build-bridge` (2P + 1X); `grok-agent-orchestra` (1P + 0X).
+  - Cross-refs only: `grok-yaml-standards` (0P + 2X); `grok-docs` (0P + 2X); `awesome-grok-agents` (0P + 2X); `grok-agents-marketplace` (0P + 2X).
+  - No Phase-1B content yet: `x-platform-toolkit` (0P + 0X; §2 #19 is future work).
+  - Sanity check: 10 primary filings (§2 #13 is counted as 2 because it files independently in both pilot repos) = 9 drafts × 1 + §2 #13 double-file. ✓
+- Phase-1B commits on `claude/phase-1b-issue-drafts-rzjg8` after this addendum: **14** (scaffold + 7 drafting units across 2 passes + 2 ISSUES-update units + 2 progress-doc units + filing-packets scaffold + this cross-link commit).
+
+### Decisions & trade-offs
+- **Pointers, not embedded bodies.** Each packet references the draft's title + labels + "paste body from `drafts/<file>.md` below `---`". Alternative was inlining the full bodies (~1350 lines duplicated across packets). Rejected: doubles the footprint for no fidelity gain, and drafts are only two clicks away.
+- **Packet numbering follows `audits/NN-*.md`.** Reuses an existing convention so mental map stays one-shot. `12-claudex.md` is omitted (own MCP scope); `11-x-platform-toolkit.md` is included as a placeholder because §2 #19 targets it in a future pass.
+- **Coordination-issue vs. 8-variant choice exposed explicitly.** §2 #3 (SHA-pin) and §2 #18 (CI template) are drafted as single coordination issues. Packets offer both paths: file once in the coordinator repo, OR file per-repo variants (body stands unchanged, keep only the target row in the checklist). Surfaced in `filing-packets/README.md §Troubleshooting` and in each affected repo's packet.
+- **Cross-refs are *gated by primary merge, not primary filing*.** Adopter follow-ups (§2 #18 adopter pointers, §2 #3 variants if chosen, the §2 #6 cross-ref in `grok-install-action`) are flagged "open only after primary lands" — the primary's text can shift in review and invalidate the follow-up assumptions. Same discipline as the `post-filing follow-ups` section of `ISSUES.md` for blocked-chain drafts.
+
+### Files changed this addendum
+- Added: `phase-1b/filing-packets/README.md` + 11 per-repo files.
+- Modified: `phase-1b/README.md`, `phase-1b/ISSUES.md`, `PROGRESS.md`, `CHANGELOG.md`, `ROADMAP.md`.
+
+### Open
+Unchanged from the second-pass close — 9 drafts await upstream filing. The filing-packets now provide the operational path for *how* to file them. Next-session kickoff prompt lives in `phase-1b/filing-packets/README.md §Path A → Kickoff prompt for the widened-scope session` and can be pasted verbatim once the GitHub App is reconfigured.
+
+### Next suggested action
+Pick one:
+- **Reconfigure GitHub App scope** (steps in `phase-1b/filing-packets/README.md §Path A`), then start a new session and paste the kickoff prompt. The new agent will file all 9 drafts + cross-refs and back-fill `ISSUES.md` autonomously.
+- **File manually from the packets** (steps in `phase-1b/filing-packets/README.md §Path B`) — same end state, slower, no scope change required.
+- `"Begin third-pass drafts — §2 #5, #8, #20."` — if you'd rather keep drafting ahead of filing.
+- `"Pause Phase 1B."` — 9 drafts + filing-packets sit ready; resume any time.

@@ -27,6 +27,8 @@ All notable changes to this repository are logged here. Format follows [Keep a C
 - `phase-1b/drafts/03-sha-pin-actions-ecosystem.md` — upstream issue draft for §2 #3 (ecosystem-wide SHA-pin of GitHub Actions + Renovate/Dependabot config; closes SUP-1 S2 across 8 CI-enabled repos; single coordination draft with 8-row per-repo checklist).
 - `phase-1b/drafts/13-blocking-pip-audit-plus-secret-scan.md` — upstream issue draft for §2 #13 (drop `continue-on-error` on `pip-audit` + add gitleaks/trufflehog secret-scan; pilot on grok-install-cli + grok-build-bridge; closes SEC-2 + SEC-3 S2 on pilot repos).
 - `phase-1b/drafts/18-ci-template-baseline.md` — upstream issue draft for §2 #18 (promote `grok-build-bridge`'s CI workflow as ecosystem baseline; primary target grok-build-bridge + 7-adopter checklist; delivers SEC-2 / SUP-1 closure across adopters once the posture fixes from #3 + #13 land at the source).
+- `phase-1b/filing-packets/README.md` — two filing paths (widened-MCP-scope agent session vs. manual GitHub UI), ready-to-paste kickoff prompt for the next session, filing order, back-fill discipline for `ISSUES.md`, and troubleshooting notes.
+- `phase-1b/filing-packets/01-grok-install.md` … `11-x-platform-toolkit.md` — 11 per-repo filing packets carrying title / suggested labels / body pointer (to `phase-1b/drafts/<file>.md`) for each Phase-1B primary and cross-ref targeting that repo. Numbering matches `audits/NN-*.md`; `12-claudex.md` is intentionally absent (own MCP scope).
 
 ### Changed
 - Renamed `CLAUDE.me` → `CLAUDE.md` to match Claude Code's canonical filename.

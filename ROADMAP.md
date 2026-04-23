@@ -34,8 +34,9 @@ Exit: User approved Phase 1A (the codebase audit). Closed 2026-04-23.
 - **Second-pass slice (CI + supply-chain floor, no blockers)**: 3 §2 recs (#3, #13, #18) → 3 draft files; raises the CI/supply-chain floor for all 8 CI-enabled repos; #18 is the delivery vehicle propagating #3 + #13's fixes across 7 adopters.
 - **Cumulative**: 7 of 20 §2 recs drafted; 9 draft files; 0 issues filed upstream (MCP scope limitation).
 - **Tracker**: [`phase-1b/ISSUES.md`](phase-1b/ISSUES.md) — first-pass table, second-pass table, third-pass candidates (§2 #5 / #8 / #20), post-filing follow-ups (§2 #7 / #12 / #4 / #16 + the #1/#11/#17 trio gated on #5), blocked-by chains, filing audit trail.
+- **Filing packets**: [`phase-1b/filing-packets/`](phase-1b/filing-packets/) — per-upstream-repo filing instructions. Covers two paths (widened-MCP-scope agent session vs. manual GitHub UI) with a ready-to-paste kickoff prompt for the next session.
 - **Branch**: `claude/phase-1b-issue-drafts-rzjg8` (branched from Phase-1A tip `37d464f`).
-- **Status**: first + second pass complete; third-pass candidates + post-filing follow-ups await user go-ahead.
+- **Status**: first + second pass complete; filing-packets written; 9 drafts await upstream filing. Third-pass candidates + post-filing follow-ups await user go-ahead.
 
 > **Label note**: "1B" here is the upstream issue drafting effort selected after Phase 1A close. The originally-proposed "1B. Greenfield `frok-super-agent` v0.1 scaffold" candidate has been relabelled to **1E** below; its content is unchanged and it remains `proposed`.
 
