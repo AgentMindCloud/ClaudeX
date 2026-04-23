@@ -71,18 +71,17 @@ it — so drafting it first unlocks the gated post-filing follow-ups.
 
 ## Next-pass candidates
 
-With the first-pass and second-pass slices covering §2 recs #3, #6, #9, #13,
-#14, #15, #18, the remaining `Blocked by`-free §2 recs fall into two groups:
-cross-ecosystem contracts (#5, #8) and repo-local governance with high local
-leverage (#20). The three below are the natural next tranche — all three
-unblock downstream §2 recs (explicit for #5), and none of them waits on
-first-pass filings landing upstream. Effort is mixed (all M).
+With first-, second-, and third-pass slices covering §2 recs #3,
+#5, #6, #8, #9, #13, #14, #15, #18, #20 (10 of 20), the remaining
+`Blocked by`-free §2 recs are the three below. Mixed effort;
+drafting them pushes cumulative coverage to 13 of 20 without
+waiting for any upstream landing.
 
 | §2 # | Rec (short) | Effort | Reach | Unblocks §2 | Why this batch |
 |:-:|---|:-:|:-:|:-:|---|
-| #5 | Publish a unified safety-profile rubric (strict / standard / permissive) with conformance tests in `grok-yaml-standards`. Closes partial UNV-3; enables UNV-4 closure. | M | 4 | #1, #11, #17 | Highest-fanout unblocker on the §2 graph — three downstream recs depend on it. Drafting it next lets the later passes run in parallel. |
-| #8 | Migrate `grok-yaml-standards` to JSON Schema draft-2020-12 for v1.3, closing the draft-07 / draft-2020 split with `grok-install`. Closes VER-2. | M | 3 | — | Removes the only structural cross-spec drift. §2 #18's template adopters inherit cleaner schema-validate jobs once this lands (the template already uses draft-2020-12). |
-| #20 | Triage the 12 open PRs on `grok-agents-marketplace`; publish `CODEOWNERS`; document a review SLA. Closes GOV-2. | M | 2 | — | Governance row with the highest local leverage (5) in §2. Reach-2 but closes the only S1-adjacent governance risk outright. |
+| #2 | Extract a shared Grok API client (auth, retries, streaming, rate-limit) — collapses the four parallel implementations in `00-ecosystem-overview.md §9.A`. | L | 5 | — | Highest reach in §2 (5). L-effort because it needs a coordination-plus-extraction write-up; the draft itself is a specification issue, not the implementation. |
+| #10 | Ship `grok-docs` v2.14 content + reference pages for the 7 undocumented standards. Closes VER-4, DOC-2. | L | 4 | #4 | Unblocks §2 #4 (`repository_dispatch` wiring) — without this, #4 cannot be responsibly drafted. L-effort is content-writing cost. |
+| #19 | Add minimum CI to `x-platform-toolkit` (html-validate, css-lint, broken-link, Live-vs-Spec consistency). Closes SUP-5. | M | 2 | — | Closes the only SUP-category risk outside the #3/#13/#18 coverage. Reach-2 but the toolkit publishes user-facing tools that read live spec versions. |
 
 ### Post-filing follow-ups (not yet candidates — wait for upstream landing)
 
