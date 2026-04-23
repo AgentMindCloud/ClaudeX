@@ -27,19 +27,20 @@ Exit: User approved Phase 1A (the codebase audit). Closed 2026-04-23.
 - Output: `audits/01-grok-install.md` … `audits/12-claudex.md` + cross-cuts `audits/00-ecosystem-overview.md`, `audits/97-methodology.md`, `audits/98-risk-register.md`, `audits/99-recommendations.md`.
 - **Backlog for the next phase lives in `audits/99-recommendations.md`** — 20 ecosystem-wide top-line recommendations + 28 deferrals, each cross-linked to its source audit and risk-register row.
 
-### 1B. Upstream issue drafting — in-progress (first + second + third pass + Session 2 done 2026-04-23)
+### 1B. Upstream issue drafting — in-progress (first + second + third + Session 2 + fourth pass done 2026-04-23)
 - Turn `audits/99-recommendations.md §2` top-20 recs into ready-to-file GitHub issue bodies under `phase-1b/drafts/`, indexed by `phase-1b/ISSUES.md`.
 - **MCP-scope constraint**: drafts only. The Phase 1B agent's GitHub MCP scope is `agentmindcloud/claudex`-only; it cannot open issues on upstream AgentMindCloud Grok repos. The user files each draft manually and back-fills `phase-1b/ISSUES.md`'s **Filed** column.
 - **First-pass slice (S-effort, no blockers)**: 4 §2 recs (#6, #9, #14, #15) → 6 draft files.
 - **Second-pass slice (CI + supply-chain floor, no blockers)**: 3 §2 recs (#3, #13, #18) → 3 draft files; #18 is the delivery vehicle propagating #3 + #13's fixes across 7 adopters.
 - **Third-pass slice (cross-ecosystem contracts + governance, M-effort, no blockers)**: 3 §2 recs (#5, #8, #20) → 3 draft files. #5 is the highest-fanout unblocker in the §2 graph.
 - **Session-2 slice (speculative post-filing follow-ups, variable effort)**: 6 §2 recs (#1, #7, #11, #12, #16, #17) → 6 draft files. Every Session-2 draft carries the mandatory speculative-draft metadata header (prerequisite status + re-review trigger) and cannot be filed upstream until its prerequisite merges upstream first. Deepest speculation: §2 #12 (through #7→#6) and §2 #17 (through #1→#5).
-- **Cumulative**: **16 of 20 §2 recs drafted**; 18 draft files; 0 issues filed upstream (MCP scope limitation).
-- **Deferred at S1→S2 kickoff**: §2 #4 (gated on undrafted #10 — L-effort). Undrafted §2 residual: #2 (shared Grok API client, L, reach 5), #10 (grok-docs v2.14, L, reach 4), #19 (x-platform-toolkit CI, M, reach 2).
-- **Tracker**: [`phase-1b/ISSUES.md`](phase-1b/ISSUES.md) — first/second/third/Session-2 tables; next-pass candidates (§2 #2 / #10 / #19); post-filing follow-ups (§2 #4 still gated on #10); blocked-by chains; filing audit trail.
-- **Filing packets**: [`phase-1b/filing-packets/`](phase-1b/filing-packets/) — per-upstream-repo filing instructions. Session-2 content now lives in packets 03 (§2 #7 + §2 #1), 06 (§2 #11 + §2 #12), 07 (§2 #16), 10 (§2 #17).
+- **Fourth-pass slice (grok-docs v2.14 unblocker, L-effort)**: 1 §2 rec (#10) → 1 draft file. Closes VER-4 + DOC-2 outright. **Unblocks §2 #4** (`repository_dispatch` wiring) for speculative-on-#10 drafting.
+- **Cumulative**: **17 of 20 §2 recs drafted**; 19 draft files; 0 issues filed upstream (MCP scope limitation).
+- **Undrafted §2 residual (3 of 20)**: #2 (shared Grok API client, L, reach 5), #4 (now eligible — speculative-on-#10), #19 (x-platform-toolkit CI, M, reach 2).
+- **Tracker**: [`phase-1b/ISSUES.md`](phase-1b/ISSUES.md) — first/second/third/Session-2/fourth-pass tables; next-pass candidates (§2 #2 / #4 / #19); post-filing follow-ups (§2 #4 now eligible); blocked-by chains; filing audit trail.
+- **Filing packets**: [`phase-1b/filing-packets/`](phase-1b/filing-packets/) — per-upstream-repo filing instructions. Session-2 content lives in packets 03 (§2 #7 + §2 #1), 06 (§2 #11 + §2 #12), 07 (§2 #16), 10 (§2 #17). Fourth-pass content in packet 05 (§2 #10).
 - **Branch**: `claude/phase-1b-session-continuation-zQBET` (branched from Phase-1B tip `e1d32ae`).
-- **Status**: first + second + third pass + Session-2 complete; filing-packets updated; 18 drafts await upstream filing. Next-pass decision: draft §2 #10 (unblocks #4), §2 #2 (highest reach), §2 #19 (lowest effort), or pause. See `PROGRESS.md` Phase-1B Session-2 "Next suggested action".
+- **Status**: first + second + third + Session-2 + fourth-pass complete; filing-packets updated; 19 drafts await upstream filing. Next-pass decision: draft §2 #4 (newly eligible), §2 #2 (highest reach), §2 #19 (lowest effort), a small batch, or pause. See `PROGRESS.md` Phase-1B fourth-pass "Next suggested action".
 
 > **Label note**: "1B" here is the upstream issue drafting effort selected after Phase 1A close. The originally-proposed "1B. Greenfield `frok-super-agent` v0.1 scaffold" candidate has been relabelled to **1E** below; its content is unchanged and it remains `proposed`.
 
