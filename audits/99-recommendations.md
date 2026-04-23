@@ -69,7 +69,85 @@ The §1 rubric says reach-1 recommendations belong in §3. #19 is borderline: th
 
 ## 3. Notable deferrals
 
-_(filled in unit 13 — per-repo recommendations that did not make the top-20 because their reach is local-only, with cross-links to their source audits)_
+The 60 per-repo `§9 row N` candidates were partitioned three ways: (a) lifted into §2, (b) absorbed by a §2 merge that subsumed them, (c) deferred here because their cross-repo reach is 1 or because they are pure local hygiene. §3.1 covers (b) for traceability; §3.2 enumerates (c), grouped by source repo. ClaudeX (audit 12) gets its own subsection — every row affects only ClaudeX itself.
+
+### 3.1 Absorbed into §2 (listed for traceability)
+
+These per-repo rows are not duplicated here as standalone deferrals because §2 closes them through a merged recommendation:
+
+- [→ 10 §9 row 4] *Document "Lucas safety veto" concretely* → absorbed by §2 #17 (defines Lucas at orchestra-bootstrap time) and §2 #5 (which subsumes the safety-rubric layer it would slot into).
+- [→ 11 §9 row 2] *Consolidate `shared/grok-client` with `grok-install-cli`/`grok-build-bridge`* → absorbed by §2 #2 (the shared Grok API client extraction explicitly counts the toolkit's JS implementation as one of the four).
+
+### 3.2 Deferred — local-only or hygiene
+
+Each bullet: `[→ NN §9 row M]` — one-line restatement — *(why deferred)*. Where a deferred row maps to a `98-risk-register.md` row, the row ID is given so future triage can re-open it.
+
+**`grok-install` (01)**
+- [→ 01 §9 row 3] Publish a formal v2.12→v2.13→v2.14 deprecation schedule. *(Single-repo governance decision. Closes part of VER-5 if adopted; reach = 1 inside the spec repo, signal-only downstream.)*
+- [→ 01 §9 row 4] Replace repo-issue/X-DM disclosure channel with `security@` + PGP. *(Closes GOV-1, but the change is local to the spec repo; ecosystem-wide governance hardening is GOV-4 territory and tracked under §3.2 below.)*
+
+**`grok-yaml-standards` (02)**
+- [→ 02 §9 row 4] `cross-repo-compat` CI job that smoke-tests `grok-install` v2.x against standards versions. *(Adjacent in spirit to §2 #4 but inverse direction; deferred until §2 #4 lands so the dispatch direction is settled first.)*
+- [→ 02 §9 row 5] Move "deferred CI workflows" out of `[Unreleased]` — ship or delete. *(Pure local hygiene; closes nothing in the risk register.)*
+
+**`grok-install-cli` (03)**
+- [→ 03 §9 row 4] Add `--cov-fail-under=80` to `ci.yml`. *(Closes UNV-5 directly. Reach = 1, but small enough to lift if §2 #18 stalls — note for Phase 1B.)*
+- [→ 03 §9 row 5] Auto-generated CLI command-reference page. *(Local docs improvement; reach = 1.)*
+
+**`grok-install-action` (04)**
+- [→ 04 §9 row 4] Lockfile validation + `npm ci --audit` in `test.yml`. *(Closes part of SUP-4; subsumed once §2 #6 resolves the npm-vs-Python question, since the install-mechanism may change.)*
+- [→ 04 §9 row 5] Document the reduced-permissions (`update-badge: false` + `contents: read`) path. *(Mitigates SEC-5 for security-conscious adopters; pure docs change, reach = 1.)*
+
+**`grok-docs` (05)**
+- [→ 05 §9 row 3] Top-of-site "version: vX.Y" banner sourced from the `latest/` VERSION file. *(Subsumed by §2 #10 once v2.14 content ships; if #10 slips, this becomes a high-leverage interim signal.)*
+- [→ 05 §9 row 4] Add schema-validated Mermaid dependency-graph diagrams (from `audits/00-ecosystem-overview.md`) to the Ecosystem nav entry. *(Nice-to-have; reach = 1 inside the docs site.)*
+
+**`awesome-grok-agents` (06)**
+- [→ 06 §9 row 3] Tighten `spec-version` job to require latest after a 1-release grace period. *(Closes part of VER-5. Blocked-by §2 #11 — need permissive exemplar before forcing migration.)*
+- [→ 06 §9 row 4] `safety_profile` distribution report in CI summary. *(Surfaces the 6/4/0 gap that §2 #11 closes; useful as a watchdog after #11 lands. Reach = 1.)*
+- [→ 06 §9 row 5] Publish or link the registry's schema to `grok-yaml-standards` to avoid a fourth schema location. *(Schema-ownership decision; reach = 2 in principle but blocked on a single org-level call.)*
+
+**`vscode-grok-yaml` (07)**
+- [→ 07 §9 row 5] Add CI to lint README + validate future `package.json` on PR. *(Pre-bootstrap governance; rolls up under §2 #16 once that lands. Reach = 1.)*
+
+**`grok-agents-marketplace` (08)**
+- [→ 08 §9 row 1] Replace caret-ranged deps with exact pins (or batched Renovate config). *(Closes SUP-2. High local leverage but reach = 1; lift to §2 if SUP-2 escalates in re-assessment.)*
+- [→ 08 §9 row 3] Add `SECURITY.md`, dependency-review thresholds, CSP/security headers in `next.config.ts`. *(Closes part of GOV-4 + SEC-3 for the most-exposed surface; reach = 1 for the page-headers piece, ecosystem-wide for SECURITY.md but covered by GOV-4 catch-all.)*
+- [→ 08 §9 row 4] Document telemetry schema + publish privacy statement for `/stats`. *(User-facing legal/UX hygiene; reach = 1.)*
+- [→ 08 §9 row 5] Lighthouse CI thresholds (`performance ≥ 0.9`, `a11y ≥ 0.95`) blocking PRs. *(Quality bar; reach = 1.)*
+
+**`grok-build-bridge` (09)**
+- [→ 09 §9 row 1] Document the LLM-audit layer's limits + a deterministic "static-only" fallback mode. *(Closes part of SEC-1. High local leverage; reach = 1 unless other repos adopt the same LLM-audit pattern — currently they do not.)*
+- [→ 09 §9 row 3] Pin `xai-sdk` and `tenacity` exactly + publish a visible `requirements.txt`. *(Closes part of SUP-3 for this repo specifically; the ecosystem-wide fix would be a broader exact-pin sweep, deferred to Phase 1B.)*
+
+**`x-platform-toolkit` (11)**
+- [→ 11 §9 row 3] Document the token-handling architecture for Live tools. *(Closes SEC-4; reach = 1, but the closure is direct — strong candidate for Phase 1B promotion.)*
+- [→ 11 §9 row 4] Ship 3 more tools from the Spec'd bucket to move Live ratio above 50%. *(Product roadmap, not audit fodder.)*
+- [→ 11 §9 row 5] Publish a Live-tools index page via GitHub Pages. *(Discoverability; reach = 1.)*
+
+### 3.3 ClaudeX self-audit (audit 12)
+
+Every audit-12 recommendation affects only this repo (cross-repo reach = 1 by definition). They are listed here in the same order as `audits/12-claudex.md §9`; collectively they close GOV-5.
+
+- [→ 12 §9 row 1] Add `LICENSE` (Apache 2.0, ecosystem-consistent). *(Closes GOV-5 in part; single-commit fix.)*
+- [→ 12 §9 row 2] Fill `CLAUDE.md §Primary Repos & Focus Areas` with the 12 repo URLs. *(Closes GOV-5 in part; ends the placeholder state called out in 12 §1.)*
+- [→ 12 §9 row 3] Add `.github/workflows/audit-lint.yml` (markdownlint + Lychee + ≥3-URL evidence-row gate per audit). *(Automates Unit 18's manual grep pass; protects against future audit drift. Reach = 1, but high local leverage for the audit programme itself.)*
+- [→ 12 §9 row 4] Add `SECURITY.md` covering the autonomous-agent workflow. *(Closes part of GOV-4 for this repo; reach = 1.)*
+- [→ 12 §9 row 5] Migrate `CHANGELOG.md` to dated `[Unreleased]` pattern matching `grok-yaml-standards`. *(Pure consistency win; reach = 1.)*
+
+### 3.4 Tally
+
+Net partition of the 60 per-repo `§9 row N` candidates:
+
+| Bucket | Rows | Notes |
+|--------|:-:|-------|
+| §2 lift | 30 | Distinct per-repo rows sourced by one or more §2 entries (some §2 entries — e.g. #1, #3, #13, #18 — lift several rows simultaneously). |
+| §3.1 absorbed | 2 | 10 §9 row 4; 11 §9 row 2. |
+| §3.2 deferred (10 repos) | 23 | 01 ×2, 02 ×2, 03 ×2, 04 ×2, 05 ×2, 06 ×3, 07 ×1, 08 ×4, 09 ×2, 11 ×3. |
+| §3.3 ClaudeX (audit 12) | 5 | All five rows of audit 12. |
+| **Total** | **60** | |
+
+Sanity: 30 + 2 + 23 + 5 = 60. ✓
 
 ## 4. Sequencing notes
 
