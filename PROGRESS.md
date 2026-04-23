@@ -2,6 +2,64 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — §2 #8 eval-harness
+
+**Shipped** `frok.evals`: declarative cases, composable scorers, a
+runner that re-plays through any `GrokClient`, and a baseline-trace
+differ that diffs captured `JsonlSink` runs against live candidates.
+
+* **`frok.evals.case`** — `EvalCase` (messages, tools, scorers,
+  optional baseline path, max-steps, dry-run), `Observation`
+  (final response + invocations + full event stream + aggregates like
+  `total_tokens` / `total_latency_ms` / `tool_call_order`), `Score`
+  (ok / fail factories), `EvalResult`, `EvalReport` with
+  `to_summary()` and `to_markdown()` verdict rendering.
+* **`frok.evals.scorers`** — 10 composable, pure-function scorers:
+  * truthfulness: `AnswerContains`, `AnswerMatches`, `AnswerAbsent`,
+    `NoSafetyBlocks`
+  * tool-behavior: `ToolCalled` (with count), `ToolNotCalled`,
+    `ToolArgsSubset`, `ToolSequence` (prefix match)
+  * perf / trace: `TokensWithin`, `NoErrors` (covers both run-level
+    exceptions and any errored span)
+* **`frok.evals.runner.EvalRunner`** — factory-per-case pattern
+  (`(sink) -> GrokClient`) so each case gets a fresh `InMemorySink`
+  and independent state. Uses `ToolOrchestrator` when the case
+  declares tools, otherwise a single `client.chat` call. Runner
+  swallows exceptions into `Observation.error` so one bad case
+  doesn't abort the report.
+* **`frok.evals.baseline`** — `diff_against_baseline(obs, path)`
+  reads a `JsonlSink` capture with `telemetry.read_jsonl`, compares
+  the tool-call order, token totals, and error count, and marks
+  `regressed=True` on tool-sequence divergence or new errors (token
+  deltas alone do not regress). The runner escalates
+  `regressed=True` to an overall case failure.
+* **Tracer tweak** — `SpanHandle.fail(reason)` lets callers mark a
+  span as errored without re-raising. Wired through the tool
+  orchestrator's caught-exception paths so "model recovers from a
+  handler exception" still surfaces to `NoErrors` as a regression.
+
+**Verification.** `python3 -m pytest -q` → 111 passed in 0.34s (21
+new). The runner tests exercise both paths (chat-only + tools),
+handler-error recovery, and the full Markdown-report shape.
+
+**Decisions / trade-offs.**
+* Scorers are *pure callables*, not a class hierarchy — keeps
+  composition trivial (`scorers=[AnswerContains("42"),
+  ToolCalled("add")]`) and sidesteps registration overhead.
+* Baseline regressions check structural behaviour (tool order +
+  errors), not tokens. Token deltas are reported for visibility but
+  a longer answer shouldn't fail a regression test when the answer
+  is still right.
+* No case-file format yet (YAML/TOML) — cases are Python values.
+  Fine for §2 #8 scope; a format loader is a cheap follow-up once
+  real cases accumulate.
+
+**Next suggested action:** `Continue Phase 2 with §2 #5 multimodal-
+adapter: a typed IO surface that accepts images (path / bytes /
+URL) and audio, routes them to Grok's vision + voice endpoints
+through the GrokClient transport, and falls back to a text
+description when a modality is unsupported.`
+
 ## 2026-04-23 — §2 #7 telemetry
 
 **Shipped** `frok.telemetry` and wired it into every Phase-2 producer so

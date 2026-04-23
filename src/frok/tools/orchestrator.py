@@ -131,6 +131,7 @@ class ToolOrchestrator:
                 parsed_args = json.loads(call.arguments) if call.arguments else {}
             except json.JSONDecodeError as exc:
                 span.set(error_kind="arguments_not_json")
+                span.fail(str(exc))
                 return ToolInvocation(
                     call_id=call.id,
                     name=call.name,
@@ -145,6 +146,7 @@ class ToolOrchestrator:
                 )
             except ToolArgumentError as exc:
                 span.set(error_kind="argument_schema")
+                span.fail(str(exc))
                 return ToolInvocation(
                     call_id=call.id,
                     name=call.name,
@@ -154,6 +156,7 @@ class ToolOrchestrator:
                 )
             except ToolError as exc:
                 span.set(error_kind="registry")
+                span.fail(str(exc))
                 return ToolInvocation(
                     call_id=call.id,
                     name=call.name,
@@ -163,8 +166,10 @@ class ToolOrchestrator:
                 )
             except Exception as exc:
                 # Surface handler failures back to the model so it can recover,
-                # rather than crashing the orchestrator loop.
+                # rather than crashing the orchestrator loop. The span itself
+                # is still marked errored so eval scorers can catch it.
                 span.set(error_kind=f"handler:{type(exc).__name__}")
+                span.fail(f"{type(exc).__name__}: {exc}")
                 return ToolInvocation(
                     call_id=call.id,
                     name=call.name,

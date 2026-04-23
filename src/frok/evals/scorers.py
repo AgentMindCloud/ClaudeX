@@ -1,0 +1,173 @@
+"""Built-in scorers for truthfulness + tool-behavior regressions.
+
+All scorers are plain dataclasses with `__call__(case, obs) -> Score`.
+Keep them pure: no I/O, no mutation of inputs. Compose them in
+`EvalCase.scorers`.
+"""
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass
+from typing import Any
+
+from .case import EvalCase, Observation, Score
+
+
+# ---------------------------------------------------------------------------
+# answer / truthfulness
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class AnswerContains:
+    substring: str
+    case_sensitive: bool = False
+
+    def __call__(self, case: EvalCase, obs: Observation) -> Score:
+        name = f"answer_contains[{self.substring!r}]"
+        content = obs.answer
+        hay = content if self.case_sensitive else content.lower()
+        needle = self.substring if self.case_sensitive else self.substring.lower()
+        if needle in hay:
+            return Score.ok(name)
+        return Score.fail(name, f"answer={content!r}")
+
+
+@dataclass(frozen=True)
+class AnswerMatches:
+    pattern: str
+    flags: int = 0
+
+    def __call__(self, case: EvalCase, obs: Observation) -> Score:
+        name = f"answer_matches[{self.pattern!r}]"
+        if re.search(self.pattern, obs.answer, self.flags):
+            return Score.ok(name)
+        return Score.fail(name, f"answer={obs.answer!r}")
+
+
+@dataclass(frozen=True)
+class AnswerAbsent:
+    """Fails if `substring` is present — guards against known-wrong answers."""
+
+    substring: str
+    case_sensitive: bool = False
+
+    def __call__(self, case: EvalCase, obs: Observation) -> Score:
+        name = f"answer_absent[{self.substring!r}]"
+        content = obs.answer
+        hay = content if self.case_sensitive else content.lower()
+        needle = self.substring if self.case_sensitive else self.substring.lower()
+        if needle in hay:
+            return Score.fail(name, f"disallowed substring present: answer={content!r}")
+        return Score.ok(name)
+
+
+@dataclass(frozen=True)
+class NoSafetyBlocks:
+    def __call__(self, case: EvalCase, obs: Observation) -> Score:
+        name = "no_safety_blocks"
+        blocked = [
+            e for e in obs.chat_spans if e.data.get("safety_blocked") is not None
+        ]
+        if not blocked:
+            return Score.ok(name)
+        kinds = sorted({e.data.get("safety_blocked") for e in blocked})
+        return Score.fail(name, f"safety blocks: {kinds}")
+
+
+# ---------------------------------------------------------------------------
+# tool-behavior
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class ToolCalled:
+    name_: str
+    times: int | None = None  # exact count when provided
+
+    def __call__(self, case: EvalCase, obs: Observation) -> Score:
+        sname = f"tool_called[{self.name_!r}]"
+        observed = [i for i in obs.invocations if i.name == self.name_]
+        if self.times is None:
+            if observed:
+                return Score.ok(sname, measure=len(observed))
+            return Score.fail(sname, f"tool {self.name_!r} was not invoked")
+        if len(observed) == self.times:
+            return Score.ok(sname, measure=len(observed))
+        return Score.fail(
+            sname,
+            f"expected {self.times} calls, got {len(observed)}",
+            measure=len(observed),
+        )
+
+
+@dataclass(frozen=True)
+class ToolNotCalled:
+    name_: str
+
+    def __call__(self, case: EvalCase, obs: Observation) -> Score:
+        sname = f"tool_not_called[{self.name_!r}]"
+        observed = [i for i in obs.invocations if i.name == self.name_]
+        if not observed:
+            return Score.ok(sname)
+        return Score.fail(sname, f"unexpected {len(observed)} call(s) to {self.name_!r}")
+
+
+@dataclass(frozen=True)
+class ToolArgsSubset:
+    """Passes if at least one call to `name_` had args ⊇ `expected`."""
+
+    name_: str
+    expected: dict[str, Any]
+
+    def __call__(self, case: EvalCase, obs: Observation) -> Score:
+        sname = f"tool_args_subset[{self.name_!r}]"
+        hits = [i for i in obs.invocations if i.name == self.name_]
+        if not hits:
+            return Score.fail(sname, f"tool {self.name_!r} not invoked")
+        for inv in hits:
+            if all(inv.arguments.get(k) == v for k, v in self.expected.items()):
+                return Score.ok(sname)
+        seen = [inv.arguments for inv in hits]
+        return Score.fail(sname, f"no call matched {self.expected!r}; seen {seen!r}")
+
+
+@dataclass(frozen=True)
+class ToolSequence:
+    """Passes if the observed tool order starts with `expected`."""
+
+    expected: tuple[str, ...]
+
+    def __call__(self, case: EvalCase, obs: Observation) -> Score:
+        sname = f"tool_sequence[{list(self.expected)}]"
+        observed = obs.tool_call_order
+        if observed[: len(self.expected)] == list(self.expected):
+            return Score.ok(sname)
+        return Score.fail(sname, f"observed order {observed!r}")
+
+
+# ---------------------------------------------------------------------------
+# perf / trace
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class TokensWithin:
+    max_total: int
+
+    def __call__(self, case: EvalCase, obs: Observation) -> Score:
+        sname = f"tokens_within[{self.max_total}]"
+        used = obs.total_tokens
+        if used <= self.max_total:
+            return Score.ok(sname, measure=used)
+        return Score.fail(sname, f"used {used} > max {self.max_total}", measure=used)
+
+
+@dataclass(frozen=True)
+class NoErrors:
+    """Fails if any span recorded an error OR the run itself raised."""
+
+    def __call__(self, case: EvalCase, obs: Observation) -> Score:
+        sname = "no_errors"
+        if obs.error is not None:
+            return Score.fail(sname, f"run error: {obs.error}")
+        bad = [e for e in obs.span_ends() if e.error is not None]
+        if bad:
+            details = ", ".join(f"{e.name}:{e.error}" for e in bad[:3])
+            return Score.fail(sname, f"{len(bad)} span errors: {details}")
+        return Score.ok(sname)

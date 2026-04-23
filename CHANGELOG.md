@@ -2,6 +2,22 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.6.0] — 2026-04-23
+### Added
+- `frok.evals` — declarative `EvalCase`s, 10 built-in scorers
+  (`AnswerContains`, `AnswerMatches`, `AnswerAbsent`, `NoSafetyBlocks`,
+  `ToolCalled`, `ToolNotCalled`, `ToolArgsSubset`, `ToolSequence`,
+  `TokensWithin`, `NoErrors`), an `EvalRunner` with a per-case
+  `(sink) -> GrokClient` factory, and `EvalReport.to_markdown()` /
+  `.to_summary()` verdict rendering. (§2 #8)
+- `frok.evals.diff_against_baseline` — reads a captured `JsonlSink`
+  trace and diffs tool-call order, token deltas, and error counts
+  against a live `Observation`. (§2 #8)
+- `SpanHandle.fail(reason)` on `frok.telemetry.Tracer` so caught-but-
+  regressed work (e.g. a tool handler that raised) still shows up on
+  the end span's `error` field.
+- Tests: 21 new (scorers, runner, baseline diff); 111 total.
+
 ## [0.5.0] — 2026-04-23
 ### Added
 - `frok.telemetry` — `Event` dataclass + four pluggable sinks

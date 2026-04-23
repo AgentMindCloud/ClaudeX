@@ -30,13 +30,29 @@ class SpanHandle:
     """Mutable span-attrs accumulator passed to `async with tracer.span(...)`."""
 
     _data: dict[str, Any] = field(default_factory=dict)
+    _error: str | None = None
 
     def set(self, **kwargs: Any) -> None:
         self._data.update(kwargs)
 
+    def fail(self, reason: str) -> None:
+        """Mark the span as errored without re-raising.
+
+        Use when a caller catches an exception but the work the span
+        represented still failed (e.g. a tool handler that raised but
+        the orchestrator recovered). The reason lands on the span.end
+        event's ``error`` field so default scorers like
+        ``NoErrors`` can catch it.
+        """
+        self._error = reason
+
     @property
     def data(self) -> dict[str, Any]:
         return dict(self._data)
+
+    @property
+    def error(self) -> str | None:
+        return self._error
 
 
 @dataclass
@@ -98,7 +114,7 @@ class Tracer:
                     name=name,
                     duration_ms=(end_ts - start_ts) * 1000.0,
                     data=handle.data,
-                    error=error,
+                    error=error or handle.error,
                 )
             )
             _current_span.reset(span_tok)

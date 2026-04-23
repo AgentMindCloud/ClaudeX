@@ -36,7 +36,11 @@ builds on these three.
    into `GrokClient.chat`, `MemoryStore.remember/recall/forget`, and
    `ToolOrchestrator.run` + per-invocation spans.
 8. **eval-harness** — Regression + truthfulness scoring across model
-   versions.
+   versions. *Shipped 2026-04-23:* `frok.evals` (EvalCase /
+   Observation / Score / EvalRunner / EvalReport), 10 built-in
+   scorers, baseline-trace diff against JsonlSink captures, Markdown
+   verdict doc. `SpanHandle.fail()` added so caught tool-handler
+   errors still regress the run.
 9. **config-loader** — Layered config (env → file → CLI overrides).
 10. **content** — X-platform content ingestion: normalises posts, threads,
     and media references into a canonical record the other modules can
