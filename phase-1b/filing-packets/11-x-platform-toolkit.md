@@ -2,23 +2,27 @@
 
 - **Target repo**: https://github.com/AgentMindCloud/x-platform-toolkit
 - **New issue URL**: https://github.com/AgentMindCloud/x-platform-toolkit/issues/new
-- **Drafts primary-targeting this repo**: 0
+- **Drafts primary-targeting this repo**: 1 (§2 #19 — seventh pass 2026-04-23; non-speculative)
 - **Cross-ref / adopter follow-ups**: 0 (not in §2 #3's 8-repo scope; not in §2 #18's adopter list)
 
-This repo has no Phase-1B drafts primary-targeting it and is not a
-target of either ecosystem-wide coordination issue (§2 #3, §2 #18).
-
-The rec that *will* primary-target this repo — §2 #19 (add minimum
-CI: html-validate, css-lint, broken-link, Live-vs-Spec consistency
-check) — has **not been drafted yet**. §2 #19 is M-effort, no
-`Blocked by`, and is a borderline inclusion in the §2 top-20 table:
-audit 99 §2 explicitly flags it for Phase-1B re-litigation on reach
-grounds (reach=2 because the toolkit publishes 8 of 20 user-facing
-tools that read live spec versions).
+The seventh-pass added §2 #19 as the primary for this repo:
+adds minimum CI (html-validate + stylelint + lychee link-check
++ Live-vs-Spec consistency script). Closes SUP-5 (S3) outright.
+M-effort; non-speculative.
 
 ## Primaries to file
 
-None from Phase 1B so far.
+### Issue 1 — §2 #19: Add minimum CI (html-validate + stylelint + link-check + Live-vs-Spec consistency)
+
+- **Draft source**: [`phase-1b/drafts/19-x-platform-toolkit-minimum-ci.md`](../drafts/19-x-platform-toolkit-minimum-ci.md)
+- **Title** (paste verbatim): `Add minimum CI to x-platform-toolkit (html-validate + stylelint + link-check + Live-vs-Spec consistency)`
+- **Suggested labels**: `ci`, `supply-chain`, `quality`, `phase-1b`
+- **Body**: paste the content of the draft below the first `---` separator.
+- **Filing note**: two-part acceptance (A: three standard lint jobs; B: one repo-specific consistency script). Parts can land separately — Part A is close to S-effort once copied from the draft; Part B's Python consistency script is what pushes this to M because the README regex needs one iteration against the maintainer's actual Live/Spec table shape.
+- **Filing note**: non-speculative — no in-repo prerequisite. File whenever convenient.
+- **Filing note**: Part A pins every action by SHA from day one (matches §2 #3 ecosystem discipline). This repo IS in §2 #3's 8-repo checklist; landing §2 #19 first satisfies §2 #3's work for this repo as a side effect. Flag in the filed issue body so reviewers see the alignment.
+- **Filing note**: expected first-run behaviour — CI may fail on the introducing PR if there is pre-existing Live/Spec drift. That's the point; fix the drift in the same PR (the draft's Part B last bullet spells this out).
+- **Filing note**: SUP-5 closure is manual — `audits/98-risk-register.md` row SUP-5 flips to `mitigated` on PR merge. The Phase-1B review layer owns that flip; flagged in the draft's Part B and Notes.
 
 ## Cross-ref / adopter follow-ups
 
@@ -26,21 +30,14 @@ None.
 
 ## Future drafting notes
 
-§2 #19 is catalogued in `phase-1b/ISSUES.md` as a candidate for a
-later pass (not first pass, not second pass, not the current
-third-pass shortlist). When it does get drafted:
+§2 #19 was the last §2 rec drafted in Phase 1B (seventh
+pass, 2026-04-23). All 20 §2 recs now have ready-to-file
+issue bodies under `phase-1b/drafts/`.
 
-- Source audits: `[→ 11 §9 row 1]`.
-- Closes: SUP-5 (audit 98).
-- No `Blocked by` entry.
-- Reach=2 is borderline per `audits/99-recommendations.md §Edge case: #19`;
-  if the Phase-1B reviewer disagrees, demote to §3 (per-repo
-  deferral).
-- Per-repo deferrals catalogued in §3.2 for this repo — `[→ 11 §9
-  row 3]` (token-handling docs, closes SEC-4 directly) is a strong
-  candidate for promotion alongside #19 if a future pass opens this
-  repo.
-
-When that draft lands in `phase-1b/drafts/`, this packet should be
-updated to add Issue 1 with the draft's title / labels / body
-pointer in the usual format.
+Per-repo deferrals catalogued in `audits/99-recommendations.md §3.2`
+for this repo — including `[→ 11 §9 row 2]` (consolidate
+`shared/grok-client` with `grok-install-cli`; candidate for §2
+#2's "JS-second-or-never" path) and `[→ 11 §9 row 3]`
+(token-handling docs; closes SEC-4) — are NOT drafted in Phase
+1B. They sit in the §3 deferrals pile pending a future pass
+if/when the user requests.
