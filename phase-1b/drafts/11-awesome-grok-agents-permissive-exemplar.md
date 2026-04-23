@@ -229,3 +229,51 @@ by the CI runtime itself, not by an application-layer
 - [ ] **CHANGELOG** entry under `[Unreleased]`: "Added
       permissive-profile exemplar `internal-ci-assistant`;
       distribution now 6 strict / 4 standard / 1 permissive."
+
+### Part B — Add a `safety_profile` distribution report to CI
+
+From `audits/06-awesome-grok-agents.md §9 row 4`: surfacing the
+distribution in CI prevents the 2-of-3 gap from silently
+reopening as the gallery grows. S-effort; pairs naturally with
+Part A so the same PR both closes the gap and installs the
+guard-rail that keeps it closed.
+
+- [ ] **Add a `distribution` job** to
+      `.github/workflows/validate-templates.yml`. The job:
+      1. Reads `featured-agents.json`.
+      2. Counts entries per `safety_profile` value.
+      3. Writes a summary block to
+         `$GITHUB_STEP_SUMMARY`:
+
+         ```
+         ## Safety-profile distribution
+         | Profile | Count |
+         |---------|:-----:|
+         | strict     | 6 |
+         | standard   | 4 |
+         | permissive | 1 |
+         ```
+
+      4. **Does NOT fail** on zero-count profiles — this is a
+         visibility job, not a gate. Adding a gate is a
+         separate policy decision and out of scope for this
+         rec.
+
+- [ ] **Do NOT hardcode the three profile names.** Let the job
+      iterate over the distinct values it finds in
+      `featured-agents.json`. If a typo ("permisive") slips
+      into a new entry, it appears in the summary as its own
+      column, making the typo visible.
+
+- [ ] **Cross-check against the rubric** (optional, ships if
+      §2 #5 has landed upstream when this PR opens): the
+      `distribution` job also reports "profiles present in
+      gallery but missing from the published rubric" and "profiles
+      in the rubric but zero-count in the gallery". Both are
+      zero today (post-Part A) but the check future-proofs
+      the report against silent drift.
+
+- [ ] **Flag Part B as optional** — if the maintainer prefers
+      to land Part A first and Part B as a follow-up PR, that
+      is fine. Keeping them together is cheaper; landing Part
+      A alone is still a net win.
