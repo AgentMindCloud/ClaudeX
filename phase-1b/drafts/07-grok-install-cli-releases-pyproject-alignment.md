@@ -51,3 +51,66 @@ repo a visible release cadence (other ecosystem repos have 1–3;
 this one has zero), which itself signals that the CLI is
 maintained rather than abandoned. For a repo downstream adopters
 pin against on every CI run, release visibility matters.
+
+## Evidence
+
+From `main` snapshots on 2026-04-23 (WebFetch; paths stable).
+
+**`grok-install-cli` repo state** —
+`audits/03-grok-install-cli.md §1, §11 rows 1–2`:
+- `pyproject.toml` declares `name = "grok-install"`,
+  `version = "0.1.0"`, entry point `grok_install.cli:app`
+  (Typer). Python ≥ 3.10. Ruff + pytest.
+- **No GitHub releases tagged** at audit time.
+- Package is a pure-Python project. No `package.json`, no
+  `setup.py`, no npm tarball shipped from the repo.
+- 3 CI workflows: `ci.yml`, `publish.yml`, `security.yml`.
+  `publish.yml` implies a release pipeline exists, but no
+  release artefacts correspond to it yet.
+
+**`grok-install-action` pin** —
+`audits/04-grok-install-action.md §1, §6`:
+- `action.yml` default: `cli-version: 2.14.0`.
+- Install command (today): `npm install -g grok-install-cli@2.14.0`
+  via `actions/setup-node@v4`.
+- The `2.14.0` value has no corresponding release tag on
+  `grok-install-cli/releases`. Any resolution path hides a
+  supply-chain fragility.
+
+**Risk register** — `audits/98-risk-register.md`:
+- **VER-3** (S1, L-high, `open`): "`grok-install-cli`
+  `pyproject.toml` is at `0.1.0` and is a Python project;
+  `grok-install-action` pins it via
+  `npm install -g grok-install-cli@2.14.0`. Either the action
+  installs an unrelated npm package, or the documented install
+  path does not actually work." *(Same row covers #6 and #7 —
+  both close different faces of it.)*
+- **SUP-4** (S2, L-med, `open`): the `2.14.0` pin is not
+  lockfile-guarded. Partially closed by whichever of #6's
+  options wins; fully closed by §2 #3's Renovate /
+  Dependabot config landing on the action.
+
+**§2 #6 cross-refs** — the three acceptance options in
+[`phase-1b/drafts/06-cli-install-mechanism.md`](06-cli-install-mechanism.md)
+give concrete shape to Part B below:
+- **Option A (Python canonical)**: `grok-install-action`
+  switches to `pip install "grok-install==<version>"`; the
+  version here matches PyPI + this repo's tagged release.
+- **Option B (npm wrapper canonical)**: an npm package exists
+  that wraps the Python CLI; its published versions match this
+  repo's tagged releases.
+- **Option C (both canonical)**: PyPI and npm publish lockstep;
+  a single source of truth (e.g. a `VERSION` file) drives both.
+
+**Intended post-merge state** for `grok-install-cli`:
+`pyproject.toml` and the latest GitHub release tag both carry
+the same version string (`vX.Y.Z` or `X.Y.Z`), and
+`grok-install-action/action.yml`'s `cli-version` default
+resolves to that exact artefact on the canonical channel.
+
+**Related §2 cross-refs**:
+- §2 #3 (SHA-pin actions + Renovate) — closes SUP-4 at the
+  action-pin layer once landed.
+- §2 #12 (replace `awesome-grok-agents`'s `grok_install_stub`)
+  — needs a working install path (§6) **and** a tagged release
+  (§7) to pin against. §12 is this draft's immediate downstream.
