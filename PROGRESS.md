@@ -211,3 +211,57 @@ Pick one:
 - `"File the 6 drafts in phase-1b/drafts/ against their upstream repos (see phase-1b/ISSUES.md for target repos + suggested labels), then back-fill the Filed column."`
 - `"Begin next batch — draft §2 #3, #13, #18."` *(does not require the first batch to be filed upstream first; they're independent.)*
 - `"Pause Phase 1B."` *(leave the first-pass drafts as-is; resume later.)*
+
+---
+
+## Session: 2026-04-23 (cont.) — Phase 1B (second pass): CI + supply-chain floor
+
+### Status: Second pass complete — 3 drafts ready for user filing upstream (cumulative with first pass: 9 drafts covering 7 of 20 §2 recs)
+
+### Scope
+Draft upstream issues for the three §2 recs staged as the "next batch" in the first-pass `ISSUES.md`: §2 #3 (ecosystem-wide SHA pinning + Renovate/Dependabot), §2 #13 (blocking `pip-audit` + secret-scanning on the CLI + bridge pilot repos), §2 #18 (promote `grok-build-bridge`'s CI workflow as the ecosystem baseline). Together the three raise the CI-and-supply-chain floor for the 8 CI-enabled repos and set up #13 + #3 to propagate via #18's template.
+
+### MCP-scope constraint (unchanged)
+Still `agentmindcloud/claudex`-only. All three drafts are markdown files in this repo; filing remains a user action. `phase-1b/ISSUES.md`'s **Filed** column is the audit trail for upstream landing.
+
+### What was done
+1. Drafted §2 #3 — SHA-pin every GitHub Action ecosystem-wide + Renovate/Dependabot config → `drafts/03-sha-pin-actions-ecosystem.md`. Single coordination draft; primary target grok-install (spec root). 8-repo scope with per-repo checklist + filing-strategy options.
+2. Drafted §2 #13 — make `pip-audit` blocking + add gitleaks/trufflehog secret-scanning → `drafts/13-blocking-pip-audit-plus-secret-scan.md`. Pilot targets grok-install-cli + grok-build-bridge (file twice, body stands against either). Three secret-scan options (A: gitleaks, B: trufflehog, C: GitHub-native with CI backstop).
+3. Drafted §2 #18 — extract `grok-build-bridge/.github/workflows/ci.yml` as the ecosystem baseline template → `drafts/18-ci-template-baseline.md`. Primary target grok-build-bridge (extraction) with 7-adopter checklist. Recommended Option A (reusable workflow) over B (vendored template).
+4. Updated `phase-1b/ISSUES.md`: added second-pass table (rows 7–9 with Effort column), replaced "Next batch candidates" with a new third-pass candidates section (§2 #5, #8, #20), added a "Post-filing follow-ups" section (§2 #7, #12, #4, #16, and the #1/#11/#17 trio gated on #5) with explicit "waits on upstream merge, not just filing" discipline.
+
+### Metrics
+- §2 recs drafted this pass: **3** (#3, #13, #18).
+- Draft files created this pass: **3** (all single-coordinator style — one draft covers multi-repo scope via per-repo checklist).
+- Cumulative §2 recs drafted (both passes): **7 of 20** (#3, #6, #9, #13, #14, #15, #18).
+- Cumulative draft files: **9** (6 from first pass + 3 here).
+- Upstream target repos touched this pass: **8 CI-enabled repos** (grok-install, grok-yaml-standards, grok-install-cli, grok-install-action, grok-docs, awesome-grok-agents, grok-agents-marketplace, grok-build-bridge) — the same set §2 #18 names as adopters.
+- Risks closed outright by this pass: none yet (depends on upstream landing + #18 template propagation for full ecosystem closure).
+- Risks closed on pilot repos only (full closure depends on #18 propagation): **SEC-2 (S2)** and **SEC-3 (S2)** on grok-install-cli + grok-build-bridge.
+- Risks moved from *partial* to *full* by this pass + the assumed filing sequence (#3 → #13 → #18): **SUP-1** (S2) on pilot repos, then ecosystem-wide once #18 adopters land.
+- Phase-1B commits on `claude/phase-1b-issue-drafts-rzjg8` so far (cumulative): **12** (first pass 7 + 3 drafting commits + ISSUES enrichment + this progress update).
+- Lines of fabricated product code: **0**.
+
+### Decisions & trade-offs
+- **Single-coordinator drafts over sibling pairs.** First pass used `(a/b)` sibling drafts for #14 (2 repos) and #15 (2 repos). Second pass uses a **single draft with per-repo checklist** for #3 (8 repos) and #18 (8 adopters), and a **single draft stood against either repo** for #13 (2 pilots). Rationale: at 8-repo scope the sibling pattern explodes the file count without adding fidelity; the coordination-issue shape is how GitHub conventions handle ecosystem-wide changes.
+- **Filing-order recommendation (#3 → #13 → #18) is soft.** None of the three has a `Blocked by` entry in §2, so order doesn't gate correctness. But §2 #18 is written to freeze the template **after** #3 (SHA pins) and #13 (blocking `pip-audit` + secret-scan) land in grok-build-bridge itself, so adopters inherit the corrected posture in one cut. Filing #18 first is valid and flagged in the draft as a "cut a follow-up template-bump PR" path.
+- **Flagged a §2 citation inconsistency for #18.** `audits/99-recommendations.md §2 #18` cites `[→ 09 §9 row 5]`, which actually describes "Publish Codecov badges" — unrelated to CI-template promotion. The substantive evidence is in audit 09 §1 (headline) + §5 (the 6-job CI breakdown). Flagged this in the draft's metadata explicitly; preserved the literal §2 citation per the "don't invent cross-refs" rule but added the substantive ones alongside. Candidate for a §2 correction note in a future self-review pass.
+- **Stale preamble fix in ISSUES.md.** The first-pass Unit-1 ISSUES.md claimed the next-batch candidates were "all S-effort" — accurate for #13 but wrong for #3 (M) and #18 (M). Rewrote the new second-pass preamble to flag the non-uniform effort explicitly and explain why "M-effort" here means coordination cost, not per-repo difficulty.
+- **Third-pass candidates chosen by unblock-value.** §2 #5 tops the list because it unblocks three downstream recs (#1, #11, #17) — highest-fanout item in the §2 dependency graph. #8 (schema draft-2020-12 migration) and #20 (grok-agents-marketplace PR triage + CODEOWNERS) make up the rest; both are M-effort and close dedicated risk-register rows outright.
+
+### Files changed this pass
+- Added: `phase-1b/drafts/03-sha-pin-actions-ecosystem.md`, `phase-1b/drafts/13-blocking-pip-audit-plus-secret-scan.md`, `phase-1b/drafts/18-ci-template-baseline.md`.
+- Modified: `phase-1b/ISSUES.md` (second-pass table, third-pass candidates, post-filing follow-ups, updated blocked-by reference).
+- Modified (this unit): `PROGRESS.md`, `CHANGELOG.md`, `ROADMAP.md`.
+
+### Open at phase close
+- **Filing** — 9 drafts in total await manual upstream filing. First-pass drafts cover 4 S-effort recs (#6, #9, #14, #15); second-pass drafts cover 3 CI-floor recs (#3, #13, #18).
+- **Third-pass candidates** — §2 #5, #8, #20 are ready to draft whenever the user calls for it; all M-effort, all `Blocked by`-free, all unblock downstream work (§5 unblocks three recs).
+- **Post-filing follow-ups** — §2 #7, #12 wait on upstream landing of #6; #16 on #15; #4 on #10; #1, #11, #17 on #5. Post-filing drafts should only start once the prerequisite **merges** upstream (not just files) — the prerequisite's text can shift in review and invalidate the follow-up.
+
+### Next suggested action
+Pick one:
+- `"File the 9 drafts in phase-1b/drafts/ against their upstream repos; back-fill the Filed column as issues land."`
+- `"Begin third-pass drafts — §2 #5, #8, #20."` *(no prerequisites; #5 is the highest-fanout unblocker in the §2 graph.)*
+- `"Begin §2 #5 alone."` *(minimal next step — unblocks #1, #11, #17 which can then be drafted as a coordinated trio once #5 lands upstream.)*
+- `"Pause Phase 1B."` *(leave the 9 drafts as-is; resume later.)*
