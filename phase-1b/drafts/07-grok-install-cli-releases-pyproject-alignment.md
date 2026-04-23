@@ -268,3 +268,48 @@ only the one branch that applies.
       `mitigated-partial` on this PR landing. Full `mitigated`
       once §2 #3 (Renovate / Dependabot) lands in the action
       repo — cross-ref §2 #3's primary draft.
+
+## Notes
+
+- **Why not skip Part A and just update the action pin?** The
+  action pin is a symptom; the absence of a tagged release is
+  the disease. Updating the action's default `cli-version` to
+  `0.1.0` today (without the release shipping) would move the
+  bug, not fix it — the pin would still resolve to nothing.
+
+- **Why a separate issue from §2 #6?** #6 picks the install
+  channel; #7 makes the picked channel coherent with the
+  source. Landing them separately lets #6's option-choice
+  discussion happen without the release-cut mechanics pulling
+  attention. Landing them together is also fine if a maintainer
+  prefers one PR with both resolved — #7's Part A is small.
+
+- **What happens to SUP-4 after this rec.** SUP-4's "no
+  lockfile guard on the `2.14.0` pin" is partially closed by
+  whichever of #6's options wins (Option A's `pip install` uses
+  pip's own resolver; Option B's npm install uses
+  `package-lock.json` if present). Full SUP-4 closure rides on
+  §2 #3 (Renovate / Dependabot) — cross-ref in Part B above.
+
+- **Version bumping cadence going forward.** The release
+  pipeline in Part A triggers on `v[0-9]+.[0-9]+.[0-9]+` tags.
+  The first release's version (A1 vs. A2) sets the starting
+  point; subsequent bumps are per-feature SemVer. No special
+  handling required.
+
+- **Relationship to §2 #12 (replace `grok_install_stub`).**
+  §2 #12 is speculative-on-both-#6-and-#7. Once #7 ships, the
+  stub replacement in `awesome-grok-agents` has a real CLI
+  version to pin against. Until then, §12 cannot close.
+
+- **Filing strategy.** Primary in `grok-install-cli`. Cross-ref
+  in `grok-install-action` filed **after** the primary's first
+  release ships. Do NOT pre-file the cross-ref — it depends on
+  the landed #6 outcome determining which Part-B branch applies.
+
+- **Speculative-draft honesty.** Part B enumerates three branches
+  because this draft cannot know which of #6's options wins.
+  The cross-ref issue filed in `grok-install-action` uses only
+  one branch's content — pick the one that matches #6's landed
+  resolution, delete the other two.
+
