@@ -141,7 +141,7 @@ What each repo declares or pins, across the three version axes that matter: the 
 | `grok-install-cli` | implicit v2.14 target (jsonschema>=4.21; schema URL usage unverified) | **`0.1.0`** in `pyproject.toml`; **no GitHub releases** | not directly referenced | 0.1.0 | [→ 03, §8, pyproject.toml] |
 | `grok-install-action` | v2.14 (via CLI) | pins CLI **`2.14.0`** via `npm install -g grok-install-cli@${{ inputs.cli-version }}` | — | v1.0.0 (2026-04-21) | [→ 04, §3 action.yml, §8] |
 | `grok-docs` | advertises **v2.12** (lags spec by 2 minor) | — | syncs v1.2.0 daily (03:00 UTC cron) | no version | [→ 05, §1, §5 sync-schemas.yml] |
-| `awesome-grok-agents` | accepts **v2.12 OR v2.13 OR v2.14** in template `grok-install.yaml` (CI `spec-version` job) | validates via in-repo `grok_install_stub/`, not real CLI | implicit (templates use 12 file types) | no releases | [→ 06, §5, §8] |
+| `awesome-grok-agents` | accepts **v2.12 OR v2.13 OR v2.14** in template `grok-install.yaml` (CI `spec-version` job) | validates via in-repo `grok_install_stub/`, not real CLI | implicit (templates use 12 file types) | no releases | [→ 06, §5 validate-templates.yml, §8] |
 | `vscode-grok-yaml` | (intended, not shipped) | (intended) | landing says "**14** standards" | repo = shell | [→ 07, §1 landing desc] |
 | `grok-agents-marketplace` | v2.14 "Visuals Renderer" in README | — | — | v0.1.0 | [→ 08, §8, package.json] |
 | `grok-build-bridge` | decoupled — own `bridge.schema.json` | not a consumer of grok-install-cli | — | v0.1.0; uses model ID `grok-4.20-0309` | [→ 09, §1, §8] |
@@ -155,9 +155,9 @@ What each repo declares or pins, across the three version axes that matter: the 
 
 2. **grok-docs lags 2 minor versions** — docs advertise v2.12; spec is at v2.14. 5 of 12 standards documented. [→ 05, §4]
 
-3. **Multi-version tolerance in templates** — `awesome-grok-agents` CI accepts v2.12/v2.13/v2.14 simultaneously. Useful for contributors, but means templates never pressure-test the latest spec. [→ 06, §5, §8]
+3. **Multi-version tolerance in templates** — `awesome-grok-agents` CI accepts v2.12/v2.13/v2.14 simultaneously. Useful for contributors, but means templates never pressure-test the latest spec. [→ 06, §5 validate-templates.yml, §8]
 
-4. **grok-install's own v2.14 validation is 1-of-6** — the `schema-v2-14` CI job validates only `examples/janvisuals/grok-install.yaml`; the five other top-level examples are still validated against v2.13 (draft-07). The v2.14 migration is half-done at the source. [→ 01, §1, §5]
+4. **grok-install's own v2.14 validation is 1-of-6** — the `schema-v2-14` CI job validates only `examples/janvisuals/grok-install.yaml`; the five other top-level examples are still validated against v2.13 (draft-07). The v2.14 migration is half-done at the source. [→ 01, §1, §5 validate.yml]
 
 5. **xAI-SDK layer is decoupled** — `grok-build-bridge` and `grok-agent-orchestra` neither consume nor produce `grok-install.yaml`; they pin to xAI SDK model IDs like `grok-4.20-0309` instead. This is a *design* choice, not drift — but it means "ecosystem-wide" changes to `grok-install` have no leverage over the xAI-SDK cluster. [→ 09, §3; → 10, §3]
 
@@ -168,11 +168,11 @@ The ecosystem runs on two JSON Schema drafts simultaneously. Drift is acknowledg
 | Repo | Schema(s) declared | Draft | Validator in CI | Source |
 |------|--------------------|-------|-----------------|--------|
 | `grok-install` | `schemas/v2.14/schema.json` | **draft-2020-12** | `ajv-cli` + `ajv-formats` (Node 20) — `schema-v2-14` job (**janvisuals only**) | [→ 01, §5 validate.yml, §7] |
-| `grok-install` | `schemas/grok-install-v2.13.schema.json` (retained) | draft-07 | `ajv-cli` — `schema-v2-13` job (all 6 examples) | [→ 01, §5] |
+| `grok-install` | `schemas/grok-install-v2.13.schema.json` (retained) | draft-07 | `ajv-cli` — `schema-v2-13` job (all 6 examples) | [→ 01, §5 validate.yml] |
 | `grok-install` | `schemas/featured-agents-v1.schema.json`, `trending-v1.schema.json` | draft-07 (inferred from naming/adjacency) | (not audited) | [→ 01, §2] |
 | `grok-yaml-standards` | 12 × `schemas/grok-<name>.json` | **draft-07** (all 12) | `ajv-cli@5.0.0 + ajv-formats` + Python schema-smoke asserting `$schema` = draft-07 | [→ 02, §5 validate-schemas.yml, §6] |
 | `grok-install-cli` | (consumes external schemas at runtime) | not verified — `jsonschema>=4.21` supports both | pytest via `test_validator.py` (coverage unknown) | [→ 03, §3, §10] |
-| `grok-install-action` | (delegates to CLI + uses ajv for internal report schema) | not verified | self-integration test on `tests/sample-agent` | [→ 04, §5] |
+| `grok-install-action` | (delegates to CLI + uses ajv for internal report schema) | not verified | self-integration test on `tests/sample-agent` | [→ 04, §5 test.yml] |
 | `grok-docs` | mirrors `grok-yaml-standards/schemas/` to `docs/assets/schemas/` daily | draft-07 (mirror of upstream) | no schema validation in site CI | [→ 05, §5 sync-schemas.yml] |
 | `awesome-grok-agents` | validates `featured-agents.json` against registry schema | draft-07 (schema from `grok-install` root) | `ajv-cli@5 + ajv-formats@3` — `schema` job | [→ 06, §3, §5] |
 | `grok-build-bridge` | `grok_build_bridge/schema/bridge.schema.json` (own) | **draft-2020-12** | `jsonschema.Draft202012Validator` — `schema-check` job | [→ 09, §5 ci.yml, §7] |
@@ -185,7 +185,7 @@ The ecosystem runs on two JSON Schema drafts simultaneously. Drift is acknowledg
 
 1. **Two spec roots disagree on drafts.** `grok-install` v2.14 → draft-2020-12; `grok-yaml-standards` v1.2.0 → draft-07. The disagreement is documented and deferred: `grok-yaml-standards/standards-overview.md` plans migration to draft-2020-12 in v1.3. Until then, any tool validating *both* schema families (the hoped-for `vscode-grok-yaml` extension, a unified CLI validator) must run two draft engines. [→ 02, §1, §6; → 01, §7]
 
-2. **Only 1 of 3 active Python validators is explicit about draft-2020-12.** `grok-build-bridge` hard-binds to `Draft202012Validator` and aligns with `grok-install` v2.14 on purpose. `grok-install-cli` uses `jsonschema>=4.21` (supports both, but the CLI source doesn't document which is called). `awesome-grok-agents` uses `ajv-cli@5` which honours the schema's `$schema` keyword. Unverified whether `grok-install-cli` picks the draft from the schema file or hard-codes one. [→ 09, §5; → 03, §3, §10; → 06, §5]
+2. **Only 1 of 3 active Python validators is explicit about draft-2020-12.** `grok-build-bridge` hard-binds to `Draft202012Validator` and aligns with `grok-install` v2.14 on purpose. `grok-install-cli` uses `jsonschema>=4.21` (supports both, but the CLI source doesn't document which is called). `awesome-grok-agents` uses `ajv-cli@5` which honours the schema's `$schema` keyword. Unverified whether `grok-install-cli` picks the draft from the schema file or hard-codes one. [→ 09, §5 ci.yml; → 03, §3, §10; → 06, §5 validate-templates.yml]
 
 3. **CI coverage of the draft-2020 migration is thin.** Only two CI jobs anywhere in the ecosystem actively exercise draft-2020-12: `grok-install/.github/workflows/validate.yml` (1 of 6 examples) and `grok-build-bridge/.github/workflows/ci.yml` (5 template YAMLs + 1 bridge.yaml). `grok-yaml-standards` and `grok-docs` are still pure draft-07. [→ 01, §5; → 09, §5; → 02, §5; → 05, §5]
 
@@ -357,7 +357,7 @@ None of the four share code. Auth flows, error shapes, retry/rate-limit policy, 
 |---|----------------|--------|-------|
 | 1 | `grok-install-cli/src/grok_install/safety/rules.py` + `scanner.py` | [→ 03, §2, §6] | Pre-install scan (the headline feature advertised by grok-install SECURITY.md). |
 | 2 | `grok-build-bridge/_patterns.py` + `safety.py` (static) + `xai_client.py` (LLM audit) | [→ 09, §2, §6] | Dual-layer: deterministic regex + Grok-powered JSON-mode audit. |
-| 3 | `awesome-grok-agents/scripts/scan_template.py` (fails on warnings) + `grok_install_stub/` | [→ 06, §5, §7] | Template-gallery CI; stubs the CLI rather than using it. |
+| 3 | `awesome-grok-agents/scripts/scan_template.py` (fails on warnings) + `grok_install_stub/` | [→ 06, §5 validate-templates.yml, §7] | Template-gallery CI; stubs the CLI rather than using it. |
 
 None share a Python package. Two (CLI and bridge) claim to enforce "Enhanced Safety 2.0" patterns; any rule added to one doesn't propagate. `grok-yaml-standards/grok-security.yaml` is the catalogue entry that *should* be the source of truth for these patterns but is not currently consumed as a rule set — needs verification whether the schemas ship the rules or just the contract. [→ 02, §6 ("needs clone to verify the actual rubric")].
 
