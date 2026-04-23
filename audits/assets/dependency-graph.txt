@@ -1,0 +1,45 @@
+AgentMindCloud Grok Ecosystem — Dependency Graph
+=================================================
+Snapshot: 2026-04-23 (Phase 1A pre-audit; updated at iter 14)
+Legend: A --> B means "A is consumed/depended-on-by B" (arrow points downstream)
+
+Spec roots
+----------
+  grok-install (spec v2.14; YAML + JSON Schema)
+      |
+      +--> grok-install-cli (Python runtime; xAI SDK + LiteLLM)
+      |       |
+      |       +--> grok-install-action (Node 20 composite action; pins CLI v2.14.0)
+      |
+      +--> grok-docs (MkDocs Material; CI syncs schemas)
+      |
+      +--> grok-agents-marketplace (Next.js 15 + RSC; consumes registry)
+
+  grok-yaml-standards (v1.2.0; 12 YAML file types)
+      |
+      +--> vscode-grok-yaml (TS extension; IntelliSense + validation)
+      +--> awesome-grok-agents (10 Py templates; safety profiles)
+      +--> grok-docs (schema republishing)
+
+xAI SDK 4.20 layer (separate cluster; peers, not hierarchical)
+--------------------------------------------------------------
+  xAI SDK v4.20 ----> grok-build-bridge (Py; bridge.yaml; dual-layer safety)
+  xAI SDK v4.20 ----> grok-agent-orchestra (Py; 5 patterns; Lucas veto)
+
+X-platform surface (mostly orthogonal)
+--------------------------------------
+  X API v2 + Grok --> x-platform-toolkit (HTML/JS monorepo; 20 tools)
+
+Self
+----
+  ClaudeX (this repo) hosts /audits/ and the autonomous-agent workflow
+  (CLAUDE.md / ROADMAP.md / PROGRESS.md / CHANGELOG.md).
+
+Cross-cutting concerns
+----------------------
+  - Safety-profile surface (strict/standard/permissive) appears in:
+      grok-yaml-standards (definition)
+      grok-install-cli (enforcement)
+      awesome-grok-agents (template selection)
+  - Spec version pinning is fragmented: v2.12 (grok-docs?), v2.14 (action).
+    Coherence matrix lives in audits/00-ecosystem-overview.md.
