@@ -272,11 +272,69 @@ At least **three independent static-regex / pattern implementations** exist: `gr
 
 ## 7. Docs drift observations
 
-_(filled in unit 7)_
+Documentation drift shows up as a handful of recurring patterns across the ecosystem.
+
+### 7.1 Version-number drift (user-facing)
+
+| Surface | Says | Should say | Cross-ref |
+|---------|------|------------|-----------|
+| `grok-docs` (published site) | spec **v2.12** | v2.14 | [→ 05, §1, §4] |
+| `grok-docs` nav — Spec reference | **5** file types (1 core spec + 4 standards) | 1 core spec + 12 standards | [→ 05, §4] |
+| `grok-install-action/README.md` | "validation against **14** YAML specifications" | 12 standards | [→ 04, §1, §4] |
+| `vscode-grok-yaml` landing description | "all **14** YAML standards" | 12 standards (also: repo has no extension yet) | [→ 07, §1] |
+
+### 7.2 Governance-file gaps
+
+`SECURITY.md` presence across the ecosystem (where verified by audit):
+
+| Repo | `LICENSE` | `SECURITY.md` | `CONTRIBUTING.md` | `CHANGELOG.md` | Notes |
+|------|:-:|:-:|:-:|:-:|---|
+| `grok-install` | ✅ | ✅ | ✅ | (not enumerated) | SECURITY.md disclosure = repo issues or @JanSol0s on X [→ 01, §4] |
+| `grok-yaml-standards` | ✅ | ✅ (not fetched) | ✅ | ✅ (granular) | CHANGELOG is best-in-ecosystem [→ 02, §4] |
+| `grok-install-cli` | ✅ | ✅ (not fetched) | ✅ | (not verified) | [→ 03, §4] |
+| `grok-install-action` | ✅ | ✅ (not fetched) | ✅ | ✅ | [→ 04, §4] |
+| `grok-docs` | ✅ | **❌** | (not enumerated) | (not enumerated) | Disclosure presumably defers to grok-install [→ 05, §6] |
+| `awesome-grok-agents` | ✅ | ✅ (not fetched) | ✅ | ✅ | [→ 06, §4] |
+| `vscode-grok-yaml` | ✅ | **❌** | **❌** | **❌** | Shell repo [→ 07, §4] |
+| `grok-agents-marketplace` | ✅ | **❌** (not enumerated at root) | (not enumerated) | (not enumerated) | Front-door repo; governance gap is most visible here [→ 08, §4, §9 row 3] |
+| `grok-build-bridge` | ✅ | (not explicitly enumerated) | ✅ | ✅ | Also has `ROADMAP.md`, `.env.example` [→ 09, §4] |
+| `grok-agent-orchestra` | ✅ | **❌** | **❌** | **❌** | LICENSE-only shell repo [→ 10, §2] |
+| `x-platform-toolkit` | ✅ | (not verified) | ✅ | ✅ + `CODE_OF_CONDUCT.md` | [→ 11, §4] |
+| `ClaudeX` | **❌** | **❌** | **❌** | ✅ | Self-audit flagged both absences [→ 12, §1, §6] |
+
+### 7.3 Single-point-of-failure signals
+
+- Maintainer `@JanSol0s` is the visible committer across spec repos; disclosure channel is "repo issue or X DM to @JanSol0s" ([→ 01, §4]). One-human bus-factor across the whole Grok spec surface.
+- `grok-docs` has 5 total commits ([→ 05, §1]); `grok-agent-orchestra` has 1 ([→ 10, §1]). If these are the sole carriers of documentation and orchestration respectively, their survival depends on a single author's continued engagement.
+
+### 7.4 Description-vs-reality mismatches (anti-hallucination concerns)
+
+The ecosystem's own SECURITY posture (`grok-install/SECURITY.md`: "Grok will automatically pause installs if capability claims don't match") is at odds with:
+
+- `vscode-grok-yaml` landing description promising IntelliSense + live validation + safety scanning + template gallery + one-click deployment — none of which exists in the repo. [→ 07, §1, §6]
+- `grok-agent-orchestra` landing description promising 5 orchestration patterns + Lucas safety veto — no code in repo. [→ 10, §1, §6]
+
+Two of twelve repos are marketing-present but code-absent. This is the most visible honesty-of-capability issue surfaced by the audit.
 
 ## 8. Phase 1 inventory corrections
 
-_(filled in unit 7)_
+The per-repo audits refined several claims that appeared in the Phase 1 inventory (the pre-audit scoping pass). Every correction below is sourced from the audit row where the ground truth was verified.
+
+| Prior claim | Corrected claim | Source |
+|-------------|------------------|--------|
+| grok-install spec version = v2.12 (appeared in pre-audit references) | **v2.14** shipped; v2.12 & v2.13 retained side-by-side | [→ 01, §1, §8] |
+| "14 YAML standards" (appeared in consumer-repo READMEs) | **12 standards** (8 core + 4 extensions); authoritative per `version-reconciliation.md` | [→ 02, §1, §4] |
+| `grok-install-action` pins "CLI v2.14.0" | Action pins `grok-install-cli@2.14.0` **via npm**, but the CLI repo is Python (pyproject.toml). Installation mechanism **unresolved**. | [→ 04, §1; → 03, §1, §8] |
+| `grok-install-cli` version = 2.14.x (inferred from action's pin) | `pyproject.toml` = **`0.1.0`**; no GitHub releases. PyPI status unverified. | [→ 03, §1, §8] |
+| `grok-docs` covers the ecosystem | Covers **spec v2.12** (2 minor behind) and **5 of 12** standards in nav | [→ 05, §1, §4] |
+| `grok-agents-marketplace` is a 1★ early-stage consumer | Also carries **12 open PRs** — by far the most active repo in the ecosystem | [→ 08, §1, §5] |
+| `vscode-grok-yaml` is a VS Code extension repo | Currently a **shell repo**: LICENSE + README (media-asset specification) only, no extension code | [→ 07, §1, §2] |
+| `grok-agent-orchestra` is a multi-agent framework | Currently a **1-commit shell repo**: LICENSE only | [→ 10, §1, §2] |
+| `grok-build-bridge` uses the grok-install spec | **Does not** — parallel track, own `bridge.schema.json`, own template registry `INDEX.yaml` | [→ 09, §1, §3] |
+| `x-platform-toolkit` ships ~20 tools | Ships **8 of 20** (40% Live); remaining 12 are `SPEC.md`-only | [→ 11, §1, §2] |
+| `ClaudeX` is Apache 2.0 licensed (inherited assumption) | **No LICENSE file** at repo root; license status ambiguous for downstream readers | [→ 12, §1, §6, §9 row 1] |
+
+No retracted claims needed to be flagged as *speculative* after the audits — every correction above is a refinement of a previously-unverified detail, not a reversal of a verified one.
 
 ## 9. Cross-cutting concerns
 
