@@ -903,3 +903,153 @@ Pick one:
 - `"File the 20 drafts now."` *(Path A widen MCP; Path B
   manual UI.)*
 - `"Pause Phase 1B."` *(20 drafts sit ready; resume any time.)*
+
+---
+
+## Session: 2026-04-23 (cont.) — Phase 1B (sixth pass): shared Grok API client
+
+### Status: Sixth pass complete — 1 non-speculative draft (§2 #2) (cumulative: 21 drafts covering 19 of 20 §2 recs)
+
+### Scope
+Single-rec pass: §2 #2 — extract a shared Grok API client
+collapsing the four parallel implementations enumerated in
+`audits/00-ecosystem-overview.md §9.A`. User chose explicitly
+("Draft §2 #2") as the highest-reach undrafted rec. L-effort;
+Reach 5 × Leverage 4 = composite 20 (tied with §2 #18 for the
+highest composite in the §2 table).
+
+### MCP-scope constraint (unchanged)
+Still `agentmindcloud/claudex`-only. 21 drafts now await
+user filing upstream.
+
+### What was done
+1. Drafted §2 #2 → `drafts/02-shared-grok-api-client.md`.
+   Three-part acceptance:
+   - (A) Package shape + ownership — A1 in-repo vs. A2 new
+     repo; recommendation A2 for ecosystem consistency with
+     §2 #1. Package naming (`grok-client` dist, `grok_client`
+     import). Scope decision: Python-first, JS-second-or-
+     never. Trusted-Publisher release pipeline matching §2 #7.
+     Governance files + §2 #18 CI template from day one.
+     Test discipline with recorded-cassette fixtures.
+   - (B) Feature surface for v0.1.0 parity — auth / retries /
+     streaming / rate-limiting / tool calling / structured
+     output / SDK-version pin. Indicative public API
+     (`GrokClient`, `AsyncGrokClient`, `ClientConfig`,
+     `Message`, `ToolDecl`, `StreamChunk`, exception
+     hierarchy). Non-goals documented. Model-ID handling
+     via strings, not enums.
+   - (C) Consumer adoption sequencing — `grok-install-cli`
+     first, `grok-build-bridge` second (most divergent);
+     `awesome-grok-agents` transitively via §2 #12;
+     `grok-agents-marketplace` not a v0.1.0 consumer (TS
+     frontend). JS implementations (grok-install browser +
+     x-platform-toolkit inlined) explicitly out of scope.
+     Cross-cut verification via a shared cassette regression
+     suite.
+2. Honest §2-row-vs-§9.A discrepancy flag in §Evidence —
+   §2 #2's "Affected repos" column names future consumers
+   (grok-install-cli, grok-build-bridge,
+   grok-agents-marketplace, awesome-grok-agents) while
+   §9.A's implementation table names current parallel
+   clients (grok-install, grok-install-cli, grok-build-
+   bridge, x-platform-toolkit). Draft treats §9.A as
+   authoritative current-state ground truth and §2's list
+   as future-consumer aspiration. Same discipline the §2
+   #18 draft used for its own audit-citation inconsistency.
+3. Updated `phase-1b/ISSUES.md`: added "Sixth-pass drafts"
+   table (row 21 with §2 #2); updated next-pass candidates
+   preamble ("18 → 19 of 20"; one undrafted remaining: §2
+   #19).
+4. Updated `phase-1b/filing-packets/03-grok-install-cli.md`:
+   added §2 #2 as Issue 5 primary (non-speculative). Now
+   carries 5 primaries total (§2 #6, #13, #7, #1, #2).
+
+### Metrics
+- §2 recs drafted this pass: **1** (#2).
+- Draft files created this pass: **1**.
+- Cumulative §2 recs drafted (through sixth pass): **19 of 20**
+  (#1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #13,
+  #14, #15, #16, #17, #18, #20).
+- Cumulative draft files: **21**.
+- Still undrafted from §2: **#19** only (x-platform-toolkit
+  CI, M, reach 2).
+- Risks closed outright (on upstream merge): none directly
+  (§2 #2 closes the cross-cutting concern from 00 §9.A, not
+  a risk-register row). Indirect benefit: preempts future
+  SEC/SUP-category risks from parallel-implementation drift.
+- Phase-1B commits this pass: **12** (7 draft micro-commits
+  + 1 ISSUES.md + 1 filing-packet + this PROGRESS +
+  CHANGELOG + ROADMAP + final sanity-check unit). Two push
+  retries needed mid-pass due to transient remote 500s; per
+  the git-push guidance, the third retry (after 8s) succeeded
+  both times.
+- Cumulative Phase-1B commits across all passes + Session 2:
+  ~112 (through fifth pass) + 12 (this pass) ≈ **~124**.
+- Lines of fabricated product code: **0**.
+
+### Decisions & trade-offs
+- **Why #2 over #19 for this pass.** User's "highest-reach"
+  framing (and §2 #2's reach 5 vs. §19's reach 2) drove the
+  choice. §19 remains the final rec; smallest-effort of the
+  two, so a sensible finisher.
+- **A2 (new repo) recommended over A1 (in-repo extraction).**
+  Same governance rationale as §2 #1. The shared client has
+  ≥3 Python consumers across repos; cleaner ownership
+  boundary in a dedicated repo. Explicit coordination note:
+  §2 #1 and §2 #2 should make the same A1/A2 choice for
+  ecosystem consistency.
+- **Python-first, JS-second-or-never.** The two JS
+  implementations are language-incompatible with a
+  Python-flavoured extraction. Rather than force-fit, the
+  draft documents this as a deliberate choice. The
+  `x-platform-toolkit` inlined JS constraint (single-file
+  HTML tools with no build step) is a genuine blocker for a
+  shared JS package today.
+- **Feature surface = parity, not ambition.** v0.1.0 covers
+  exactly what the two current Python implementations do.
+  Non-goals (caching, batching, cost tracking, prompt
+  templating, JS port) are documented so v0.1.0 reviewers
+  don't scope-creep. Post-v0.1.0 extensions land per real
+  consumer need.
+- **Recorded-cassette test discipline.** Live-API tests on
+  every CI run are both expensive and brittle. `vcrpy`-style
+  recorded cassettes pin SDK behaviour without hitting the
+  live API; live tests gated behind an opt-in workflow with
+  `XAI_API_KEY` secret. Matches ecosystem CI discipline.
+- **Model-ID churn discipline.** The package passes model
+  strings through; does NOT hard-code IDs or enum-gate them.
+  Audit 09 §9 row 3 called out the bridge's current
+  hard-coded `grok-4.20` as a risk; moving model ID to
+  consumer-side config is the fix.
+- **Push resilience.** Two mid-pass pushes failed with
+  transient 500s. The prompt's git-push guidance (retry up
+  to 4 times with 2s / 4s / 8s / 16s exponential backoff)
+  resolved both. No further action needed; flagged here in
+  case the pattern recurs.
+
+### Files changed this pass
+- Added: `phase-1b/drafts/02-shared-grok-api-client.md`.
+- Modified: `phase-1b/ISSUES.md` (sixth-pass table; candidates
+  list down to #19 only),
+  `phase-1b/filing-packets/03-grok-install-cli.md` (added §2
+  #2 as Issue 5 primary).
+- Modified (this + next two units): `PROGRESS.md`,
+  `CHANGELOG.md`, `ROADMAP.md`.
+
+### Open at pass close
+- **Filing** — 21 drafts await upstream filing. Filing-order
+  and speculative-draft-chain discipline unchanged.
+- **Undrafted §2 residual (1 of 20)**: #19 (x-platform-toolkit
+  CI minimum, M, reach 2). Closes SUP-5.
+- **Phase 1B drafting is one pass away from §2 top-20
+  complete.** Drafting §2 #19 closes the pile at 20/20.
+
+### Next suggested action
+Pick one:
+- `"Draft §2 #19."` *(M-effort, closes §2 top-20 at 20 of
+  20. The natural finisher.)*
+- `"File the 21 drafts now."` *(Path A widen MCP; Path B
+  manual UI. Skipping §19 is fine — it is a local-CI
+  hygiene rec and does not block filing anything else.)*
+- `"Pause Phase 1B."` *(21 drafts sit ready.)*
