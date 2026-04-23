@@ -338,4 +338,83 @@ No retracted claims needed to be flagged as *speculative* after the audits — e
 
 ## 9. Cross-cutting concerns
 
-_(filled in unit 8)_
+Issues that emerge only when the 12 audits are read together. Each concern below feeds at least one top-20 recommendation in `audits/99-recommendations.md`.
+
+### 9.A Four independent Grok API clients
+
+| # | Client | Language | Location | Consumed by |
+|---|--------|----------|----------|-------------|
+| 1 | Browser Grok invocation | HTML/JS | `grok-install/index.html`, `my-agents.html` | End users visiting the spec repo pages [→ 01, §2] |
+| 2 | `grok-install-cli` (optional `xai` extra) | Python | `grok-install-cli/src/grok_install/` (entry via `runtime/` + `integrations/`) | Action, templates, downstream CLIs [→ 03, §2, §3] |
+| 3 | `grok-build-bridge/xai_client.py` | Python | `grok_build_bridge/xai_client.py` | The bridge's runtime + LLM-based safety audit [→ 09, §2, §6] |
+| 4 | `x-platform-toolkit/shared/grok-client/` | JavaScript | Inlined per-tool into each `index.html` | The 8 Live single-file tools [→ 11, §3] |
+
+None of the four share code. Auth flows, error shapes, retry/rate-limit policy, and SDK-version drift are implemented four times over. Highest cross-ecosystem leverage in the recommendations pile.
+
+### 9.B Safety-rule duplication (three parallel implementations)
+
+| # | Implementation | Source | Scope |
+|---|----------------|--------|-------|
+| 1 | `grok-install-cli/src/grok_install/safety/rules.py` + `scanner.py` | [→ 03, §2, §6] | Pre-install scan (the headline feature advertised by grok-install SECURITY.md). |
+| 2 | `grok-build-bridge/_patterns.py` + `safety.py` (static) + `xai_client.py` (LLM audit) | [→ 09, §2, §6] | Dual-layer: deterministic regex + Grok-powered JSON-mode audit. |
+| 3 | `awesome-grok-agents/scripts/scan_template.py` (fails on warnings) + `grok_install_stub/` | [→ 06, §5, §7] | Template-gallery CI; stubs the CLI rather than using it. |
+
+None share a Python package. Two (CLI and bridge) claim to enforce "Enhanced Safety 2.0" patterns; any rule added to one doesn't propagate. `grok-yaml-standards/grok-security.yaml` is the catalogue entry that *should* be the source of truth for these patterns but is not currently consumed as a rule set — needs verification whether the schemas ship the rules or just the contract. [→ 02, §6 ("needs clone to verify the actual rubric")].
+
+### 9.C Supply-chain pinning inconsistency
+
+Four distinct discipline levels coexist:
+
+| Discipline | Who | Examples |
+|------------|-----|----------|
+| **Exact `==` across the board** | `grok-docs/requirements.txt`, `grok-yaml-standards` CI tool versions (yamllint 1.35.1, ajv-cli 5.0.0, js-yaml 4.1.0) | [→ 05, §6; → 02, §5, §6] |
+| **Exact on one critical tool; `^` / `>=` on everything else** | `grok-agents-marketplace` (Biome 1.9.4 exact; 13 runtime + 8 other dev deps caret) | [→ 08, §1, §6] |
+| **`>=` (lower-bound ranges)** | `grok-install-cli`, `grok-build-bridge` — runtime deps; no lockfile visible | [→ 03, §6; → 09, §6] |
+| **None (no CI at all)** | `x-platform-toolkit` — first-in-ecosystem; tools ship as inlined HTML bundles | [→ 11, §5, §6] |
+
+GitHub Actions pinning is universally **major-tag only** (`actions/checkout@v4`, `actions/setup-node@v4`, etc.) — no repo in the ecosystem uses SHA pinning for third-party actions, even on security-critical steps like the badge-commit path in `grok-install-action` (which writes to `main` as `grokinstall-bot`). [→ 04, §6].
+
+This is the single highest-reach recommendation in the ecosystem: one PR per repo to convert major tags to commit SHAs.
+
+### 9.D Schema-distribution fragmentation
+
+Schemas for the 12 YAML standards + 2 registry shapes ultimately live in ≥4 distinct locations:
+
+1. **Source** — `grok-yaml-standards/schemas/` (12 `grok-*.json`). [→ 02, §2]
+2. **Republished** — `grok-docs/docs/assets/schemas/{latest,<VERSION>}/` (synced daily at 03:00 UTC via `sync-schemas.yml`). [→ 05, §5]
+3. **Additional registry/shape schemas** — `grok-install/schemas/v2.14/schema.json`, `schemas/grok-install-v2.13.schema.json`, `schemas/featured-agents-v1.schema.json`, `schemas/trending-v1.schema.json`. [→ 01, §2]
+4. **Possible 4th location** — `awesome-grok-agents/schemas/` (not enumerated in audit). [→ 06, §10]
+
+Recommendation thread: pick `grok-yaml-standards` as the single source of truth, have every other location be a mechanically-synced mirror with a declared source. See `audits/99-recommendations.md`.
+
+### 9.E No release-dispatch between spec and consumers
+
+The current sync model for spec→consumer is daily cron (`grok-docs/sync-schemas.yml` at 03:00 UTC). This creates up to a **24-hour drift window** on every spec release. `awesome-grok-agents` does not auto-validate against a new spec version; `grok-agents-marketplace` has no dispatch from `featured-agents.json` updates. `grok-install-action` pins `cli-version` as a hard-coded default.
+
+The fix is a `repository_dispatch` from `grok-install`'s release workflow to each downstream repo — a ~15-line addition per repo that closes drift from hours to seconds.
+
+### 9.F Test-framework diversity
+
+| Framework | Used by |
+|-----------|---------|
+| `pytest` + `pytest-cov` + `pytest-asyncio` | `grok-install-cli`, `grok-build-bridge`, `awesome-grok-agents` (Python scripts) |
+| `vitest` | `grok-agents-marketplace` |
+| `npm test` (framework not identified) | `grok-install-action` |
+| `ajv-cli` (schema validation only) | `grok-install`, `grok-yaml-standards`, `awesome-grok-agents` |
+| (none) | `grok-docs` (link-check only), `vscode-grok-yaml`, `grok-agent-orchestra`, `x-platform-toolkit`, `ClaudeX` |
+
+No single framework dominates; this is normal for a polyglot ecosystem. The cross-cutting concern is that **no repo runs an end-to-end test that exercises the full chain** (spec → schema → CLI → action → template → marketplace). Any such drift is caught only by human review.
+
+### 9.G Coverage-threshold and typing-strictness outlier
+
+`grok-build-bridge` is the only repo in the ecosystem with:
+- `--cov-fail-under=85` enforced in CI.
+- `mypy` in **strict** mode.
+- Draft-2020-12 schema validation.
+- Cross-platform matrix (Ubuntu + macOS).
+
+This is the "best CI" benchmark; every other repo has at least one of these missing. See recommendation #18 in `audits/99-recommendations.md` (promote the grok-build-bridge CI template as the ecosystem baseline).
+
+### 9.H Two shell repos in the active roadmap
+
+`vscode-grok-yaml` and `grok-agent-orchestra` both advertise production-grade features on their landing pages but contain no implementing code (7 commits / 1 commit respectively). Ecosystem-internal consistency with the anti-hallucination posture (`grok-install/SECURITY.md`: "Verified by Grok" badge, halt-on-anomaly) requires that these descriptions be downgraded to "planned / skeleton" until code lands.
