@@ -433,3 +433,85 @@ it. Three small changes to the publication infrastructure.
       remains available via the version switcher at the
       top-right of this page."
 
+## Notes
+
+- **Effort sizing honesty.** Seven reference pages at ~150–300
+  words each plus one spec-page rewrite plus the publication
+  wiring is a genuine week-of-focused-time job, not a
+  long-weekend. L-effort is the right label. Splitting
+  across PRs is encouraged — the acceptance criteria are
+  designed to be landed incrementally (Part A can ship alone;
+  Part B can ship a standard at a time; Part C is the final
+  integration). Each partial PR moves the site closer to
+  truth without making v2.14 content go backwards.
+
+- **Why `grok-docs` the standard is self-documented.** The
+  site *is* its own `grok-docs` reference. Adding a standalone
+  `spec/grok-docs.md` page would be redundant — the reader is
+  already looking at the deliverable. A one-paragraph
+  subsection in `docs/index.md` naming `grok-docs` as the
+  ninth core standard (with a link to
+  `grok-yaml-standards/grok-docs/`) is sufficient.
+
+- **Field-table authoring.** The initial pass hand-authors
+  the Fields table on each new reference page. An auto-
+  generator (reading the `--8<--`-snippeted schema JSON and
+  emitting the table as a pre-build hook) is the right
+  long-term solution — track as a follow-up issue against
+  this repo. Not blocking v2.14.
+
+- **Interaction with §2 #8 (draft-2020-12 migration).**
+  `sync-schemas.yml` is draft-agnostic — it copies whatever
+  `grok-yaml-standards@main` publishes. If #8 merges first,
+  the embedded schemas in Part B's pages are draft-2020-12
+  from day one. If #8 lands after v2.14 docs, the next sync
+  pulls the migrated schemas and Part B's pages rebuild
+  automatically on the next deploy. No coordination overhead
+  either way. Flag in §Part A's "Validator compatibility"
+  subsection.
+
+- **Interaction with §2 #4 (`repository_dispatch` wiring).**
+  §2 #4 is blocked on this rec. Once this merges upstream,
+  §2 #4 becomes drafteable: the dispatch from `grok-install`
+  to this repo's sync workflow has a target site to rebuild
+  against. Drafting §2 #4 before v2.14 content lands would
+  be drafting against an empty target — premature.
+
+- **Interaction with §2 #3 (SHA-pin actions).** This repo's
+  three workflows (`deploy.yml`, `link-check.yml`,
+  `sync-schemas.yml`) are §2 #3 targets. Not coordinated
+  here; file separately. The v2.14 content PR should not
+  mix SHA-pinning changes (reviewer cognitive load).
+
+- **Maintainer capacity constraint.** Audit 05 §10 flagged
+  the single-maintainer signal (5 commits total, 0 PRs in
+  repo history). L-effort content work against a
+  single-maintainer repo is a governance risk. Mitigate:
+  split the PR into four bite-sized chunks (Part A, Part B
+  core, Part B extensions, Part C) and surface a
+  contributor call in `README.md` if the maintainer wants
+  help. §2 #20's SLA framing (applied to `grok-agents-
+  marketplace`) is adjacent — this repo may want the same
+  pattern once content lands.
+
+- **Out of scope here.**
+  - Auto-generating field tables from schemas (follow-up
+    hygiene issue).
+  - Adding schema-validated Mermaid dependency-graph
+    diagrams to the Ecosystem nav entry (audit 05 §9 row 4 —
+    M-effort, reach 3; separate row).
+  - SHA-pinning the three workflows (§2 #3 is the vehicle).
+  - `SECURITY.md` at repo root (defers to `grok-install`
+    currently; bundled properly in §2 #20-pattern future
+    work, not here).
+  - Playground rewrite / cross-link to CLI — future UX work.
+
+- **Filing strategy.** Single primary issue in `grok-docs`.
+  No cross-refs needed at filing time — the content pulls
+  from existing upstream material (`grok-install` v2.14
+  spec files, `grok-yaml-standards/grok-<name>/` folders).
+  Coordinate with `grok-yaml-standards` maintainers only if
+  any `grok-<name>/` folder turns out to lack a canonical
+  `example.yaml` that the new reference page would embed;
+  flag as a PR discussion item at review time.
+
