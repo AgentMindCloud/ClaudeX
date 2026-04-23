@@ -7,12 +7,19 @@ All notable changes to this repository are logged here. Format follows [Keep a C
 ### Added
 - `README.md` — project pitch, repo layout, how to work with the agent, conventions.
 - `ROADMAP.md` — living roadmap with Phase 0 in-progress and four proposed Phase 1 candidates (codebase audit, greenfield Frok scaffold, Grok API wrapper, X stream agent).
-- `PROGRESS.md` — structured per-session log (session 1: blocked-kickoff; session 2: Phase 0 bootstrap).
+- `PROGRESS.md` — structured per-session log (session 1: blocked-kickoff; session 2: Phase 0 bootstrap; session 3: Phase 1A close).
 - `CLAUDE.md` "Current Active Phase" now populated with **Phase 0: Bootstrap** (goal, acceptance criteria, exit condition).
+- `audits/_template.md` — per-repo audit template (sections 1–11, evidence-log mandatory).
+- `audits/01-grok-install.md` … `audits/12-claudex.md` — 12 per-repo Phase-1A audits.
+- `audits/00-ecosystem-overview.md` — 9-section cross-cut synthesis (dependency graph, spec-version pin matrix, JSON Schema draft matrix, standards-count coherence, release cadence, safety-profile distribution, docs drift, inventory corrections, cross-cutting concerns A–H).
+- `audits/97-methodology.md` — access-mode rationale, evidence discipline, security-disclosure policy, audit-order rationale, checkpoints, evidence-log row counts (71 across 12 audits; 10-orchestra exception documented).
+- `audits/98-risk-register.md` — 29 risk rows across 6 categories (Security, Supply chain, Governance, Version coherence, Documentation drift, Unverifiable claims); 3 S1, severity / likelihood / source / status per row.
+- `audits/99-recommendations.md` — three-axis rubric (cross-repo reach × local leverage × effort), 20 ecosystem-wide recommendations in §2 with risk-register linkage, 28 deferrals in §3 (23 per-repo + 5 ClaudeX), 60-row partition closed.
+- `audits/assets/dependency-graph.txt` — ASCII dependency graph used as source for `00 §1`.
 
 ### Changed
 - Renamed `CLAUDE.me` → `CLAUDE.md` to match Claude Code's canonical filename.
 
 ### Open / deferred
-- `CLAUDE.md` "Primary Repos & Focus Areas" (lines 8–15) remains a placeholder; needs real repo URLs from the user before Phase 1 starts.
-- Phase 1 candidate is not yet selected — awaiting user approval in `ROADMAP.md`.
+- `CLAUDE.md` "Primary Repos & Focus Areas" (lines 8–15) remains a placeholder; needs real repo URLs from the user (tracked as `99 §3.3` row 2 and risk register `GOV-5`).
+- Phase 1B / Phase 2 selection awaiting user approval — see `PROGRESS.md` session-3 "Next suggested action".
