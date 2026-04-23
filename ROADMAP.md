@@ -29,6 +29,11 @@ builds on these three.
    signature inference, dry-run mode, full loop wired through
    `GrokClient.chat(tools=...)`.
 5. **multimodal-adapter** — Vision/voice IO adapter surface.
+   *Shipped 2026-04-23:* `frok.multimodal` (ImageRef / AudioRef
+   path/bytes/URL factories, MultimodalAdapter + AdapterConfig,
+   graceful descriptor fallbacks when vision/voice disabled).
+   `GrokMessage.parts` threaded through safety pre-flight;
+   `GrokClient.request_json` for non-chat endpoints.
 6. **agent-team-runtime** — Lightweight multi-agent scheduler.
 7. **telemetry** — Structured logs, traces, and evals hook.
    *Shipped 2026-04-23:* `frok.telemetry` (Event + Null / InMemory /

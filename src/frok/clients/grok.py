@@ -60,10 +60,19 @@ class GrokMessage:
     name: str | None = None
     tool_calls: tuple[ToolCall, ...] | None = None
     tool_call_id: str | None = None
+    # Multimodal content parts (OpenAI-compatible). When set, `content` is
+    # ignored for payload purposes; the `parts` list goes out as `content`.
+    parts: tuple[dict[str, Any], ...] | None = None
+
+    @property
+    def is_multimodal(self) -> bool:
+        return self.parts is not None
 
     def to_payload(self) -> dict[str, Any]:
         out: dict[str, Any] = {"role": self.role}
-        if self.tool_calls:
+        if self.parts is not None:
+            out["content"] = [dict(p) for p in self.parts]
+        elif self.tool_calls:
             # OpenAI/xAI convention: assistant tool-call messages carry null
             # content alongside the `tool_calls` array.
             out["content"] = self.content or None
@@ -158,9 +167,40 @@ class GrokClient:
             has_tools=tools is not None,
         ) as span:
             # Pre-flight: apply safety rules to every inbound message.
+            # Text content is rewritten; multimodal non-text parts pass through.
             guarded: list[GrokMessage] = []
             pre_findings: list[Any] = []
             for m in messages:
+                if m.parts is not None:
+                    new_parts: list[dict[str, Any]] = []
+                    for part in m.parts:
+                        if part.get("type") == "text":
+                            result = self.safety.apply(part.get("text", ""))
+                            pre_findings.extend(result.findings)
+                            if result.blocked:
+                                span.set(
+                                    safety_blocked="prompt",
+                                    safety_findings=len(pre_findings),
+                                )
+                                raise GrokError(
+                                    f"prompt blocked by safety rule(s): "
+                                    f"{[f.rule for f in result.findings if f.severity >= 40]}"
+                                )
+                            new_parts.append({"type": "text", "text": result.text})
+                        else:
+                            new_parts.append(dict(part))
+                    guarded.append(
+                        GrokMessage(
+                            role=m.role,
+                            content=m.content,
+                            name=m.name,
+                            tool_calls=m.tool_calls,
+                            tool_call_id=m.tool_call_id,
+                            parts=tuple(new_parts),
+                        )
+                    )
+                    continue
+
                 result = self.safety.apply(m.content)
                 pre_findings.extend(result.findings)
                 if result.blocked:
@@ -235,6 +275,20 @@ class GrokClient:
                 tool_calls=tool_calls,
                 finish_reason=finish_reason,
             )
+
+    async def request_json(
+        self, path: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Public POST to a non-chat xAI endpoint (audio, embeddings, …).
+
+        Bypasses the chat safety pre/post-flight — callers that need
+        safety must run it themselves. Retries + auth headers + tracer
+        state are all inherited.
+        """
+        async with self.tracer.span("grok.request", path=path) as span:
+            out = await self._post(path, payload)
+            span.set(ok=True)
+            return out
 
     async def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         if self.transport is None:

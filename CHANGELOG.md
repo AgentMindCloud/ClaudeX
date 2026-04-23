@@ -2,6 +2,23 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.7.0] — 2026-04-23
+### Added
+- `frok.multimodal` — `ImageRef` + `AudioRef` with `from_path` /
+  `from_bytes` / `from_url` factories, MIME & format detection,
+  `to_content_part()` and `to_transcribe_payload()`, plus a
+  `MultimodalAdapter` that wraps `GrokClient` and routes images
+  through chat + audio through a configurable transcribe endpoint.
+  `AdapterConfig` controls vision / voice toggles and fallback
+  descriptors. (§2 #5)
+- `GrokMessage.parts` — optional OpenAI-compatible multimodal content
+  parts. Safety pre-flight rewrites only `type: text` parts; image /
+  audio parts pass through. Block-before-network behaviour preserved.
+- `GrokClient.request_json(path, payload)` — public POST helper for
+  non-chat endpoints (emits its own `grok.request` telemetry span).
+- Tests: 25 new (encoding, refs, adapter vision + voice paths, safety
+  interaction, fallbacks); 136 total.
+
 ## [0.6.0] — 2026-04-23
 ### Added
 - `frok.evals` — declarative `EvalCase`s, 10 built-in scorers

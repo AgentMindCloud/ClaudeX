@@ -2,6 +2,70 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — §2 #5 multimodal-adapter
+
+**Shipped** `frok.multimodal`: a typed image + audio IO surface that
+routes through `GrokClient` (so safety + telemetry + retries come
+along for free) and falls back to short text descriptors when a
+modality is disabled.
+
+* **`frok.multimodal.encoding`** — MIME tables for the image formats
+  Grok actually accepts (png / jpeg / gif / webp / bmp / tiff) and
+  audio formats (wav / mp3 / m4a / flac / ogg / opus / webm), plus a
+  `to_data_url()` helper + base64 encoder. Zero deps.
+* **`ImageRef` / `AudioRef`** — frozen dataclasses with three
+  consistent factories each: `from_path`, `from_bytes`, `from_url`.
+  `to_content_part()` emits the OpenAI-compatible chat content part
+  (URLs stay as URLs, bytes/paths become `data:` URLs). Audio has a
+  sibling `to_transcribe_payload()` for the voice endpoint.
+  `describe()` gives a short text fallback (`alt_text` first, then
+  URL / path / bytes summary).
+* **`MultimodalAdapter`** — wraps a `GrokClient`. Public API:
+  * `describe_image(image, prompt=...)` — one-shot vision chat.
+  * `chat([parts...])` — mixed text + images + audio.
+  * `transcribe_audio(audio)` — routes to a configurable endpoint
+    (default `/audio/transcriptions`) via the new
+    `GrokClient.request_json()` helper; returns descriptor when voice
+    is disabled so callers always get *something*.
+  * `AdapterConfig` toggles vision / voice, configurable fallback
+    prefixes, transcribe path, voice model. Default is
+    vision-enabled, voice-disabled.
+* **`GrokMessage.parts`** — new optional `tuple[dict, ...]` carrying
+  OpenAI-style content parts. When set, safety pre-flight rewrites
+  only `{"type": "text"}` parts and leaves image / audio parts
+  untouched. The payload emits the parts list as `content`. Safety
+  blocks on any text part short-circuit before the network.
+* **`GrokClient.request_json(path, payload)`** — public POST for
+  non-chat endpoints (audio / embeddings / …). Bypasses chat safety
+  but inherits retries, auth, and the tracer (`grok.request` span).
+
+**Verification.** `python3 -m pytest -q` → 136 passed in 0.37s (25
+new). Tests cover MIME/format detection, three-way ref factories,
+data-URL round-trips, vision-enabled + vision-disabled fallback,
+voice-enabled endpoint routing (base64 + model name + path), voice-
+disabled descriptor path, safety rewriting text parts while leaving
+image parts alone, and block-before-network on unsafe text parts.
+
+**Decisions / trade-offs.**
+* Adapter builds exactly one user message carrying a list of content
+  parts. Multi-turn multimodal chats are still one `client.chat`
+  call each — no hidden state in the adapter.
+* Audio transcription currently expects a JSON endpoint returning
+  `{"text": "..."}`. If a real xAI voice endpoint takes multipart,
+  `GrokClient.request_json` is the narrow hook to swap (or add a
+  sibling `request_multipart`). Tests pin the JSON shape so the swap
+  is observable.
+* Fallback descriptors are surfaced as plain text parts, not system
+  prompts, so they flow with the user's other text in order — a
+  vision-disabled model still sees the image in the "right place"
+  relative to the prompt.
+
+**Next suggested action:** `Continue Phase 2 with §2 #6 agent-team-
+runtime: a lightweight multi-agent scheduler that composes multiple
+MemoryAgent / MultimodalAdapter / ToolOrchestrator instances as named
+roles, routes messages between them, and reports a run trace through
+the telemetry sink so §2 #8 evals can regress the team's behaviour.`
+
 ## 2026-04-23 — §2 #8 eval-harness
 
 **Shipped** `frok.evals`: declarative cases, composable scorers, a
