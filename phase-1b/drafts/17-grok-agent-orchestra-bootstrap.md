@@ -123,3 +123,102 @@ to reinvent):
   adoption; fall-back if #1 not yet merged is flagged in
   metadata header).
 - §2 #18 (CI template — adopted from day one per audit 10 §9 row 3).
+
+## Acceptance criteria
+
+Two parts. Part A ships v0.1.0 with one real multi-agent pattern
+plus the supporting repo scaffolding. Part B defines Lucas
+behaviourally and wires it into the pattern. The issue closes
+when v0.1.0 is published to PyPI, the sample pattern runs
+end-to-end on a test fixture, and Lucas's veto can be
+demonstrated both triggering (on violating input) and not
+triggering (on conformant input).
+
+### Part A — Ship v0.1.0 with one working multi-agent pattern
+
+- [ ] **Package scaffolding**: create `src/grok_agent_orchestra/`
+      with `pyproject.toml` at repo root:
+      - `name = "grok-agent-orchestra"`, `version = "0.1.0"`.
+      - Python ≥ 3.10 (matches `grok-install-cli`).
+      - Exact-pinned runtime deps: `grok-safety-rules == 0.1.0`
+        (from §2 #1), `PyYAML == 6.x`, `typer == <matched-to-CLI>`,
+        `pydantic == 2.x`, `httpx == <pinned>` (Grok API client
+        — or depend on §2 #2's shared client if that has
+        shipped; flag in §Notes).
+      - Dev deps + coverage floor matching §2 #18's CI template
+        (`ruff`, `mypy` strict, `pytest --cov-fail-under=85`).
+
+- [ ] **Canonical pattern: `plan_execute_critique`** — three
+      agents collaborating on one user task.
+
+      ```
+      grok_agent_orchestra/
+        __init__.py
+        patterns/
+          __init__.py
+          plan_execute_critique.py      # the one shipped pattern
+        agents/
+          __init__.py
+          base.py                        # shared Agent protocol
+          planner.py                     # produces a step list
+          executor.py                    # executes steps via tool calls
+          critic.py                      # scores execution against plan
+        safety/
+          __init__.py
+          lucas.py                       # the veto — see Part B
+        orchestrator.py                  # wires the three agents + Lucas
+        cli.py                           # `orchestra run <task>` entry
+      ```
+
+- [ ] **Agent protocol** (`agents/base.py`): dataclass
+      `AgentDecl` with `name`, `role`, `safety_profile: SafetyProfile`
+      (imported from `grok_safety_rules`), and an `async act()`
+      method. Three profile claims (one per agent) drive
+      Lucas's veto semantics (see Part B).
+
+- [ ] **Orchestrator** (`orchestrator.py`): initialises the
+      three agents from a user-supplied YAML manifest (one of
+      `awesome-grok-agents`' templates, or a custom file),
+      invokes the pattern, routes every proposed action
+      through Lucas, records the result to a structured log.
+      Failure modes: Lucas vetoes ⇒ orchestrator halts with a
+      non-zero exit code + a human-readable reason. Agent
+      errors ⇒ retry budget (configurable) then halt.
+
+- [ ] **CLI** (`cli.py`, Typer): `orchestra run <manifest.yaml>
+      [--dry-run] [--verbose]`. Dry-run mode runs planner +
+      critic but not executor — useful for CI smoke tests.
+
+- [ ] **Sample fixtures**: `examples/`:
+      - `examples/ci-review/manifest.yaml` — three agents
+        (planner, executor, critic), `safety_profile: standard`,
+        task "review this diff and summarise findings".
+      - `examples/ci-review/expected_output.json` — the
+        expected critic score shape, for
+        regression/smoke tests.
+
+- [ ] **Adopt §2 #18's CI template** from day one:
+      `.github/workflows/ci.yml` with lint + matrix test +
+      mypy strict + Draft-2020 schema validation (for the
+      orchestra's own `schema/` if it ships any) + safety-scan
+      + build. Audit 10 §9 row 3 requires this; adopting it
+      at bootstrap is cheaper than retrofitting.
+
+- [ ] **Governance files** (close part of GOV-4 for this repo
+      while we're here): `README.md` (rewrite from §2 #15b's
+      honest description; expand with "what v0.1.0 does" +
+      "roadmap to multi-pattern v1.0"), `CHANGELOG.md` (seed
+      with v0.1.0 section), `CONTRIBUTING.md` (how to run
+      tests, pattern-authoring guide), `SECURITY.md` (points
+      at `grok-install/SECURITY.md`), `.github/CODEOWNERS`
+      (bootstrap maintainer; §2 #20's pattern).
+
+- [ ] **Publish v0.1.0 to PyPI** via Trusted Publisher (same
+      pattern §2 #7 Part A establishes for `grok-install-cli`).
+
+- [ ] **README roadmap section** — explicit: "v0.1.0 ships
+      *one* pattern (plan-execute-critique). v0.2.0 adds
+      <N2-pattern>; v0.3.0 adds <N3-pattern>; …". Do NOT
+      promise five patterns up front. The original landing
+      page's "5 patterns" number is marketing, not an
+      engineering commitment.
