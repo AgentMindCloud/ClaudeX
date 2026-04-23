@@ -222,3 +222,104 @@ triggering (on conformant input).
       promise five patterns up front. The original landing
       page's "5 patterns" number is marketing, not an
       engineering commitment.
+
+### Part B — Lucas safety veto: behavioural contract
+
+Define Lucas concretely, implement it, and demonstrate it in
+CI. The definition is in terms of §2 #5's rubric — a scope the
+rubric was built for.
+
+- [ ] **Normative definition** (publish in `docs/LUCAS.md` and
+      `README.md` §Safety):
+
+      > **Lucas** is the orchestra's safety veto. For each
+      > proposed action an agent wants to execute, Lucas:
+      > 1. Collects the `safety_profile` claims of every agent
+      >    currently active in the team.
+      > 2. Takes the **strictest** of those profiles (in the
+      >    ordering `strict > standard > permissive`).
+      > 3. Runs the proposed action through
+      >    `grok_safety_rules.check_profile_conformance` against
+      >    that strictest profile.
+      > 4. Vetoes the action (returns `VETO`, orchestrator
+      >    halts) if the action would violate the strictest
+      >    profile on any axis of §2 #5's seven-axis rubric.
+      > 5. Records the veto outcome (veto reason, strictest
+      >    profile, axis violated) to the structured log.
+      >
+      > Lucas is a *team-level* veto: the veto applies even if
+      > the agent proposing the action claims a looser profile
+      > than a teammate. This is the design choice that makes
+      > multi-agent orchestration safe — a permissive
+      > scratchpad agent cannot launder an action past the
+      > strict executor via the critic.
+
+- [ ] **Implementation** (`safety/lucas.py`):
+
+      ```python
+      from grok_safety_rules import (
+          SafetyProfile, check_profile_conformance, load_rubric_values,
+      )
+
+      PROFILE_ORDER = [
+          SafetyProfile.STRICT, SafetyProfile.STANDARD, SafetyProfile.PERMISSIVE,
+      ]
+
+      def strictest(profiles: list[SafetyProfile]) -> SafetyProfile:
+          for p in PROFILE_ORDER:
+              if p in profiles:
+                  return p
+          raise ValueError("empty team")
+
+      def lucas_veto(
+          team_profiles: list[SafetyProfile],
+          proposed_action_yaml: str,
+          rubric_values,
+      ) -> LucasVerdict:
+          target = strictest(team_profiles)
+          verdict = check_profile_conformance(
+              proposed_action_yaml, target, rubric_values,
+          )
+          return LucasVerdict(
+              veto = (verdict.exit_code in (1, 3)),  # non-conformant or schema error
+              target_profile = target,
+              underlying = verdict,
+          )
+      ```
+
+- [ ] **Veto demonstration in CI**: two fixtures in
+      `tests/fixtures/lucas/`:
+      - `no_veto/` — a team of three `standard` agents
+        proposing a conformant action. Lucas returns
+        `veto=False`. Orchestrator runs to completion.
+      - `veto/` — a team of one `strict` + two `permissive`
+        agents where the permissive agent proposes an
+        `external_writes: open` action. Lucas sees strictest
+        = `strict`, the action violates `strict.external_writes`,
+        returns `veto=True`. Orchestrator halts with exit
+        code 2 + reason string.
+
+      Both fixtures run in `pytest` in the `test` CI job.
+
+- [ ] **Veto override is NOT a v0.1.0 feature.** A later
+      version may add an operator-override (with audit log),
+      but v0.1.0 treats Lucas as fail-closed. Document this
+      explicitly in `LUCAS.md §Override`.
+
+- [ ] **Interaction with `grok-build-bridge`'s LLM audit**:
+      Lucas is *static* (rubric-based). `grok-build-bridge`'s
+      LLM audit layer is *dynamic* (model-based). They are
+      complementary: Lucas catches static rubric violations
+      deterministically; the LLM audit catches semantic issues
+      Lucas cannot see. Document this in `LUCAS.md §Scope`.
+      The orchestra does not ship its own LLM audit in v0.1.0;
+      that layer lives in the bridge and is optionally
+      consumed.
+
+- [ ] **Lucas release coupling to §2 #5**: since Lucas's
+      definition references §2 #5's rubric axes verbatim, the
+      `LUCAS.md` document cites the rubric's version pin
+      (`rubric-v1`). If the rubric bumps to `rubric-v2`
+      (MAJOR), Lucas's implementation needs to re-audit the
+      axis-mapping and may need to bump its own major
+      version. Encode this relationship in the README.
