@@ -17,3 +17,41 @@
 - **Suggested labels**: `ci`, `validation`, `tooling`, `phase-1b`
 
 ---
+
+## Context
+
+`awesome-grok-agents`'s `validate-templates.yml` workflow has the
+strictest matrix-validation posture in the ecosystem: 7 jobs,
+fails on warnings, matrix over all 10 templates. The one hole:
+the `validate` matrix uses a locally-vendored `grok_install_stub`
+package in `scripts/` rather than the real `grok-install-cli`.
+
+The stub's purpose at repo-creation time was reasonable —
+`grok-install-cli` had no PyPI presence, no tagged release, no
+npm package that resolves cleanly. Rather than let CI depend on a
+broken install path, the stub replicated just enough of the CLI
+interface to exercise the templates locally.
+
+The cost of the stub pattern is that stub ↔ real-CLI divergence
+is *undetectable* by this repo's CI. A template that passes
+`validate_template.py` against the stub may still fail at install
+time via the real CLI, because:
+
+- The stub's safety rules may be stricter, looser, or simply
+  different from `grok-install-cli/src/grok_install/safety/`
+  (UNV-4 in the risk register).
+- The stub's schema interpretation may drift from
+  `grok-yaml-standards`' schemas if either repo updates in ways
+  the stub doesn't track.
+- The stub's subcommand surface (`init` / `validate` / `scan` /
+  `run` / `deploy`) may diverge from the real CLI's over time.
+
+Replacing the stub with the real CLI closes all three at once —
+the CLI *is* the source of truth, so its behaviour is what the
+templates validate against.
+
+The catch that kept this rec blocked: until §2 #6 picks an
+install channel (Python / npm / both) and §2 #7 cuts a tagged
+release on that channel, there is nothing stable to pin against.
+Once both merge upstream, this rec becomes a small workflow
+edit.
