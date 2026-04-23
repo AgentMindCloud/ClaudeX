@@ -223,3 +223,134 @@ on `push` + `pull_request`.
       specific tagged versions in the workflow step.
       Matches `grok-yaml-standards`' exact-pin discipline
       for `ajv-cli` / `js-yaml` / `yamllint`.
+
+### Part B — Live-vs-Spec consistency check
+
+Repo-specific invariant: a tool listed as **Live** in the
+top-level `README.md` MUST have an `index.html` in its
+directory; a tool listed as **Spec'd** MUST have a `SPEC.md`
+and MUST NOT have an `index.html`. The fourth job enforces
+this invariant in CI so Live/Spec drift is caught the
+moment it lands rather than on audit-time sampling.
+
+- [ ] **Write the consistency script**
+      (`scripts/check-live-vs-spec.py` or a small Node
+      equivalent — Python recommended for parity with
+      `grok-docs` / `awesome-grok-agents` tooling):
+
+      ```python
+      #!/usr/bin/env python3
+      """
+      Verify every tool's Live/Spec status matches its file shape.
+      Exit 0 on pass; exit 1 on any drift with a readable report.
+      """
+      from pathlib import Path
+      import re
+      import sys
+
+      ROOT = Path(__file__).resolve().parent.parent
+      README = (ROOT / "README.md").read_text(encoding="utf-8")
+      TOOLS = ROOT / "tools"
+
+      # Parse the top-level README's Live/Spec table.
+      # Convention: each tool row matches a pattern like
+      #   "| 05 | pinned-post-ab-rotator | Live |"
+      # Adjust the regex below to match whatever the README uses;
+      # the first version of the script is likely to need
+      # iteration against the actual README shape.
+      declared = {}
+      for line in README.splitlines():
+          m = re.match(
+              r"^\|\s*(\d{2})\s*\|\s*([a-z0-9-]+)\s*\|\s*(Live|Spec'd)\s*\|",
+              line,
+          )
+          if m:
+              num, slug, status = m.groups()
+              declared[f"{num}-{slug}"] = status
+
+      errors = []
+      for tool_dir in sorted(TOOLS.iterdir()):
+          if not tool_dir.is_dir():
+              continue
+          name = tool_dir.name
+          has_html = (tool_dir / "index.html").exists()
+          has_spec = (tool_dir / "SPEC.md").exists()
+          has_readme = (tool_dir / "README.md").exists()
+
+          status = declared.get(name)
+          if status is None:
+              errors.append(f"{name}: not declared in README")
+              continue
+          if not has_readme:
+              errors.append(f"{name}: README.md missing")
+          if status == "Live":
+              if not has_html:
+                  errors.append(f"{name}: declared Live but index.html missing")
+              if has_spec:
+                  errors.append(f"{name}: declared Live but SPEC.md present (stale?)")
+          elif status == "Spec'd":
+              if not has_spec:
+                  errors.append(f"{name}: declared Spec'd but SPEC.md missing")
+              if has_html:
+                  errors.append(f"{name}: declared Spec'd but index.html present (undeclared Live?)")
+
+      # Also check the reverse: tools in README but missing on disk
+      for name in declared:
+          if not (TOOLS / name).is_dir():
+              errors.append(f"{name}: declared in README but directory missing")
+
+      if errors:
+          print("Live-vs-Spec consistency check FAILED:")
+          for e in errors:
+              print(f"  - {e}")
+          sys.exit(1)
+      print(f"OK — {len(declared)} tools consistent with README.")
+      sys.exit(0)
+      ```
+
+      First version of the script will need one iteration
+      against the actual README shape (the regex pattern
+      assumes the maintainer's convention; adjust as
+      needed).
+
+- [ ] **Job 4 — `live-vs-spec`** in `validate.yml`:
+
+      ```yaml
+      live-vs-spec:
+        name: Live-vs-Spec consistency
+        runs-on: ubuntu-latest
+        steps:
+          - uses: actions/checkout@<SHA>  # v4
+          - uses: actions/setup-python@<SHA>  # v5
+            with: { python-version: '3.12' }
+          - run: python scripts/check-live-vs-spec.py
+      ```
+
+      No Python deps needed — stdlib only. Fast job; runs
+      under 5 seconds.
+
+- [ ] **Derivative — top-level README generation**:
+      once the consistency check is green, optionally
+      auto-generate the Live/Spec table in the top-level
+      README from the same source (tools directory +
+      file shapes). Out of scope for v1 of this rec;
+      document as a follow-up in the workflow's comments.
+
+- [ ] **Close SUP-5 in the risk register**: once the
+      workflow lands green on `main`, `98-risk-register.md`
+      row SUP-5 flips from `open` to `mitigated`. The
+      Phase-1B review layer (not this repo) owns that
+      flip; flag in the filed issue so reviewers remember
+      to update the audit trail.
+
+- [ ] **First-run expected behaviour**: on the PR that
+      introduces `validate.yml`, all four jobs should
+      pass against the current `main`. If any fail, the
+      failures are **pre-existing drift** this rec surfaces
+      — fix in the same PR (adjust the README's Live/Spec
+      table to match reality, or fix the `index.html` /
+      `SPEC.md` asymmetry — whichever matches the
+      maintainer's intent).
+      Document the initial discrepancy list in the PR
+      description so the audit trail of the first-run
+      is explicit.
