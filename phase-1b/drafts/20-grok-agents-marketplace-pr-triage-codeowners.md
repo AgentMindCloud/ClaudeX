@@ -103,3 +103,56 @@ paths stable).
   contributors — `(needs GitHub API / org MCP)`.
   The triage plan below handles both cases (automation PRs often
   close-as-wontfix faster; human PRs take longer).
+
+## Acceptance criteria
+
+Three parts. Each is independently mergeable; the issue closes
+when all three are complete. Landing order is flexible; Part B
+(CODEOWNERS) can ship first if a maintainer wants new PRs to
+route correctly before the Part-A triage is complete.
+
+### Part A — Triage the 12 open PRs (timeboxed first-pass)
+
+The goal is a first-pass decision per PR in a bounded window,
+not to merge or close every PR.
+
+- [ ] **Open a tracking issue** in this repo titled *"PR-triage
+      sweep 2026"* (or the chosen date) listing all 12 open PRs
+      with one row per PR: `#N | title | author-type
+      (human/automation/copilot) | first-pass target date |
+      outcome`.
+- [ ] **Classify each PR** via first-pass review (≤20 minutes per
+      PR) into exactly one outcome:
+      - **merge** — PR is ready or needs ≤1 cycle of requested
+        changes. Merge directly or leave a clear
+        `request-changes` review.
+      - **request-changes** — PR is substantively reasonable but
+        needs non-trivial rework. Leave a `request-changes`
+        review with a time-bounded expectation ("if not
+        addressed within N days, will close as stale").
+      - **close-as-wontfix** — PR's scope is outside the repo's
+        direction or overlaps with planned work. Leave a short
+        comment + link to the superseding issue/PR if one
+        exists.
+      - **escalate** — PR requires maintainer discussion that
+        can't happen in the triage sweep. Convert to a design
+        discussion; assign an owner; leave the PR open but
+        re-label `triage:escalated`.
+- [ ] **Apply triage labels** to each PR:
+      `triage:merge-ready`, `triage:needs-rework`,
+      `triage:wontfix`, `triage:escalated`. Create the labels
+      if they don't exist (the label set is part of the Part-A
+      deliverable, not a prerequisite).
+- [ ] **Record outcomes** in the tracking issue. When the final
+      PR is classified, close the tracking issue with a one-line
+      summary: *"12 PRs → N merged / M request-changes / K
+      closed / J escalated. Distribution: …"*
+- [ ] **Timebox**: target 10 business days for the sweep. If the
+      sweep stretches beyond that, post an interim status update
+      in the tracking issue so contributors know where they
+      stand.
+- [ ] **Fairness note** in the tracking issue: if any PR was
+      opened more than 60 days ago, give the author 7 days'
+      notice before closing as wontfix or stale. This is
+      etiquette, not policy — but documenting it here makes the
+      triage sweep a one-time event, not a surprise cliff.
