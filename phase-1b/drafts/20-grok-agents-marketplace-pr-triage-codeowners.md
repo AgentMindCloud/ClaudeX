@@ -51,3 +51,55 @@ before triage finishes (new PRs route correctly from day one);
 the SLA doc can be drafted in parallel. Triage is the slowest
 gate because it depends on maintainer time and on reviewers
 actually being available.
+
+## Evidence
+
+From `main` snapshot + repo landing page on 2026-04-23 (WebFetch;
+paths stable).
+
+**Repo landing** — `audits/08-grok-agents-marketplace.md §1, §11 row 1`:
+- 0 stars, 0 forks, 0 issues, **12 open PRs**, 11 commits,
+  Apache 2.0, Node `>=20`, TS 98.4% / CSS 1.6%. Vercel-hosted;
+  live site `https://grokagents.dev`.
+- "12 open PRs" is a 10× multiple on any other repo in the
+  ecosystem at audit time.
+
+**Governance surface observed** —
+`audits/08-grok-agents-marketplace.md §4`:
+- **Missing** at repo root: `SECURITY.md`, `CONTRIBUTING.md`,
+  `CHANGELOG.md` not verified. Expected by the ecosystem
+  convention; present in most peer repos.
+- **No `CODEOWNERS`** referenced anywhere in the audit.
+- README is clear on routes and features (landing, detail pages,
+  `/stats`, Hall of Fame, submission form) but governance is
+  happening in issues/PRs rather than docs.
+
+**Review capacity** — `audits/08-grok-agents-marketplace.md §7`:
+- "12 open PRs is a code-quality signal *and* a reviewer-capacity
+  signal: active but likely under-reviewed."
+
+**Source §2 citation** —
+`audits/99-recommendations.md §2 #20`:
+- Effort M, reach 2, leverage 5.
+- "Triage the 12 open PRs on `grok-agents-marketplace`, publish
+  `CODEOWNERS`, and document a review SLA. (closes: GOV-2)"
+
+**Risk register** — `audits/98-risk-register.md`:
+- **GOV-2** (S2, likelihood L-high, `open`): "12 open PRs on
+  `grok-agents-marketplace`, none reviewed; no `CODEOWNERS`. The
+  most-active repo has no triage capacity, so contributor PRs
+  stall and forks proliferate."
+
+**Ecosystem context** (for CODEOWNERS + SLA precedent) —
+`audits/00-ecosystem-overview.md §7.2`:
+- `CODEOWNERS` presence across the 12 audited repos is not
+  mentioned — none of the per-repo audits flagged an existing
+  `CODEOWNERS` file. Publishing one here is a first for the
+  ecosystem and sets a template other repos can adopt.
+
+**Open unknowns** (flagged for the triage step) —
+`audits/08-grok-agents-marketplace.md §10`:
+- Whether the 12 PRs come from Copilot/automation or human
+  contributors — `(needs GitHub API / org MCP)`.
+  The triage plan below handles both cases (automation PRs often
+  close-as-wontfix faster; human PRs take longer).
