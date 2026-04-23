@@ -16,14 +16,20 @@ Filing workflow: see `phase-1b/README.md §Filing workflow (for the user)`.
 
 ## First-pass drafts (4 §2 recs, 6 files)
 
-| # | §2 rec | Upstream repo | Draft file | Filed (link) | Status |
-|:-:|:-:|---|---|---|---|
-| 1 | #6 | AgentMindCloud/grok-install-cli *(+ cross-ref to grok-install-action)* | [`drafts/06-cli-install-mechanism.md`](drafts/06-cli-install-mechanism.md) | — | drafted |
-| 2 | #9 | AgentMindCloud/grok-install | [`drafts/09-v2-14-examples-coverage.md`](drafts/09-v2-14-examples-coverage.md) | — | drafted |
-| 3 | #14 | AgentMindCloud/grok-install-action | [`drafts/14a-grok-install-action-readme.md`](drafts/14a-grok-install-action-readme.md) | — | drafted |
-| 4 | #14 | AgentMindCloud/vscode-grok-yaml | [`drafts/14b-vscode-grok-yaml-landing.md`](drafts/14b-vscode-grok-yaml-landing.md) | — | drafted |
-| 5 | #15 | AgentMindCloud/vscode-grok-yaml | [`drafts/15a-vscode-grok-yaml-description.md`](drafts/15a-vscode-grok-yaml-description.md) | — | drafted |
-| 6 | #15 | AgentMindCloud/grok-agent-orchestra | [`drafts/15b-grok-agent-orchestra-description.md`](drafts/15b-grok-agent-orchestra-description.md) | — | drafted |
+Slice chosen because all four recs are S-effort in §2, carry no `Blocked by`
+entry, and each closes at least one S1 / S3 risk. The six files have no
+internal filing-order dependencies — they can be filed in any order. Across
+the two `(a/b)` pairs, **filing both halves is required to fully close the
+underlying risk row**; filing one half moves that risk to *partial*.
+
+| # | §2 rec | Risks closed | Upstream repo | Draft file | Unblocks §2 | Filed (link) | Status |
+|:-:|:-:|---|---|---|:-:|---|---|
+| 1 | #6 | VER-3 (S1), UNV-1 (S1) | AgentMindCloud/grok-install-cli *(+ cross-ref to grok-install-action)* | [`drafts/06-cli-install-mechanism.md`](drafts/06-cli-install-mechanism.md) | #7, #12 | — | drafted |
+| 2 | #9 | VER-1 (S1) | AgentMindCloud/grok-install | [`drafts/09-v2-14-examples-coverage.md`](drafts/09-v2-14-examples-coverage.md) | — | — | drafted |
+| 3 | #14 | DOC-1 (partial — pair with row 4) | AgentMindCloud/grok-install-action | [`drafts/14a-grok-install-action-readme.md`](drafts/14a-grok-install-action-readme.md) | — | — | drafted |
+| 4 | #14 | DOC-1 (partial — pair with row 3) | AgentMindCloud/vscode-grok-yaml | [`drafts/14b-vscode-grok-yaml-landing.md`](drafts/14b-vscode-grok-yaml-landing.md) | — | — | drafted |
+| 5 | #15 | GOV-3 (S3) + DOC-3 (S3) (partial — pair with row 6) | AgentMindCloud/vscode-grok-yaml | [`drafts/15a-vscode-grok-yaml-description.md`](drafts/15a-vscode-grok-yaml-description.md) | #16 | — | drafted |
+| 6 | #15 | GOV-3 (S3) + DOC-3 (S3) (partial — pair with row 5) | AgentMindCloud/grok-agent-orchestra | [`drafts/15b-grok-agent-orchestra-description.md`](drafts/15b-grok-agent-orchestra-description.md) | #17 *(still gated by §2 #5 — see below)* | — | drafted |
 
 ## Next batch candidates
 
