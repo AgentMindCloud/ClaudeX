@@ -274,3 +274,67 @@ in the issue thread.
       default owner (`*`). This repo is low-traffic — one-line
       CODEOWNERS is enough. The file exists for consistency
       with §2 #20's marketplace pattern.
+
+## Notes
+
+- **What v0.1.0 deliberately does NOT include.**
+  - Snippets (triggered by `@grok` prefix). A `snippets/*.code-snippets`
+    file can land in v0.2.0.
+  - Hover documentation beyond what the schemas contribute (the
+    schema's `description` field already drives hover; no code
+    needed for that baseline).
+  - Quick Fix / code actions. Require AST walking; out of scope.
+  - Cross-file validation (e.g. checking that an agent in
+    `.grok/agents/foo.yaml` references a tool defined in
+    `.grok/tools/bar.yaml`). Requires a proper language server;
+    v0.1.0 is intentionally only an association contributor.
+  - IntelliSense for non-YAML Grok files. Out of scope for a
+    *YAML* extension.
+
+- **Why v0.1.0, not v1.0.0.** SemVer discipline: a single-feature
+  extension sets expectations honestly by shipping < 1.0 until
+  the feature set feels complete. The ecosystem's `grok-install`
+  took several minor releases to stabilise; this extension should
+  do the same.
+
+- **Relationship to §2 #8 (draft-2020-12 migration).** The
+  `yaml-language-server` is `$schema`-keyword aware (via
+  `ajv`-based validation internally). When §2 #8 lands and the
+  12 schemas flip to draft-2020-12, this extension picks up the
+  change with zero code changes (Option B1) or a schema-bump PR
+  (Option B2). No coordination required beyond acknowledging the
+  compatibility in CHANGELOG at the time.
+
+- **Relationship to §2 #5 (safety-profile rubric).** The
+  `tests/fixtures/strict.yaml` / `standard.yaml` / `permissive.yaml`
+  fixtures in Part A call out all three profiles. Once §2 #5
+  ships `safety-profile-rubric-v1.values.json`, the fixtures can
+  be aligned to the rubric's canonical values — not required for
+  v0.1.0 but a natural follow-up.
+
+- **Relationship to §2 #17 (`grok-agent-orchestra` bootstrap).**
+  #17 is an analogous bootstrap for the other LICENSE+README-only
+  repo in the ecosystem. Both repos close half of GOV-3 each;
+  filing order between them does not matter.
+
+- **Pre-filing coordination needed with `grok-docs` maintainers**
+  (only if Option B1 is chosen): confirm the
+  `/assets/schemas/latest/` convention is either live or easy to
+  add. Flag as a single comment on `grok-docs` after this
+  bootstrap's §2 #15 prerequisite merges.
+
+- **Filing strategy.** Single primary issue in
+  `vscode-grok-yaml`. The §Part-A and §Part-B acceptance bullets
+  are likely all landed in one "bootstrap PR" — the issue's job
+  is to set expectations and track the launch.
+
+- **Speculative-draft honesty.** This draft's §Part-A rewrites
+  the README. The specific language will need to diff-merge with
+  whichever option §2 #15a's upstream reviewers chose. Treat this
+  draft's README-section text as a *template*, not a final copy.
+
+- **Out of scope here.** §2 #14b (reconciling "14 standards" in
+  the landing description to "12") is a separate Phase-1B draft
+  that has already shipped in `phase-1b/drafts/14b-vscode-grok-yaml-landing.md`.
+  Do not duplicate its text here; cross-reference it in the
+  README-rewrite bullet of Part A.
