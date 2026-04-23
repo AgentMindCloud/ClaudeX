@@ -66,3 +66,79 @@ implements that contract. After both land:
 That's the only configuration in which UNV-4 ("safety surfaces
 drifting apart unobserved") closes structurally rather than
 situationally.
+
+## Evidence
+
+From `main` snapshots on 2026-04-23 (WebFetch; paths stable).
+
+**Implementation #1 — `grok-install-cli`** —
+`audits/03-grok-install-cli.md §2, §11 row 4`:
+- Module: `src/grok_install/safety/` with `__init__.py`,
+  `rules.py`, `scanner.py`.
+- Called via `grok-install scan` subcommand.
+- Mature (used by the CLI's own CI via `security.yml`).
+
+**Implementation #2 — `grok-build-bridge`** —
+`audits/09-grok-build-bridge.md §1, §6, §11 row 3`:
+- Module: `grok_build_bridge/_patterns.py` (static regex layer).
+- Paired with LLM audit in `xai_client.py` (the "dual-layer
+  safety" model).
+- Audit 09 §9 row 4 is the source of the "share with
+  `grok-install-cli/src/grok_install/safety/rules.py` via a
+  small `grok-safety-rules` package or git-submodule"
+  recommendation — **the headline source of this §2 #1**.
+
+**Implementation #3 — `awesome-grok-agents`** —
+`audits/06-awesome-grok-agents.md §5, §7`:
+- Script: `scripts/scan_template.py` (plus the
+  `grok_install_stub/` package that §2 #12 removes).
+- Fails on warnings in CI — the strictest signal in the
+  ecosystem.
+
+**Intended fourth consumer — `grok-agent-orchestra`** —
+`audits/10-grok-agent-orchestra.md §9 row 5`:
+- "Share safety-layer code with `grok-install-cli` and
+  `grok-build-bridge` from the start — don't re-implement.
+  Three ecosystem repos independently reimplementing safety
+  rules would produce the worst kind of drift. Pre-adopt a
+  shared `grok-safety-rules` package (see `grok-build-bridge`
+  audit rec #4)." *(Verbatim.)*
+
+**Cross-cut summary** —
+`audits/00-ecosystem-overview.md §6.3`:
+- "At least three independent static-regex / pattern
+  implementations exist: `grok-install-cli/safety/rules.py`,
+  `grok-build-bridge/_patterns.py`,
+  `awesome-grok-agents/scripts/scan_template.py`. None share a
+  source module." *(Verbatim.)*
+
+**Risk register** — `audits/98-risk-register.md`:
+- **UNV-4** (S3, L-med, `needs-info`): drift between the
+  safety surfaces. Closed structurally by this extraction.
+- **SEC-1** (S1, L-med, `open`): "LLM-audit safety layer in
+  `build-bridge` accepts untrusted YAML and feeds it to a
+  model — prompt-injection can subvert or bypass the audit
+  verdict. No prompt-isolation or output-shape validation
+  documented." This extraction partially addresses SEC-1:
+  the *static* scan layer that feeds the LLM becomes
+  auditable and rubric-disciplined. Does not replace the
+  prompt-isolation / output-shape work that closes SEC-1
+  fully (that is orthogonal to this rec).
+
+**Prerequisite state**:
+- §2 #5 draft: [`phase-1b/drafts/05-safety-profile-rubric.md`](05-safety-profile-rubric.md)
+  — seven-axis normative rubric + machine-readable companion
+  schema + conformance-test format + consumer-repo contract
+  layer. Not filed upstream at this writing.
+
+**Related §2 cross-refs**:
+- §2 #5 — the contract. See prerequisite above.
+- §2 #12 — removes one of the three parallel implementations
+  independently of this rec. Complements; does not block or
+  unblock.
+- §2 #17 — `grok-agent-orchestra` bootstrap. Should adopt this
+  package from day one rather than adding a fourth
+  implementation.
+- §2 #11 — the permissive exemplar template. Consumes this
+  package via the CLI's `scan` subcommand; no additional
+  work required in this rec.
