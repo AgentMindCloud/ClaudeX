@@ -124,3 +124,81 @@ From `main` snapshot on 2026-04-23 (WebFetch; paths stable).
   stub's behaviour is not. Replacing the stub with the real CLI
   means the gallery inherits rubric-disciplined validation for
   free.
+
+## Acceptance criteria
+
+Two parts. Part A is the stub replacement in the workflow. Part B
+adds a conformance-check matrix once the rubric (§2 #5) lands.
+Part A closes the issue's headline ask; Part B is a natural
+follow-up that the same PR may or may not include depending on
+§2 #5's merge timing.
+
+### Part A — Replace `grok_install_stub` with the real CLI
+
+Land a single PR that edits
+`.github/workflows/validate-templates.yml` +
+`scripts/validate_template.py` + `scripts/scan_template.py` +
+`scripts/mock_run_template.py` to consume the real
+`grok-install-cli` instead of the in-repo stub.
+
+- [ ] **Install the real CLI at workflow start.** Replace the
+      implicit `PYTHONPATH` / `sys.path` setup that pulls
+      `grok_install_stub` with an explicit install step. The
+      exact command depends on which of §2 #6's options landed:
+      - If §6 Option A (Python canonical):
+        ```yaml
+        - uses: actions/setup-python@<SHA>  # v5
+          with: { python-version: '3.12' }
+        - run: pip install "grok-install==<pin-from-#7>"
+        ```
+      - If §6 Option B (npm canonical): `npm install -g
+        grok-install-cli@<pin-from-#7>`.
+      - If §6 Option C (both): pick one path explicitly and
+        document the choice in a workflow comment.
+
+      Until #6 merges upstream, this draft treats Option A as
+      the *default* example (matches the recommended path in
+      #6's draft). Swap at PR time if needed.
+
+- [ ] **Rewrite `validate_template.py` as a thin wrapper** over
+      `grok-install validate <path>`. The Typer CLI's exit
+      code + stdout become the workflow signal. Drop all logic
+      that re-implements validation; the script's job is now
+      (a) discover templates, (b) invoke the CLI, (c) format
+      output for the matrix job.
+
+- [ ] **Rewrite `scan_template.py`** similarly: thin wrapper
+      over `grok-install scan <path>`. Preserve the
+      "fail-on-warnings" posture by passing `--strict` (or
+      whichever flag the real CLI exposes per §2 #6's
+      outcome).
+
+- [ ] **Rewrite `mock_run_template.py`** over `grok-install run
+      --dry-run <path>` (or the equivalent subcommand — CLI's
+      real surface is `init` / `validate` / `scan` / `run` /
+      `deploy` per audit 03 §8).
+
+- [ ] **Delete `scripts/grok_install_stub/`** and its tests.
+      The stub existed only because the real CLI had no
+      install path; once the real CLI is the source of truth,
+      the stub is dead code. Removing it in the same PR keeps
+      the repo honest about what's being exercised.
+
+- [ ] **Update `CONTRIBUTING.md`** (and `README.md` if it
+      references the stub) to point at the real CLI. Template
+      authors now need `pip install grok-install` (or the
+      chosen channel) locally to run
+      `python scripts/validate_template.py` — flag this as
+      onboarding friction and mitigate with a Makefile target
+      (`make setup`) that installs the CLI at the pinned
+      version.
+
+- [ ] **CHANGELOG** entry under `[Unreleased]` documenting the
+      stub removal + real-CLI adoption + the pinned version.
+
+- [ ] **Sanity check**: all 10 templates still pass the rewired
+      workflow. If any template passed under the stub but
+      fails under the real CLI, that is exactly the drift this
+      rec was meant to surface — fix the template (or the
+      CLI, if the CLI's behaviour turns out to be wrong), don't
+      paper over it with a stub revival.
