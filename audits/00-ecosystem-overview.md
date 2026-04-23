@@ -191,7 +191,22 @@ The ecosystem runs on two JSON Schema drafts simultaneously. Drift is acknowledg
 
 ## 4. Standards-count coherence — 5 / 12 / 14
 
-_(filled in unit 5)_
+Three different numbers for "how many Grok YAML standards are there" appear across the ecosystem. The authoritative count is **12**, established in `grok-yaml-standards/version-reconciliation.md` — which was created explicitly to retire earlier 8-count and 14-count claims.
+
+| Claim | Where it appears | Count | Status |
+|-------|------------------|-------|--------|
+| "12 standards" (8 core + 4 extensions) | `grok-yaml-standards/standards-overview.md`, `version-reconciliation.md`, `README.md`, CHANGELOG v1.2.0 | **12** | **Authoritative.** grok-cache.yaml and grok-auth.yaml explicitly declined; process for future additions via `discussion/new-standard` issue. [→ 02, §4, §11 row 2] |
+| "5 file types" (grok-install, grok-agent, grok-workflow, grok-security, grok-prompts) | `grok-docs/mkdocs.yml` nav → Spec reference | **5** | **Drift.** 7 of 12 standards (`grok-config`, `grok-update`, `grok-test`, `grok-docs`, `grok-tools`, `grok-deploy`, `grok-analytics`, `grok-ui` minus the 3 in the 5-list) are undocumented on the published docs site. [→ 05, §4, §11 row 2] |
+| "14 YAML specifications / standards" | `grok-install-action/README.md` (validation claim); `vscode-grok-yaml` landing description ("all 14 YAML standards") | **14** | **Drift.** Predates or ignores `version-reconciliation.md`, which explicitly declined the 14-count. Reconciliation doc provides ready-to-use PR language. [→ 04, §4; → 07, §1] |
+
+### Distribution of the drift
+
+- **Internally consistent in grok-yaml-standards** (count = 12). Every artefact in the repo agrees.
+- **grok-docs undercounts** at 5 (41.7% coverage on the user-facing docs site).
+- **Two consumer surfaces overcount at 14** — notably the GitHub Marketplace action README and the VS Code extension's landing page, both of which are the primary adoption touchpoints. Credibility cost lands hardest here.
+- **grok-install** itself says nothing about the 12-count (it's the outer spec, not the standards catalogue) — no drift, but no endorsement either.
+
+The drift is cheap to fix: `version-reconciliation.md` already contains PR-ready wording. The cross-cutting recommendation (see `audits/99-recommendations.md`) is to sync all ecosystem surfaces to the canonical 12 and wire a release-dispatch so future bumps can't redrift.
 
 ## 5. Release cadence snapshot
 
