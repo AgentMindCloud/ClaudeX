@@ -152,3 +152,73 @@ this rec ships **7 new pages**, not 8.)
   upstream.
 - §2 #3 (SHA-pin actions) — applies to this repo's 3 workflows;
   separate rec, not coordinated here.
+
+## Acceptance criteria
+
+Three parts. Part A refreshes the existing `grok-install` spec
+page to v2.14. Part B adds the 7 missing standard-reference
+pages. Part C is the publication-layer wiring (nav, version
+banner, Mike archive of v2.12). All three land in the same PR
+(or three PRs in any order); the issue closes when the published
+site at `agentmindcloud.github.io/grok-docs/` renders v2.14 as
+current and all 12 standards have reference pages accessible
+from the nav.
+
+### Part A — Refresh the `grok-install` spec page to v2.14
+
+The spec-page rewrite consumes `grok-install/spec/v2.14/spec.md`
+and `grok-install/CHANGELOG.md` v2.13 → v2.14 section as source
+material. No new vocabulary introduced in this rec — just a
+content refresh of what already exists upstream.
+
+- [ ] **Rewrite `docs/spec/grok-install.md`** (or wherever the
+      current v2.12 content lives; confirm path from
+      `mkdocs.yml` nav entry for "Spec → grok-install"):
+      - Top of page: `!!! info` admonition citing the current
+        version sourced from
+        `docs/assets/schemas/latest/VERSION` (the sync job
+        already maintains this file — see Part C's version
+        banner for the Jinja override pattern).
+      - **Overview** section: what `grok-install.yaml` is,
+        how it relates to the 12 file-type standards it
+        references, link to `grok-install/spec/v2.14/spec.md`
+        as the authoritative canonical copy.
+      - **v2.14 additions** section: the optional `visuals:`
+        block (per `audits/01 §8`); cite `grok-install
+        CHANGELOG.md` v2.14 entry for the exhaustive list.
+      - **Schema reference** section: embed
+        `docs/assets/schemas/latest/v2.14/schema.json` via
+        the MkDocs snippet mechanism:
+        ```markdown
+        ```json
+        --8<-- "docs/assets/schemas/latest/v2.14/schema.json"
+        ```
+        ```
+      - **Validator compatibility** section: flag that v2.14
+        uses JSON Schema **draft-2020-12** (vs. v2.13's
+        draft-07); consumers pick up the new draft via
+        `$schema`-keyword awareness. Cross-link to §2 #8's
+        landed migration on `grok-yaml-standards` when that
+        issue merges.
+      - **Migration from v2.13** section: single-screen guide
+        — what changed, what to update, what stays identical.
+        Source: `grok-install` `CHANGELOG.md` v2.13 → v2.14
+        entry.
+      - **Back-compat note**: v2.14 is additive over v2.13;
+        v2.12 is retained as an archive under Mike versioning
+        (see Part C).
+
+- [ ] **Update `mkdocs.yml` site_description** to drop the
+      "v2.12" language if present (not confirmed in audit;
+      check during PR).
+
+- [ ] **Update `README.md` at repo root** with the current spec
+      version in any headline claim.
+
+- [ ] **Sanity check**: `mkdocs build --strict` passes locally.
+      The `--strict` flag fails on ambiguous references and
+      missing nav entries, so it catches most content-migration
+      mistakes before they reach CI.
+
+- [ ] **Link-check**: the existing `link-check.yml` workflow
+      runs on the PR; no new config needed.
