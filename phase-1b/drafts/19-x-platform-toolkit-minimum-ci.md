@@ -60,3 +60,81 @@ incremental landing works.
 
 Closes SUP-5 outright. This is the last §2 rec undrafted
 after six passes; drafting it completes the §2 top-20.
+
+## Evidence
+
+From `main` snapshot on 2026-04-23 (WebFetch; paths stable).
+
+**Repo shape** — `audits/11-x-platform-toolkit.md §1, §2, §11`:
+- 20 tools under `tools/NN-<slug>/`. 8 Live (directory
+  contains `README.md` + `index.html`); 12 Spec'd
+  (directory contains `README.md` + `SPEC.md`).
+- `shared/grok-client/`, `shared/x-api-client/`,
+  `shared/ui-kit/` (tokens.css, components.css, shell.html,
+  README.md). Live tools inline `tokens.css` +
+  `components.css` per the `ui-kit` README.
+- Top-level files: `.editorconfig`, `.gitignore`,
+  `CHANGELOG.md`, `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`,
+  `LICENSE`, `README.md`. `.github/ISSUE_TEMPLATE/` present;
+  **no `.github/workflows/` directory**.
+- Language mix: HTML 93.4%, CSS 4.7%, JS 1.9% — concentrated
+  in the 8 Live tools' inline bundles.
+- Maturity: 1★, 0 forks, 0 issues, 0 PRs, 4 commits total.
+
+**Verified Live tool** — `audits/11-x-platform-toolkit.md §11 row 6`:
+- `tools/05-pinned-post-ab-rotator/` contains `README.md` +
+  `index.html`. This is the Live-shape archetype.
+
+**Verified Spec'd tools** — `audits/11-x-platform-toolkit.md §11 rows 3–5`:
+- `tools/01-thread-decay-tracker/` — `README.md` + `SPEC.md`.
+- `tools/19-grok-thread-composer/` — `README.md` + `SPEC.md`.
+- `tools/06-digital-product-storefront/` — `README.md` +
+  `SPEC.md`.
+- The Spec'd-shape archetype is `README.md` + `SPEC.md`.
+
+**Full 8-Live list not yet enumerated** — `audits/11 §10` flags
+"Which 8 tools are exactly Live? Audit sampled 4 of 20; inferred
+from file listings". Part B's consistency check is the
+mechanism that enumerates them authoritatively.
+
+**Risk register** — `audits/98-risk-register.md`:
+- **SUP-5** (S3, L-high, `open`): "`x-platform-toolkit` has
+  no CI of any kind — no dependency scanning, no lint, no
+  build verification; supply-chain regressions are
+  invisible."
+
+**Why reach is 2, not 1** —
+`audits/99-recommendations.md §2` (footnote under §2 #19):
+
+> "The toolkit hosts 8 of 20 advertised user-facing tools
+> that *read live spec versions*, so a CI consistency check
+> there protects every downstream user against silent
+> spec-drift. Scored reach=2 on that argument. If a Phase
+> 1B reviewer disagrees, demote it to §3."
+
+This draft agrees with the reach=2 argument — the
+Live-vs-Spec consistency check (Part B) is what makes this
+rec ecosystem-relevant rather than purely local hygiene.
+The 8 Live tools that read live spec versions are the
+surface where the toolkit's claims can silently become
+untrue.
+
+**Related §2 cross-refs**:
+- §2 #3 (SHA-pin actions + Renovate) — this repo is in §2
+  #3's 8-repo checklist. Landing §2 #19 here first creates
+  the `.github/workflows/` directory §2 #3 then adds
+  SHA-pinning to. No hard dependency either way.
+- §2 #2 (shared Grok API client) — §2 #2's JS consumer path
+  is explicitly out of scope. This rec does not coordinate
+  with §2 #2.
+- No other §2 cross-refs.
+
+**What this rec does NOT close**:
+- `shared/grok-client/` consolidation (audit 11 §9 row 2,
+  L-effort, separate row).
+- Token-handling architecture documentation (audit 11 §9
+  row 3, S-effort, separate row).
+- Moving Live tools above the 50% threshold by shipping
+  more (audit 11 §9 row 4, author time).
+- Hosted demo index page (audit 11 §9 row 5, S-effort,
+  separate row).
