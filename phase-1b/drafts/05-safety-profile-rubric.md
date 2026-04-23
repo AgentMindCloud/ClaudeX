@@ -158,3 +158,82 @@ Notes on the table:
       loses (rubric is canonical for the three profile
       *definitions*; SECURITY.md is canonical for the overall
       stance).
+
+### Part B — Location in the repo (human-readable + machine-readable)
+
+Both artefacts live at the repo root of `grok-yaml-standards` so
+consumers can pin them without spelunking nested paths.
+
+- [ ] `docs/safety-profile-rubric-v1.md` — the canonical
+      human-readable rubric. Contains §Part-A's seven-axis table
+      plus short per-axis prose and the cross-reference back to
+      `grok-install/SECURITY.md`. MUST carry the `rubric-v1`
+      SemVer tag in its H1 and a top-of-file `Last-updated:`
+      ISO-8601 date.
+- [ ] `schemas/safety-profile-rubric.schema.json` — the
+      machine-readable companion. Draft-2020-12 (aligns with
+      §2 #8's target draft for the v1.3 migration; if this rec
+      lands before §2 #8, the schema still uses draft-2020-12
+      and the `schema-smoke` CI job treats it as the one
+      exception to the repo-wide draft-07 rule until #8 lands).
+      The schema defines an object shape like:
+
+      ```json
+      {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://github.com/AgentMindCloud/grok-yaml-standards/schemas/safety-profile-rubric.schema.json",
+        "title": "Grok safety-profile rubric v1",
+        "type": "object",
+        "required": ["rubric_version", "profiles"],
+        "properties": {
+          "rubric_version": {"type": "string", "pattern": "^1\\.\\d+(\\.\\d+)?$"},
+          "profiles": {
+            "type": "object",
+            "required": ["strict", "standard", "permissive"],
+            "additionalProperties": false,
+            "properties": {
+              "strict":     {"$ref": "#/$defs/profile"},
+              "standard":   {"$ref": "#/$defs/profile"},
+              "permissive": {"$ref": "#/$defs/profile"}
+            }
+          }
+        },
+        "$defs": {
+          "profile": {
+            "type": "object",
+            "required": [
+              "external_writes", "secret_access", "code_execution",
+              "approval_gate", "scan_severity_threshold",
+              "network_egress", "halt_on_anomaly"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "external_writes":          {"enum": ["per_action_approval", "scoped_allowlist", "open"]},
+              "secret_access":            {"enum": ["read_never_echo", "read_reference_only", "read_passthrough"]},
+              "code_execution":           {"enum": ["denied", "sandboxed", "host_bounded"]},
+              "approval_gate":            {"enum": ["human", "rule_based", "none"]},
+              "scan_severity_threshold":  {"enum": ["warning", "error", "error_log_only"]},
+              "network_egress":           {"enum": ["default_deny_allowlist", "install_time_allowlist", "open"]},
+              "halt_on_anomaly":          {"enum": ["on_warning", "on_error", "operator_only"]}
+            }
+          }
+        }
+      }
+      ```
+
+      The concrete filled-in `strict`/`standard`/`permissive`
+      values from §Part-A's table are published alongside as
+      `schemas/safety-profile-rubric-v1.values.json` — the
+      canonical rubric instance that validates against the
+      schema above.
+- [ ] Both files are added to `CHANGELOG.md` under the release
+      that ships them (v1.3.0 if co-released with §2 #8;
+      v1.2.1 otherwise).
+- [ ] `README.md` gains a one-line pointer under the existing
+      "12 standards" callout: *"Safety-profile rubric: see
+      `docs/safety-profile-rubric-v1.md`."*
+- [ ] `standards-overview.md` gets a cross-link so readers
+      arriving at the Low/Medium/High/Critical-level discussion
+      can jump to the strict/standard/permissive-profile
+      discussion (they are orthogonal axes; the overview should
+      say so).
