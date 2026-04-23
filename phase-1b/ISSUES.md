@@ -54,7 +54,22 @@ just triggers a follow-up template-bump PR once #3 and #13 merge.
 | 8 | #13 | S | SEC-2 (S2), SEC-3 (S2) on both pilot repos; SEC-3 only *partial* ecosystem-wide (full closure rides on §2 #18) | AgentMindCloud/grok-install-cli + AgentMindCloud/grok-build-bridge *(file twice — same body stands against either)* | [`drafts/13-blocking-pip-audit-plus-secret-scan.md`](drafts/13-blocking-pip-audit-plus-secret-scan.md) | — *(consumed by §2 #18 at template-freeze time)* | — | drafted |
 | 9 | #18 | M | SEC-2 (S2) across adopters indirectly; supports SUP-1 closure across adopters | AgentMindCloud/grok-build-bridge *(extraction — coordinator)*; 7 adopter repos in checklist | [`drafts/18-ci-template-baseline.md`](drafts/18-ci-template-baseline.md) | — *(delivery vehicle for #3 + #13 across 7 adopters once they land at the source)* | — | drafted |
 
-## Third-pass candidates
+## Third-pass drafts (3 §2 recs, 3 files)
+
+Slice chosen as the "cross-ecosystem contracts + local-leverage
+governance" tranche. All three are M-effort with no `Blocked by`
+entry in §2; each closes (or fully enables closure of) at least
+one `98-risk-register.md` row. §2 #5 is the highest-fanout item
+in the §2 graph — three downstream recs (#1, #11, #17) depend on
+it — so drafting it first unlocks the gated post-filing follow-ups.
+
+| # | §2 rec | Effort | Risks closed | Upstream repo(s) | Draft file | Unblocks §2 | Filed (link) | Status |
+|:-:|:-:|:-:|---|---|---|:-:|---|---|
+| 10 | #5 | M | partial UNV-3 (S3); enables UNV-4 (S3) closure once consumers adopt | AgentMindCloud/grok-yaml-standards *(primary — owner of the rubric)*; consumer-repo checklist covers grok-install-cli, awesome-grok-agents, grok-build-bridge, grok-agent-orchestra | [`drafts/05-safety-profile-rubric.md`](drafts/05-safety-profile-rubric.md) | #1, #11, #17 | — | drafted |
+| 11 | #8 | M | VER-2 (S2) outright | AgentMindCloud/grok-yaml-standards *(downstream validators inherit via `$schema`-keyword awareness — no cross-ref filings)* | [`drafts/08-grok-yaml-standards-draft-2020-12-migration.md`](drafts/08-grok-yaml-standards-draft-2020-12-migration.md) | — *(cleans up §2 #18's schema-check job once both land)* | — | drafted |
+| 12 | #20 | M | GOV-2 (S2) outright | AgentMindCloud/grok-agents-marketplace | [`drafts/20-grok-agents-marketplace-pr-triage-codeowners.md`](drafts/20-grok-agents-marketplace-pr-triage-codeowners.md) | — *(makes §2 #3 and §2 #18 cross-ref adoptions in this repo cheaper via reviewer routing)* | — | drafted |
+
+## Next-pass candidates
 
 With the first-pass and second-pass slices covering §2 recs #3, #6, #9, #13,
 #14, #15, #18, the remaining `Blocked by`-free §2 recs fall into two groups:
