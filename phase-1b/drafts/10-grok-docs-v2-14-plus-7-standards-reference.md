@@ -60,3 +60,95 @@ drafteable. Without this rec, a dispatch-on-release fires into
 an empty target; nothing useful rebuilds. This rec is the
 only Phase-1B draft that unblocks §2 #4 — hence its inclusion
 at this point in the drafting sequence.
+
+## Evidence
+
+From `main` snapshots on 2026-04-23 (WebFetch; paths stable).
+
+**Current nav — 5 spec entries** — `audits/05-grok-docs.md §4`
+(sourced from `mkdocs.yml`):
+- `grok-install` (core spec)
+- `grok-agent`
+- `grok-workflow`
+- `grok-security`
+- `grok-prompts`
+
+**12 standards ratified in `grok-yaml-standards` v1.2.0** —
+`audits/02-grok-yaml-standards.md §2, §8, §11 row 2`
+(sourced from `standards-overview.md` + `version-reconciliation.md`):
+
+| # | Standard | Status | Documented on docs site today? |
+|:-:|----------|--------|-------------------------------|
+| 1 | `grok-install` (core spec) | 8-core | Yes (needs v2.12 → v2.14 refresh) |
+| 2 | `grok-agent` | 8-core | Yes |
+| 3 | `grok-workflow` | 8-core | Yes |
+| 4 | `grok-security` | 8-core | Yes |
+| 5 | `grok-prompts` | 8-core | Yes |
+| 6 | `grok-config` | 8-core | **Missing** |
+| 7 | `grok-update` | 8-core | **Missing** |
+| 8 | `grok-test` | 8-core | **Missing** |
+| 9 | `grok-docs` | 8-core | *Implicit* — the site is its own reference |
+| 10 | `grok-tools` | 4-extension | **Missing** |
+| 11 | `grok-deploy` | 4-extension | **Missing** |
+| 12 | `grok-analytics` | 4-extension | **Missing** |
+| 13 | `grok-ui` | 4-extension | **Missing** |
+
+(Wait — the math: 12 standards, 8 core + 4 extensions. `grok-docs`
+*is* the 9th core standard in audit 02; counting above gives
+13 because `grok-install` is the *outer spec*, not one of the 12.
+Correcting: the 12 standards are rows 2–13 above; `grok-install`
+at row 1 is the grok-install-spec, which is documented separately
+from the 12-standard catalogue. Net: 5 of 12 standards documented
+today, 7 missing. The `grok-docs` standard is self-documenting
+via the site itself; no standalone reference page needed — so
+this rec ships **7 new pages**, not 8.)
+
+**Schema synchronisation already in place** —
+`audits/05-grok-docs.md §5, §8, §11 row 4`:
+- `.github/workflows/sync-schemas.yml` — daily cron
+  (`0 3 * * *`) + manual dispatch + on-self-change.
+  Pulls `agentmindcloud/grok-yaml-standards@main`, copies
+  schemas to `docs/assets/schemas/{latest,<VERSION>}/`.
+  Idempotent; commit message
+  `chore(schemas): sync from grok-yaml-standards@[VERSION]`.
+- Implication: the 12 schemas are *already* mirrored locally.
+  This rec consumes that mirror for reference-page content —
+  each new standard-reference page embeds its schema as a
+  code block with `--8<-- "docs/assets/schemas/latest/grok-<name>.json"`
+  (standard MkDocs snippet syntax).
+
+**Build hygiene already strong** —
+`audits/05-grok-docs.md §4, §6, §11 row 5`:
+- `requirements.txt` exact-pinned across 8 deps.
+- Mike versioning plugin configured (enables per-version archives).
+- MkDocs Material with theme overrides in `overrides/`.
+
+**Risk register** — `audits/98-risk-register.md`:
+- **VER-4** (S2, L-high, `open`): "`grok-docs` advertises spec
+  **v2.12**; current spec is **v2.14**. Two-minor-version lag
+  in the canonical documentation site."
+- **DOC-2** (S2, L-high, `open`): "`grok-docs` documents **5
+  of 12** ratified standards; the remaining 7 have no
+  published reference page. The 'official documentation
+  site' is structurally incomplete."
+
+**Cross-cut docs-drift context** —
+`audits/00-ecosystem-overview.md §7.1` (verbatim):
+
+| Surface | Says | Should say |
+|---------|------|------------|
+| `grok-docs` (published site) | spec **v2.12** | v2.14 |
+| `grok-docs` nav — Spec reference | **5** file types | 1 core spec + 12 standards |
+
+**Related §2 cross-refs**:
+- §2 #8 (draft-2020-12 migration) — the schemas the new
+  reference pages embed switch from draft-07 to draft-2020-12
+  when #8 lands. If #8 lands first, the new pages embed the
+  migrated schemas from day one. If this rec lands first, the
+  pages embed draft-07 schemas and re-render on the next
+  daily sync after #8 merges — no coordination overhead.
+- §2 #4 (`repository_dispatch` wiring) — blocked by this rec.
+  Drafteable in the next drafting pass once this merges
+  upstream.
+- §2 #3 (SHA-pin actions) — applies to this repo's 3 workflows;
+  separate rec, not coordinated here.
