@@ -744,3 +744,162 @@ Pick one:
   §2 #2 undrafted.)*
 - `"File the 19 drafts now."` *(Path A widen MCP; Path B manual UI.)*
 - `"Pause Phase 1B."`
+
+---
+
+## Session: 2026-04-23 (cont.) — Phase 1B (fifth pass): repository_dispatch wiring
+
+### Status: Fifth pass complete — 1 speculative draft (§2 #4) (cumulative: 20 drafts covering 18 of 20 §2 recs)
+
+### Scope
+Single-rec pass: §2 #4 — wire `repository_dispatch` from
+`grok-install` → `grok-docs`, `grok-install-action`,
+`grok-agents-marketplace` so a spec bump fans out automatically.
+User chose explicitly ("Draft §2 #4") after the fourth-pass
+unblocked it (drafting #10 satisfied §4's in-repo prerequisite).
+Closes VER-4 trigger half + partial DOC-1.
+
+### MCP-scope constraint (unchanged)
+Still `agentmindcloud/claudex`-only. 20 drafts now await user
+filing upstream.
+
+### What was done
+1. Drafted §2 #4 → `drafts/04-repository-dispatch-spec-to-consumers.md`.
+   Two-part acceptance: (A) publisher workflow in `grok-install`
+   — new `fan-out-spec-release.yml` firing
+   `repository_dispatch` on GitHub Release publish, with a
+   matrix over the three subscriber repos; the
+   dispatch-event contract is documented (event type
+   `grok-install-release`, payload shape with `version` +
+   `source_repo` + `release_url`, additive-only semantics).
+   PAT/token strategy + GitHub-App alternative spelled out.
+   (B) three subscriber listener workflows — one per consumer
+   repo — each opens a PR (grok-docs, grok-install-action) or
+   a tracking issue (grok-agents-marketplace, since work there
+   is likelier to be rendering-logic-flavoured). Common
+   YAML skeleton above the per-subscriber variants avoids
+   duplication; PAT lives only on the publisher, subscribers
+   use default `GITHUB_TOKEN`.
+2. Updated `phase-1b/ISSUES.md`: added row 20 to the Session-2
+   speculative drafts table (§2 #4, M-effort, speculative on
+   #10, publisher + 3 subscriber cross-refs); moved #4 row in
+   Post-filing follow-ups from "eligible" to "drafted"; updated
+   next-pass-candidates preamble ("17 → 18 of 20"; two
+   undrafted remaining: §2 #2 and §2 #19).
+3. Updated filing-packets: `01-grok-install.md` (added §2 #4
+   as Issue 3 primary with PAT-setup notes); `04-grok-install-
+   action.md`, `05-grok-docs.md`, `08-grok-agents-marketplace.md`
+   (each gained a §2 #4 subscriber cross-ref — "open only
+   after §2 #4 primary merges", body points at the relevant
+   Part-B subsection of the draft, repo-specific coordination
+   notes for each).
+
+### Metrics
+- §2 recs drafted this pass: **1** (#4).
+- Draft files created this pass: **1**.
+- Cumulative §2 recs drafted (through fifth pass): **18 of 20**
+  (#1, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #13, #14,
+  #15, #16, #17, #18, #20).
+- Cumulative draft files: **20**.
+- Still undrafted from §2: **#2** (shared Grok API client, L,
+  reach 5), **#19** (x-platform-toolkit CI, M, reach 2).
+- Risks closed outright (on upstream merge of this + #10):
+  **VER-4** (S2) full closure (trigger side from #4 + content
+  side from #10).
+- Risks partially closed: **DOC-1** (partial — this rec lets
+  consumer-side number-claim rebuilds fan out automatically;
+  the hard-coded prose fixes in §2 #14a/#14b + §2 #10 are
+  the other axis).
+- Phase-1B commits on `claude/phase-1b-session-continuation-zQBET`
+  this pass: **13** (6 draft micro-commits + 1 ISSUES.md + 1
+  filing-packets bundle + this PROGRESS + CHANGELOG + ROADMAP
+  + final sanity-check unit).
+- Cumulative Phase-1B commits across all passes + Session 2 +
+  fourth pass: ~99 (through fourth pass) + 13 (this pass) ≈
+  **~112**.
+- Lines of fabricated product code: **0**.
+
+### Decisions & trade-offs
+- **Why filing-packets got only one bundled commit this pass.**
+  Four files changed (packets 01 / 04 / 05 / 08) but the
+  changes are symmetric — one new primary entry + three new
+  cross-ref entries, all citing the same draft and same
+  primary-URL-TODO pattern. Splitting into four commits would
+  be micro-unit theatre without review value; one bundled
+  commit lets a reviewer compare the four subscriber-packet
+  entries side by side.
+- **Why GitHub-Release trigger (A1) over tag-push (A2).**
+  GitHub Releases already carry human-readable release notes
+  and a stable `release.html_url` the dispatch payload can
+  carry. Tag-push works too (and is cheaper if the repo
+  doesn't cut Releases today), but A1 is the canonical
+  pattern.
+- **Why `grok-yaml-standards` is NOT a subscriber.**
+  `grok-docs/sync-schemas.yml` pulls from
+  `grok-yaml-standards@main` daily; `grok-yaml-standards`
+  doesn't need a `grok-install` release trigger to do
+  anything. Adding it as a subscriber creates noise, not
+  signal.
+- **Why `awesome-grok-agents` is NOT a subscriber in this
+  first cut.** Its CI validates templates via the stub today
+  (§2 #12 removes the stub). Until §2 #12 lands and the CI
+  exercises the real CLI, a spec-release dispatch has no
+  sensible action for `awesome-grok-agents` to take. Flag as
+  a future-subscriber in the draft's Notes.
+- **Why subscribers ship three different shapes.**
+  `grok-docs` opens a PR (banner bump + mkdocs trigger) —
+  mechanical.
+  `grok-install-action` opens a PR (cli-version default +
+  README prose bumps) — mechanical.
+  `grok-agents-marketplace` opens a tracking issue (submission-
+  form allowed-versions check, `visuals:` block rendering) —
+  non-mechanical. Matching the workflow's output to the
+  complexity of the downstream work avoids auto-generated
+  PRs that require human labour to close manually.
+- **PAT scope minimised.** Fine-grained PAT with `contents:
+  read` + `metadata: read` on only the three subscriber
+  repos. No write scope on the subscribers (the listener
+  uses its own default `GITHUB_TOKEN` for PR/issue creation
+  on its side). Captures least-privilege.
+- **Drift-window math.** Before: up to 24h (cron). After
+  happy-path: seconds. After missed dispatch (PAT expired,
+  network blip): the 03:00 UTC cron still runs — floor
+  remains 24h, not undefined. Defensive.
+
+### Files changed this pass
+- Added: `phase-1b/drafts/04-repository-dispatch-spec-to-consumers.md`.
+- Modified: `phase-1b/ISSUES.md` (added row 20 to Session-2
+  table; flipped #4 row to "drafted" in post-filing
+  follow-ups; updated next-pass candidates preamble),
+  `phase-1b/filing-packets/01-grok-install.md` (added §2 #4
+  primary as Issue 3), `phase-1b/filing-packets/04-grok-install-action.md`
+  + `phase-1b/filing-packets/05-grok-docs.md` +
+  `phase-1b/filing-packets/08-grok-agents-marketplace.md`
+  (each gained a §2 #4 subscriber cross-ref).
+- Modified (this + next two units): `PROGRESS.md`, `CHANGELOG.md`,
+  `ROADMAP.md`.
+
+### Open at pass close
+- **Filing** — 20 drafts await upstream filing. Filing order
+  is now a meaningful coordination artefact given the depth
+  of speculative-draft chains.
+- **Undrafted §2 residual (2 of 20)**: #2 (L, reach 5 —
+  highest reach remaining), #19 (M, reach 2 — lowest effort
+  remaining).
+- **Phase 1B drafting is one pass away from complete.**
+  Drafting #2 + #19 in either order (or both in one pass)
+  closes the §2 top-20.
+
+### Next suggested action
+Pick one:
+- `"Draft §2 #2 (shared Grok API client)."` *(L-effort, reach
+  5 — highest reach remaining. Most strategically valuable
+  rec left.)*
+- `"Draft §2 #19 (x-platform-toolkit CI minimum)."` *(M-effort,
+  reach 2 — smallest-effort rec remaining. Closes SUP-5
+  outright.)*
+- `"Draft both in one pass."` *(final drafting pass; closes
+  the §2 top-20 at 20 of 20.)*
+- `"File the 20 drafts now."` *(Path A widen MCP; Path B
+  manual UI.)*
+- `"Pause Phase 1B."` *(20 drafts sit ready; resume any time.)*
