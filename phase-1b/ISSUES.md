@@ -85,18 +85,25 @@ waiting for any upstream landing.
 
 ### Post-filing follow-ups (not yet candidates — wait for upstream landing)
 
-Drafts below become unblocked once the listed first-pass draft is **filed AND
+Drafts below become unblocked once the listed prerequisite draft is **filed AND
 merged/closed** upstream. Don't draft them before the unblocking merge lands;
 the prerequisite's text may shift in review and invalidate the follow-up
 assumptions.
 
-| §2 # | Rec (short) | Waits on | Notes |
-|:-:|---|:-:|---|
-| #7 | Publish proper `grok-install-cli` GitHub releases whose tag matches `pyproject.toml`; align the action's pin. Closes VER-3. | #6 | #6's resolution determines whether "version" means PyPI tag, npm tag, or both. |
-| #12 | Replace `awesome-grok-agents`'s `grok_install_stub` with a real CLI invocation in CI. Closes partial UNV-4. | #6, #7 | Needs a working install path (from #6) and a tagged release (from #7) to pin against. |
-| #4 | Wire `repository_dispatch` from `grok-install` → `grok-docs`, `grok-install-action`, `grok-agents-marketplace`. Closes VER-4 trigger; partial DOC-1. | #10 | v2.14 docs (#10) must exist before dispatch is wired, else the dispatched event has no docs to rebuild. |
-| #16 | Bootstrap `vscode-grok-yaml` v0.1.0 (read-only schema validation is enough). Closes partial GOV-3. | #15 | Description must be honest (#15) before bootstrap begins so contributors aren't confused mid-flight. |
-| #1, #11, #17 | Shared `grok-safety-rules` (#1), permissive-profile exemplar (#11), `grok-agent-orchestra` bootstrap (#17). | #5 | All three depend on the unified safety-profile rubric; draft them as a coordinated trio after #5 lands. |
+Note: since none of the first-/second-/third-pass drafts has been filed upstream yet
+(MCP-scope blocker — see `phase-1b/README.md §MCP-scope constraint`), drafts in this
+table that reference a third-pass prerequisite (§2 #5) are eligible to be written as
+**speculative drafts** against the in-repo prerequisite rather than waiting for
+upstream merge. A speculative draft carries a metadata-header flag stating so. See
+`phase-1b/README.md` and the §2 #5 draft itself for context.
+
+| §2 # | Rec (short) | Waits on | Prerequisite status | Notes |
+|:-:|---|:-:|---|---|
+| #7 | Publish proper `grok-install-cli` GitHub releases whose tag matches `pyproject.toml`; align the action's pin. Closes VER-3. | #6 | drafted in `phase-1b/drafts/06-cli-install-mechanism.md`; not yet filed upstream | #6's three acceptance options determine whether "version" means PyPI tag, npm tag, or both. Speculative draft must enumerate the pin-alignment behaviour under each of #6's options. |
+| #12 | Replace `awesome-grok-agents`'s `grok_install_stub` with a real CLI invocation in CI. Closes partial UNV-4. | #6, #7 | #6 drafted (see above); #7 is itself speculative-on-#6 | Deepest speculation: needs a working install path (from #6) and a tagged release (from #7) to pin against. Draft only after #7 is drafted. |
+| #4 | Wire `repository_dispatch` from `grok-install` → `grok-docs`, `grok-install-action`, `grok-agents-marketplace`. Closes VER-4 trigger; partial DOC-1. | #10 | **#10 NOT drafted** (L-effort; in next-pass candidates above) | #4 cannot be responsibly drafted without either drafting #10 first or getting explicit user confirmation to defer. Default recommendation: defer #4 until #10 is drafted. |
+| #16 | Bootstrap `vscode-grok-yaml` v0.1.0 (read-only schema validation is enough). Closes partial GOV-3. | #15 | drafted in `phase-1b/drafts/15a-vscode-grok-yaml-description.md` + `15b-…` | Both #15 sibling drafts result in "description is honest"; #16 can be drafted relatively safely against either landing option. Safest speculative draft. |
+| #1, #11, #17 | Shared `grok-safety-rules` (#1), permissive-profile exemplar (#11), `grok-agent-orchestra` bootstrap (#17). | #5 | drafted in `phase-1b/drafts/05-safety-profile-rubric.md` as of 2026-04-23 (this pass) | Draft as a coordinated trio (each targets a different repo). Speculative drafts reference #5's Part-D consumer-contract section; must be rewritten if #5's normative rubric values shift during upstream review. |
 
 Blocked-by chains (one-way; source of truth is the `Blocked by` column in
 `audits/99-recommendations.md §2`):
