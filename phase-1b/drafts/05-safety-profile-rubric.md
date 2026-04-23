@@ -64,3 +64,47 @@ then ships a conformance-test format that each of the four consumer
 repos can run in CI to prove its claimed profile mapping matches
 the rubric. The rubric is the contract; the conformance tests are
 what give it teeth.
+
+## Evidence
+
+From `main` snapshots on 2026-04-23 (WebFetch; paths stable).
+
+**Where the vocabulary appears today**
+
+| Repo | Artefact | What it says | What is missing |
+|------|----------|--------------|-----------------|
+| `grok-install` | `SECURITY.md` — "Enhanced Safety & Verification 2.0" | Defines the overall safety stance (pre-install scan, halt-on-anomaly, "Verified by Grok" badge). | No definition of the three profile names. |
+| `grok-yaml-standards` | `standards-overview.md` | Categorises the 12 standards by security **level** (Low / Medium / High / Critical). | Level ≠ profile. No rubric for strict / standard / permissive. |
+| `grok-yaml-standards` | `grok-security/` | Operational catalogue entry for the security standard. | Does not enumerate profile semantics. |
+| `grok-install-cli` | `src/grok_install/safety/rules.py`, `scanner.py` | Implements *a* ruleset used by `grok-install scan`. | Not documented whether it re-implements `grok-security` or diverges (UNV-4). |
+| `awesome-grok-agents` | `featured-agents.json` v1.0 | Declares one of `strict` / `standard` / `permissive` per template. | **6 strict / 4 standard / 0 permissive** — no permissive exemplar. |
+| `grok-build-bridge` | `_patterns.py` + LLM audit in `xai_client.py` | Implements its own dual-layer safety scan. | Parallel re-implementation of "safety rules" vocabulary. |
+| `grok-agent-orchestra` | README | Advertises "Lucas safety veto". | No source defines Lucas or its relationship to the three profiles (UNV-3). |
+
+*Sources: `audits/00-ecosystem-overview.md §6.1`, `§6.2`, `§6.3`;
+`audits/01-grok-install.md §6`; `audits/02-grok-yaml-standards.md
+§6`; `audits/03-grok-install-cli.md §6, §10`; `audits/06-awesome-
+grok-agents.md §6, §11 row 3`; `audits/09-grok-build-bridge.md §6`;
+`audits/10-grok-agent-orchestra.md §10`.*
+
+**Risk register** — `audits/98-risk-register.md`:
+
+- **UNV-3** (S3, L-med, `needs-info`): "'Lucas safety veto'
+  (advertised on `grok-agent-orchestra`): no source defines what
+  Lucas is, what veto authority it carries, or how it interacts
+  with the strict / standard / permissive profiles. Branding
+  without a behavioural contract."
+- **UNV-4** (S3, L-med, `needs-info`): "Whether `grok-install-cli`'s
+  safety rules are a re-implementation of the `grok-yaml-standards/
+  grok-security` schema or a divergent ruleset is not stated —
+  risks two safety surfaces drifting apart unobserved."
+
+**Why `grok-yaml-standards` is the right home for the rubric.**
+The repo already owns `standards-overview.md` (the ecosystem's
+most authoritative cross-standard table) and
+`version-reconciliation.md` (which established the "12 standards"
+count against competing 8- and 14-counts — audit 02 §4). Publishing
+the safety-profile rubric alongside those artefacts keeps the
+ecosystem's single-source-of-truth discipline intact. The four
+consumer repos already import this repo's schemas; adding a rubric
+file is additive.
