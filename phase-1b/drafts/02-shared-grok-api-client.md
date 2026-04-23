@@ -175,3 +175,92 @@ SEC-2-adjacent).
 - §2 #7 (`grok-install-cli` tagged releases + Trusted
   Publisher) — this rec's release pipeline follows the same
   pattern (Trusted Publisher to PyPI, SemVer tags).
+
+## Acceptance criteria
+
+Three parts. Part A is the package skeleton + ownership
+decisions + release pipeline. Part B is the feature surface
+(what the package must actually do). Part C is the
+consumer-adoption sequencing. The issue closes when v0.1.0
+ships to PyPI and the first two consumers (CLI + bridge)
+have adopted it on `main`.
+
+### Part A — Package shape + ownership
+
+- [ ] **Pick the package home.** Same two-option pattern §2
+      #1 uses. Decide once, cite the §2 #1 decision; whichever
+      landed there should land here.
+
+      **A1 — Extract from `grok-install-cli` as a sibling
+      top-level package.** A new `src/grok_client/` alongside
+      `src/grok_install/`, published as a separate PyPI
+      distribution. CLI depends on it.
+
+      **A2 — Create a new dedicated repo.**
+      `AgentMindCloud/grok-client`. Extract the Python logic;
+      publish from there; CLI + bridge + other consumers
+      depend on it.
+
+      Default recommendation: **A2**. Ownership boundary
+      rationale carries over from §2 #1: the shared client
+      has ≥3 Python consumers across repos; separate repo
+      governance is cleaner than CLI-centric review cadence.
+      If §2 #1 chose A2, follow suit for consistency. If §2
+      #1 chose A1 (in-repo extraction), this rec can still
+      choose A2 — the two decisions are not forced to match,
+      but reviewers should note the divergence explicitly.
+
+- [ ] **Package naming**:
+      - Distribution (PyPI): `grok-client`.
+      - Import: `grok_client`.
+      - Avoid `grok-sdk` (that name belongs to xAI's own SDK
+        and colliding with it is confusing).
+
+- [ ] **Scope: Python-first, JS-second-or-never.** The two
+      JS implementations (`grok-install`/browser,
+      `x-platform-toolkit`/inlined) are out of scope for
+      v0.1.0. Document this in the README as a **deliberate
+      choice**, not an oversight. Two honest paths for JS:
+      - **JS-never**: browser-flavoured Grok invocations stay
+        per-repo; the toolkit's inlined client is a constraint
+        of the single-file-HTML format the toolkit ships. A
+        shared JS package would need a build step those tools
+        don't have.
+      - **JS-later**: if/when a need emerges, extract a
+        sibling `grok-client-js` package. Out of scope for
+        this rec; captured in README roadmap.
+
+- [ ] **Pin library deps.** Runtime: `xai-sdk` pinned at
+      exact version (this is the point — the whole ecosystem
+      pins here). `httpx` pinned. `pydantic>=2,<3`. No other
+      runtime deps. Dev deps follow §2 #18's CI-template
+      discipline.
+
+- [ ] **Ship v0.1.0 to PyPI** via Trusted Publisher config
+      (same pattern §2 #7 Part A establishes for
+      `grok-install-cli`). Tag `v0.1.0`. GitHub Release with
+      generated notes.
+
+- [ ] **License**: Apache-2.0 (ecosystem convention
+      post-v1.2.0).
+
+- [ ] **Repo governance** (if A2): seed with `README.md`,
+      `LICENSE`, `CHANGELOG.md`, `SECURITY.md` (points at
+      `grok-install/SECURITY.md`), `CONTRIBUTING.md`,
+      `.github/CODEOWNERS`, `.github/workflows/ci.yml`
+      (adopt §2 #18's CI template from day one, same as §2
+      #17's bootstrap pattern).
+
+- [ ] **Test discipline**: `pytest --cov-fail-under=85` +
+      `mypy` strict + matrix over Python 3.10/3.11/3.12
+      (matches §2 #18 template).
+      Include a **recorded-cassette** test suite that pins
+      SDK behaviour without hitting the live API on every
+      CI run. Use `vcrpy` or a hand-rolled fixture pattern;
+      either works. Live-API tests gated behind an
+      `XAI_API_KEY` secret + an opt-in workflow.
+
+- [ ] **Maintainer roster**: name at least two maintainers
+      in `CODEOWNERS`. Shared libraries consumed by 3+ repos
+      with one maintainer are governance debt; make it
+      visible.
