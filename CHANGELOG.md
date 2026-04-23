@@ -40,6 +40,7 @@ All notable changes to this repository are logged here. Format follows [Keep a C
 - `phase-1b/drafts/17-grok-agent-orchestra-bootstrap.md` — upstream issue draft for §2 #17 (bootstrap v0.1.0 with a plan-execute-critique pattern + a behavioural Lucas safety veto; two-part acceptance; speculative on §2 #5 + #1 — deepest speculation with explicit fall-back if #1 not shipped; closes UNV-3 S3 outright + partial GOV-3).
 - `phase-1b/drafts/10-grok-docs-v2-14-plus-7-standards-reference.md` — upstream issue draft for §2 #10 (ship `grok-docs` v2.14 content + reference pages for the 7 undocumented standards; three-part acceptance covering spec-page refresh + 7 new reference pages + publication layer; L-effort content-writing; closes VER-4 + DOC-2 outright; unblocks §2 #4 for drafting).
 - `phase-1b/drafts/04-repository-dispatch-spec-to-consumers.md` — upstream issue draft for §2 #4 (wire `repository_dispatch` from `grok-install` → `grok-docs` + `grok-install-action` + `grok-agents-marketplace`; two-part acceptance covering publisher workflow + three subscriber listeners; speculative on §2 #10; closes VER-4 trigger + partial DOC-1).
+- `phase-1b/drafts/02-shared-grok-api-client.md` — upstream issue draft for §2 #2 (extract a shared Grok API client consumed by every Grok-calling repo; three-part acceptance covering package shape / ownership + feature surface for v0.1.0 parity + consumer adoption sequencing; non-speculative; closes the "four parallel Grok API clients" cross-cutting concern from `00-ecosystem-overview.md §9.A`).
 
 ### Changed
 - Renamed `CLAUDE.me` → `CLAUDE.md` to match Claude Code's canonical filename.
@@ -47,6 +48,6 @@ All notable changes to this repository are logged here. Format follows [Keep a C
 ### Open / deferred
 - `CLAUDE.md` "Primary Repos & Focus Areas" (lines 8–15) remains a placeholder; needs real repo URLs from the user (tracked as `99 §3.3` row 2 and risk register `GOV-5`).
 - Phase 1B first + second pass drafts (9 files total) await upstream filing by the user (MCP scope is `agentmindcloud/claudex`-only; the agent cannot file them). See `phase-1b/README.md §Filing workflow` and `phase-1b/ISSUES.md`.
-- Phase 1B fifth-pass draft (§2 #4 — 1 file) shipped 2026-04-23; cumulative **20 drafts across 18 of 20 §2 recs** still await upstream filing.
-- Session-2 + fourth-pass + fifth-pass drafts all carry the mandatory speculative-draft metadata header (prerequisite status + re-review trigger). Filing order respects the prerequisite tree.
-- Undrafted from §2 (2 of 20 remaining): **#2** (shared Grok API client, L, reach 5), **#19** (x-platform-toolkit CI, M, reach 2). See `PROGRESS.md` Phase-1B fifth-pass "Next suggested action".
+- Phase 1B sixth-pass draft (§2 #2 — 1 file) shipped 2026-04-23; cumulative **21 drafts across 19 of 20 §2 recs** still await upstream filing.
+- Session-2 + fourth-pass + fifth-pass drafts carry the mandatory speculative-draft metadata header (prerequisite status + re-review trigger). Sixth-pass §2 #2 is **non-speculative** (no in-repo prerequisite).
+- Undrafted from §2 (1 of 20 remaining): **#19** (x-platform-toolkit CI minimum, M, reach 2). See `PROGRESS.md` Phase-1B sixth-pass "Next suggested action".
