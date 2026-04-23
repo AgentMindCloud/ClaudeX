@@ -604,3 +604,143 @@ Pick one:
 - `"File the 18 drafts now."` *(Path A: widen MCP scope; Path
   B: manual GitHub UI.)*
 - `"Pause Phase 1B."` *(18 drafts sit ready; resume any time.)*
+
+---
+
+## Session: 2026-04-23 (cont.) — Phase 1B (fourth pass): grok-docs v2.14 unblocker
+
+### Status: Fourth pass complete — 1 draft (§2 #10) (cumulative: 19 drafts covering 17 of 20 §2 recs)
+
+### Scope
+Single-rec pass: §2 #10 — ship `grok-docs` v2.14 content +
+reference pages for the 7 undocumented standards. Selected by
+user ("Draft §2 #10") because it's the only remaining §2 rec
+that unblocks a post-filing follow-up (§2 #4,
+`repository_dispatch` wiring). Closes VER-4 + DOC-2 outright.
+
+### MCP-scope constraint (unchanged)
+Still `agentmindcloud/claudex`-only. 19 drafts now await user
+filing upstream.
+
+### What was done
+1. Drafted §2 #10 → `drafts/10-grok-docs-v2-14-plus-7-standards-reference.md`.
+   Three-part acceptance: (A) refresh the `grok-install` spec
+   page to v2.14 — embed the v2.14 schema via
+   `--8<--` snippet, add migration-from-v2.13 section, cite
+   v2.14's draft-2020-12 switch; (B) ship seven new reference
+   pages (`grok-config`, `grok-update`, `grok-test`, `grok-tools`,
+   `grok-deploy`, `grok-analytics`, `grok-ui`) each following
+   an identical template (front-matter + overview + when-to-use
+   + schema reference + example + fields table + related
+   standards + see-also); (C) publication layer (mkdocs.yml
+   nav with two-level Core/Extensions grouping, version banner
+   in `overrides/main.html`, Mike-archive v2.12 before the
+   main-branch rewrite lands). Notes section flags L-effort
+   honestly, proposes a four-PR split strategy for a
+   single-maintainer context.
+2. Updated `phase-1b/ISSUES.md`: added "Fourth-pass drafts"
+   table (row 19 with §2 #10); flagged §2 #4 as now eligible
+   (its prerequisite is in repo); moved §2 #10 out of the
+   next-pass-candidates list; added §2 #4 there instead.
+3. Updated `phase-1b/filing-packets/05-grok-docs.md`: added
+   §2 #10 as the single primary (previously had 0 primaries +
+   2 cross-refs); spelled out a split-PR strategy, the no-CI-
+   changes-required property, and the §2 #4 unblock linkage
+   in the filing notes.
+
+### Metrics
+- §2 recs drafted this pass: **1** (#10).
+- Draft files created this pass: **1**.
+- Cumulative §2 recs drafted (through fourth pass): **17 of 20**
+  (#1, #3, #5, #6, #7, #8, #9, #10, #11, #12, #13, #14, #15,
+  #16, #17, #18, #20).
+- Cumulative draft files: **19**.
+- Still undrafted from §2: **#2** (shared Grok API client, L,
+  reach 5), **#4** (now eligible — unblocks from drafted #10),
+  **#19** (x-platform-toolkit CI, M, reach 2).
+- Risks closed outright (on upstream merge): **VER-4** (S2),
+  **DOC-2** (S2).
+- Recs newly eligible for drafting as of this pass: **§2 #4**
+  (gated on #10 which is now in repo).
+- Phase-1B commits on `claude/phase-1b-session-continuation-zQBET`
+  this pass: **12** (7 draft micro-commits + 1 ISSUES.md +
+  1 filing-packet + this PROGRESS + CHANGELOG + ROADMAP +
+  final sanity-check unit).
+- Cumulative Phase-1B commits across all passes + Session 2:
+  ~87 (through Session 2) + 12 (this pass) ≈ **~99**.
+- Lines of fabricated product code: **0**.
+
+### Decisions & trade-offs
+- **Why #10 over the other two undrafted recs.** User choice
+  (explicit "Draft §2 #10"). Upstream value argument: #10
+  unblocks #4 (the only post-filing follow-up whose
+  prerequisite was still undrafted). Drafting #10 closes the
+  speculative-draft graph's longest unfulfilled dependency
+  chain.
+- **Acceptance criteria designed for incremental merge.**
+  L-effort against a single-maintainer repo (audit 05 §10)
+  is governance-risky if the PR is monolithic. The draft's
+  three parts + Part B's per-standard checkboxes intentionally
+  map to 4–7 bite-sized PRs. Partial landings still move the
+  site closer to truth; none of the parts regresses v2.14
+  claims.
+- **`grok-docs` the standard is self-documenting.** Confirmed
+  explicitly in the draft: the site IS its own `grok-docs`
+  standard reference. A standalone `spec/grok-docs.md` page
+  would be redundant. Ships as 7 new pages (one per missing
+  standard in the 12-catalogue), not 8. The draft's Evidence
+  section defends the count explicitly so a reviewer doesn't
+  wonder about an off-by-one.
+- **No CI changes required in v2.14 docs.**
+  `sync-schemas.yml` already republishes the 12 schemas daily;
+  new reference pages embed them via `--8<--` snippets.
+  §2 #3 (SHA-pin actions) and §2 #18 (CI template adoption)
+  remain separate recs; deliberately NOT bundled here to keep
+  reviewer cognitive load low.
+- **Field-table authoring hand-written.** Auto-generation
+  (pre-build hook emitting tables from JSON schemas) is the
+  right long-term answer; deferred. Hand-authoring 7 tables
+  is tractable; gating v2.14 ship on an auto-generator is
+  not.
+- **Mike v2.12 archive before main-branch rewrite.** Draft's
+  Part C spells out the exact Mike incantations
+  (`mike deploy v2.12 --push; mike deploy v2.14 latest ...`).
+  Users maintaining v2.12 agents during the deprecation window
+  keep access to v2.12 docs; the site defaults to v2.14. The
+  1-release grace window §2 #11's draft Part-B alluded to is
+  now concrete.
+- **§2 #4 is the next natural pass.** With #10 drafted, #4 is
+  now speculative-on-in-repo-prerequisite rather than blocked.
+  Surfaced in "Next suggested action" below.
+
+### Files changed this pass
+- Added: `phase-1b/drafts/10-grok-docs-v2-14-plus-7-standards-reference.md`.
+- Modified: `phase-1b/ISSUES.md` (fourth-pass table; #4 eligibility;
+  next-pass candidates rewrite), `phase-1b/filing-packets/05-grok-docs.md`
+  (added §2 #10 primary).
+- Modified (this + next two units): `PROGRESS.md`, `CHANGELOG.md`,
+  `ROADMAP.md`.
+
+### Open at pass close
+- **Filing** — 19 drafts await upstream filing. Filing order
+  respects blocked-by chains per `phase-1b/README.md` and
+  `phase-1b/ISSUES.md §Post-filing follow-ups`.
+- **Undrafted §2 residual (3 of 20)**: #2 (L, reach 5), #4
+  (newly eligible — speculative on #10), #19 (M, reach 2).
+- **§2 #4 drafteable once user requests it.** With #10 in
+  repo, #4 can be written as a speculative-on-#10 draft
+  (exactly the same discipline Session 2's drafts use).
+
+### Next suggested action
+Pick one:
+- `"Draft §2 #4 (repository_dispatch wiring)."` *(Now
+  eligible as speculative-on-#10. Natural continuation; M-effort.)*
+- `"Draft §2 #2 (shared Grok API client)."` *(L-effort, reach
+  5 — highest reach still undrafted.)*
+- `"Draft §2 #19 (x-platform-toolkit CI)."` *(M-effort, reach
+  2 — lowest-effort remaining. Closes SUP-5.)*
+- `"Draft both §2 #4 and §2 #19 (small batch)."` *(two
+  M-effort drafts; pushes cumulative to 19 of 20. Leaves only
+  §2 #2 undrafted.)*
+- `"File the 19 drafts now."` *(Path A widen MCP; Path B manual UI.)*
+- `"Pause Phase 1B."`
