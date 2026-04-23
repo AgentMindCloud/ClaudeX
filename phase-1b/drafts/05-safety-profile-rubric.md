@@ -309,3 +309,58 @@ in its `grok-install.yaml`?".
       must include at least one conformance case per profile
       that exercises the new standard's safety surface. Keeps
       the suite growing in lockstep with the catalogue.
+
+### Part D — Consumer contract (how downstream repos adopt)
+
+Four consumer repos are named in the `Affected repos` column of
+§2 #5. Each adopts the rubric differently; the acceptance criteria
+below name what "adopted" means per consumer. These checkboxes do
+**not** need to merge in `grok-yaml-standards` for this issue to
+close; they are the contract language this issue publishes so
+consumer-repo maintainers know what to do once the rubric lands.
+Linked follow-up issues in each consumer repo ticked these off.
+
+- [ ] **`grok-install-cli`** — `src/grok_install/safety/rules.py`
+      + `scanner.py` adopt the rubric as a loaded artefact
+      (`safety-profile-rubric-v1.values.json`) rather than
+      hard-coding profile semantics. `grok-install scan` gains a
+      `--conformance-check` flag that runs
+      `check_profile_conformance` against the target agent's
+      `grok-install.yaml`. Closes UNV-4 (the cause of UNV-4 is
+      *undocumented divergence*; making the CLI consume the
+      published rubric resolves the ambiguity by construction).
+      Dependency: §2 #1 (shared `grok-safety-rules` package)
+      becomes a natural extraction once this adoption lands in
+      both `grok-install-cli` and `grok-build-bridge`.
+
+- [ ] **`awesome-grok-agents`** — CI's
+      `validate_template.py` / `scan_template.py` adopt the
+      reference validator. Each of the 10 gallery templates'
+      `grok-install.yaml` is checked against the profile it
+      declares in `featured-agents.json`. **This also unblocks
+      §2 #11** (add a permissive exemplar): a new template
+      declaring `safety_profile: permissive` can now be
+      honestly checked against Part-A's `permissive` row.
+
+- [ ] **`grok-build-bridge`** — `_patterns.py` adopts
+      `safety-profile-rubric-v1.values.json` as the source of
+      truth for the "severity threshold" and "external writes"
+      axes. The LLM-audit layer in `xai_client.py` uses the
+      rubric as part of its system prompt context (the LLM
+      auditor is told which profile the agent claims, so it
+      can flag behaviour inconsistent with that profile).
+
+- [ ] **`grok-agent-orchestra`** — README's "Lucas safety
+      veto" gains a behavioural contract defined *in terms of*
+      the rubric: Lucas's veto is triggered when a proposed
+      multi-agent action would violate the *strictest* profile
+      claimed by any agent in the team. Closes UNV-3 partially;
+      §2 #17 (orchestra bootstrap) closes the rest once an
+      implementation ships.
+
+- [ ] **Follow-up linkage**: once this primary issue lands,
+      open four short follow-up issues (one per consumer) that
+      cite this issue's URL as the rubric source and carry the
+      consumer-specific checklist above. Do NOT open the
+      follow-ups before this primary merges — the rubric's
+      normative values may shift during review.
