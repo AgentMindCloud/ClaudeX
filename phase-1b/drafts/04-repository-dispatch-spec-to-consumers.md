@@ -133,3 +133,136 @@ verbatim from `audits/00-ecosystem-overview.md §9.E`:
   CLI releases.
 - §2 #14a/#14b — prose-level "14 → 12 standards" fixes stand
   alone; dispatch does not force their adoption.
+
+## Acceptance criteria
+
+Two parts. Part A lands in `grok-install` (the publisher).
+Part B lands as three short follow-up issues / PRs in each
+subscriber. The issue closes when Part A merges and all three
+subscriber workflows respond to a test dispatch (verified via
+`gh api repos/.../dispatches` from a maintainer's machine, or
+by cutting a dry-run release tag).
+
+### Part A — Publisher workflow in `grok-install`
+
+The publisher side is a single workflow file (or a ~15-line
+addition to whatever release workflow exists) that fires a
+`repository_dispatch` event at each of the three subscriber
+repos whenever a new spec version ships.
+
+- [ ] **Confirm publisher trigger.** The dispatch should fire
+      when a new spec version is *released*, not on every
+      push. Two honest options:
+      - **A1 — on GitHub release publish**: use
+        `on: release: types: [published]`. Cleanest if
+        `grok-install` already cuts GitHub releases (confirm
+        from repo `releases` page; Phase 1A did not record
+        this).
+      - **A2 — on tag push matching a spec-version pattern**:
+        use `on: push: tags: ['v[0-9]+.[0-9]+']`. Works if
+        releases are cut as tags without GitHub Release pages.
+
+      Default recommendation: **A1**. GitHub Releases already
+      carry human-readable release notes; their "published"
+      event is the canonical ecosystem-wide signal. If
+      `grok-install` doesn't cut GitHub Releases today, adding
+      them is a one-time setup — worth the 10 minutes.
+
+- [ ] **Add `.github/workflows/fan-out-spec-release.yml`**
+      (name is a suggestion — match existing naming conventions
+      in the repo):
+
+      ```yaml
+      name: Fan out spec release to downstream consumers
+
+      on:
+        release:
+          types: [published]
+        workflow_dispatch:
+          inputs:
+            version:
+              description: 'Version string to dispatch (e.g. v2.14)'
+              required: true
+              type: string
+
+      permissions:
+        contents: read
+
+      jobs:
+        dispatch:
+          runs-on: ubuntu-latest
+          strategy:
+            fail-fast: false
+            matrix:
+              target:
+                - { owner: AgentMindCloud, repo: grok-docs }
+                - { owner: AgentMindCloud, repo: grok-install-action }
+                - { owner: AgentMindCloud, repo: grok-agents-marketplace }
+          steps:
+            - name: Fire repository_dispatch
+              env:
+                GH_PAT: ${{ secrets.FANOUT_DISPATCH_PAT }}
+                VERSION: ${{ github.event.release.tag_name || inputs.version }}
+              run: |
+                curl -sS -X POST \
+                  -H "Accept: application/vnd.github+json" \
+                  -H "Authorization: Bearer ${GH_PAT}" \
+                  -H "X-GitHub-Api-Version: 2022-11-28" \
+                  "https://api.github.com/repos/${{ matrix.target.owner }}/${{ matrix.target.repo }}/dispatches" \
+                  -d "{\"event_type\":\"grok-install-release\",\"client_payload\":{\"version\":\"${VERSION}\",\"source_repo\":\"${{ github.repository }}\",\"release_url\":\"${{ github.event.release.html_url }}\"}}"
+      ```
+
+- [ ] **Define the dispatch-event contract** (put this in a
+      `CONTRIBUTING.md` subsection or a new
+      `docs/ci-dispatch.md` in `grok-install`):
+
+      - **Event type**: `grok-install-release`.
+      - **Client payload shape**:
+        ```json
+        {
+          "version": "v2.14",
+          "source_repo": "AgentMindCloud/grok-install",
+          "release_url": "https://github.com/AgentMindCloud/grok-install/releases/tag/v2.14"
+        }
+        ```
+      - **Payload stability**: additive-only. Subscribers may
+        rely on `version`, `source_repo`, `release_url`
+        existing on every event. New fields may be added; no
+        field will be renamed or removed without a new
+        `event_type` (e.g. `grok-install-release-v2`).
+      - **Retry semantics**: publisher retries are out of
+        scope. If a subscriber misses a dispatch (e.g. secret
+        expired), the subscriber's daily cron (where it
+        exists) is the safety net. The dispatch closes the
+        drift window in the happy path, not in every failure
+        mode.
+
+- [ ] **PAT / token strategy**: `repository_dispatch` from one
+      repo to another requires a token with `repo` scope on
+      the target repo (org-owned fine-grained PAT or a GitHub
+      App). Maintainer one-time setup:
+      1. Generate a fine-grained PAT (or install a GitHub App)
+         scoped to the three subscriber repos only,
+         `repo → contents: read, metadata: read`.
+      2. Add as `FANOUT_DISPATCH_PAT` secret on
+         `grok-install`.
+      3. Do NOT use the default `GITHUB_TOKEN` — it has no
+         permission to dispatch to sibling repos.
+
+- [ ] **Dry-run validation**: with the workflow in place,
+      trigger `workflow_dispatch` manually with
+      `version: v2.14-test`. All three subscriber workflows
+      (once Part B lands) receive the event and log it
+      without doing destructive work (each subscriber Part B
+      spells out a `dry-run` branch that's safe to exercise).
+
+- [ ] **CHANGELOG** entry on `grok-install` under
+      `[Unreleased]`: "Added fan-out release-dispatch to
+      grok-docs / grok-install-action / grok-agents-marketplace.
+      Subscribers wire their listeners per §2 #4 Part B
+      follow-ups."
+
+- [ ] **README cross-link** (one line near the top, under the
+      "contributing" or "workflow" section):
+      *"Spec releases fan out to downstream repos via
+      `repository_dispatch`; see `docs/ci-dispatch.md`."*
