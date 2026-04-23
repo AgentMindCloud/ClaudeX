@@ -38,6 +38,7 @@ All notable changes to this repository are logged here. Format follows [Keep a C
 - `phase-1b/drafts/01-shared-grok-safety-rules-package.md` — upstream issue draft for §2 #1 (extract shared `grok-safety-rules` package consumed by CLI + bridge + orchestra + gallery; two-part acceptance covering package shape / ownership options + consumer-adoption sequencing; speculative on §2 #5; closes UNV-4 S3 outright + partial SEC-1).
 - `phase-1b/drafts/11-awesome-grok-agents-permissive-exemplar.md` — upstream issue draft for §2 #11 (add `internal-ci-assistant` permissive-exemplar template + optional CI distribution report; speculative on §2 #5; closes the 6/4/0 "missing-exemplar" finding in `00-ecosystem-overview.md §6.2`).
 - `phase-1b/drafts/17-grok-agent-orchestra-bootstrap.md` — upstream issue draft for §2 #17 (bootstrap v0.1.0 with a plan-execute-critique pattern + a behavioural Lucas safety veto; two-part acceptance; speculative on §2 #5 + #1 — deepest speculation with explicit fall-back if #1 not shipped; closes UNV-3 S3 outright + partial GOV-3).
+- `phase-1b/drafts/10-grok-docs-v2-14-plus-7-standards-reference.md` — upstream issue draft for §2 #10 (ship `grok-docs` v2.14 content + reference pages for the 7 undocumented standards; three-part acceptance covering spec-page refresh + 7 new reference pages + publication layer; L-effort content-writing; closes VER-4 + DOC-2 outright; unblocks §2 #4 for drafting).
 
 ### Changed
 - Renamed `CLAUDE.me` → `CLAUDE.md` to match Claude Code's canonical filename.
@@ -45,7 +46,7 @@ All notable changes to this repository are logged here. Format follows [Keep a C
 ### Open / deferred
 - `CLAUDE.md` "Primary Repos & Focus Areas" (lines 8–15) remains a placeholder; needs real repo URLs from the user (tracked as `99 §3.3` row 2 and risk register `GOV-5`).
 - Phase 1B first + second pass drafts (9 files total) await upstream filing by the user (MCP scope is `agentmindcloud/claudex`-only; the agent cannot file them). See `phase-1b/README.md §Filing workflow` and `phase-1b/ISSUES.md`.
-- Phase 1B Session-2 speculative drafts (§2 #1, #7, #11, #12, #16, #17 — 6 files) shipped 2026-04-23; cumulative **18 drafts across 16 of 20 §2 recs** still await upstream filing.
-- All 6 Session-2 drafts carry the mandatory speculative-draft metadata header (prerequisite status + re-review trigger). Filing each Session-2 draft requires its in-repo prerequisite to merge upstream first; the prerequisite tree is catalogued in `phase-1b/ISSUES.md §Post-filing follow-ups` (speculative-depth column).
-- Phase 1B post-filing follow-up §2 #4 remains blocked on §2 #10 (not drafted; L-effort) — user deferred at S1→S2 kickoff. Flagged in `phase-1b/ISSUES.md §Post-filing follow-ups`.
-- Undrafted from §2: **#2** (shared Grok API client, L, reach 5), **#4** (gated on #10 — deferred), **#10** (grok-docs v2.14 + 7 standards reference, L, reach 4), **#19** (x-platform-toolkit CI, M, reach 2). See `PROGRESS.md` Phase-1B Session-2 "Next suggested action".
+- Phase 1B fourth-pass draft (§2 #10 — 1 file) shipped 2026-04-23; cumulative **19 drafts across 17 of 20 §2 recs** still await upstream filing.
+- §2 #4 is now drafteable as a speculative-on-#10 draft; previously blocked on #10 being undrafted. Flagged in `phase-1b/ISSUES.md §Post-filing follow-ups` + §Next-pass candidates.
+- Session-2 speculative drafts (§2 #1, #7, #11, #12, #16, #17) and fourth-pass #10 all carry the mandatory speculative-draft metadata header (prerequisite status + re-review trigger). Filing order respects the prerequisite tree.
+- Undrafted from §2: **#2** (shared Grok API client, L, reach 5), **#4** (newly eligible — speculative on #10), **#19** (x-platform-toolkit CI, M, reach 2). See `PROGRESS.md` Phase-1B fourth-pass "Next suggested action".
