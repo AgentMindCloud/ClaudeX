@@ -13,3 +13,48 @@
 - **Suggested labels**: `schema`, `migration`, `v1.3`, `ecosystem`, `phase-1b`
 
 ---
+
+## Context
+
+The two spec roots in the Grok ecosystem target different JSON
+Schema meta-schemas:
+
+- `grok-install` v2.14 ships its schema at `schemas/v2.14/
+  schema.json` on **draft-2020-12**.
+- `grok-yaml-standards` v1.2.0 ships all 12 per-standard schemas
+  on **draft-07**.
+
+`grok-yaml-standards/standards-overview.md` already declares a
+planned migration to draft-2020-12 for v1.3 — the drift is
+*acknowledged* and *scheduled*, not silent. This issue's job is to
+land that planned migration so every validator in the chain stops
+having to tolerate both drafts.
+
+The cost of the current split is observable in three places:
+
+1. **Downstream validators must support two drafts.** Any tool that
+   validates schemas from both spec roots — the hoped-for
+   `vscode-grok-yaml` extension, a unified CLI validator, or the
+   CI template §2 #18 is promoting — has to run two draft engines.
+   The `grok-build-bridge` CI workflow, which §2 #18 promotes as
+   the ecosystem baseline, already uses
+   `jsonschema.Draft202012Validator`; adopting that template in
+   `grok-yaml-standards` today would fail until its schemas
+   migrate.
+
+2. **Schema authoring defensively hedges.** New additions to
+   `grok-yaml-standards` (the `discussion/new-standard` process
+   from `version-reconciliation.md`) are written against draft-07
+   even when the authors know draft-2020-12 is coming — producing
+   churn at v1.3 bump time.
+
+3. **`grok-docs` mirrors the draft-07 schemas daily** (per audit
+   05 §5's `sync-schemas.yml`), which locks draft-07 documentation
+   into the published site until upstream migrates. The docs drift
+   disappears on its own once this migrates.
+
+The migration itself is mechanical in the hot path (swap
+`$schema` URLs + retune any syntactic constructs that moved
+between drafts). The M-effort rating comes from the
+coordination around the v1.3 release: CI changes, ajv-cli version
+confirmation, smoke-testing against consumers.
