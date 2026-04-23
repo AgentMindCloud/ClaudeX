@@ -185,3 +185,51 @@ ships with the migrated schemas.
       entry recording when v1.3 closed the draft-07 chapter —
       this is the repo's audit-trail convention for
       version-related changes.
+
+### Part B — Downstream coordination (smoke tests, no code changes required)
+
+Downstream validators pick up the new draft automatically via
+`$schema`-keyword awareness. Part B's job is to *verify* that
+this is the case before the v1.3 release is cut — and to flag any
+unexpected friction so it can be fixed at the source before
+release day.
+
+- [ ] **Pre-release smoke test against `grok-install`'s v2.14
+      validator.** Run
+      `ajv validate -s grok-yaml-standards/schemas/grok-security.json
+      -d grok-yaml-standards/grok-security/example.yaml`
+      against the migrated schemas with the same `ajv-cli@5`
+      version `grok-install` CI uses. Expected: pass. If not,
+      capture the failure and fix at the source before release.
+- [ ] **Pre-release smoke test against `grok-docs`'s
+      `sync-schemas.yml`.** Trigger the daily mirror job manually
+      (workflow_dispatch) against a pre-release branch of
+      `grok-yaml-standards`; verify the mirrored schemas in
+      `grok-docs/docs/assets/schemas/` parse cleanly. Expected:
+      pass (mirror job copies verbatim).
+- [ ] **Pre-release smoke test against `awesome-grok-agents`'s
+      `validate-templates.yml`.** Point that workflow at the
+      pre-release `grok-yaml-standards` branch. `ajv-cli@5 +
+      ajv-formats@3` is draft-2020-12 aware; the `schema` job
+      should continue to pass. If `schema` fails because a
+      template's YAML used a draft-07-specific construct that
+      draft-2020-12 tightens, flag the template(s) in that
+      repo's follow-up issue.
+- [ ] **Pre-release smoke test against `grok-install-cli` and
+      `grok-build-bridge`'s Python validators.**
+      `grok-install-cli` uses `jsonschema>=4.21` (supports both
+      drafts); `grok-build-bridge` already hard-binds to
+      `Draft202012Validator`. Expected: no changes required in
+      either repo. Verify with a smoke run of `grok-install scan`
+      against a `grok-security`-using template.
+- [ ] **Announce in `grok-install` and `grok-docs`**: once v1.3
+      ships, open a one-line follow-up issue in each of those
+      two repos (and only those two) confirming "schemas are
+      now draft-2020-12 end-to-end". Closes the docs-drift on
+      the published site and tightens `grok-install`'s
+      own-v2.14-is-1-of-6 validation story (audit 00 §4 row 4).
+- [ ] **Do NOT open follow-up issues in `grok-install-cli`,
+      `grok-build-bridge`, `awesome-grok-agents`, or
+      `grok-agents-marketplace`** unless the smoke tests above
+      surface a real problem. The migration is transparent to
+      them; follow-up noise dilutes the audit trail.
