@@ -28,15 +28,51 @@ DEFAULT_MAX_RETRIES = 4
 
 
 @dataclass(frozen=True)
+class ToolCall:
+    """A single function call request emitted by the model."""
+
+    id: str
+    name: str
+    arguments: str  # raw JSON string as produced by the model
+
+    def to_payload(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "type": "function",
+            "function": {"name": self.name, "arguments": self.arguments},
+        }
+
+    @classmethod
+    def from_payload(cls, data: dict[str, Any]) -> "ToolCall":
+        fn = data.get("function") or {}
+        return cls(
+            id=str(data.get("id") or ""),
+            name=str(fn.get("name") or ""),
+            arguments=fn.get("arguments") or "{}",
+        )
+
+
+@dataclass(frozen=True)
 class GrokMessage:
     role: str  # "system" | "user" | "assistant" | "tool"
     content: str
     name: str | None = None
+    tool_calls: tuple[ToolCall, ...] | None = None
+    tool_call_id: str | None = None
 
     def to_payload(self) -> dict[str, Any]:
-        out: dict[str, Any] = {"role": self.role, "content": self.content}
+        out: dict[str, Any] = {"role": self.role}
+        if self.tool_calls:
+            # OpenAI/xAI convention: assistant tool-call messages carry null
+            # content alongside the `tool_calls` array.
+            out["content"] = self.content or None
+            out["tool_calls"] = [c.to_payload() for c in self.tool_calls]
+        else:
+            out["content"] = self.content
         if self.name is not None:
             out["name"] = self.name
+        if self.tool_call_id is not None:
+            out["tool_call_id"] = self.tool_call_id
         return out
 
 
@@ -48,10 +84,16 @@ class GrokResponse:
     prompt_tokens: int = 0
     completion_tokens: int = 0
     safety_findings: list[Any] = field(default_factory=list)
+    tool_calls: tuple[ToolCall, ...] | None = None
+    finish_reason: str | None = None
 
     @property
     def total_tokens(self) -> int:
         return self.prompt_tokens + self.completion_tokens
+
+    @property
+    def has_tool_calls(self) -> bool:
+        return bool(self.tool_calls)
 
 
 class GrokError(RuntimeError):
@@ -118,7 +160,15 @@ class GrokClient:
                     f"prompt blocked by safety rule(s): "
                     f"{[f.rule for f in result.findings if f.severity >= 40]}"
                 )
-            guarded.append(GrokMessage(role=m.role, content=result.text, name=m.name))
+            guarded.append(
+                GrokMessage(
+                    role=m.role,
+                    content=result.text,
+                    name=m.name,
+                    tool_calls=m.tool_calls,
+                    tool_call_id=m.tool_call_id,
+                )
+            )
 
         payload: dict[str, Any] = {
             "model": self.model,
@@ -134,7 +184,7 @@ class GrokClient:
             payload.update(extra)
 
         raw = await self._post("/chat/completions", payload)
-        content = _extract_content(raw)
+        content, tool_calls, finish_reason = _extract_message(raw)
 
         # Post-flight: rewrite model output through the same ruleset.
         post = self.safety.apply(content)
@@ -157,6 +207,8 @@ class GrokClient:
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
             safety_findings=pre_findings + post.findings,
+            tool_calls=tool_calls,
+            finish_reason=finish_reason,
         )
 
     async def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -207,8 +259,16 @@ class GrokClient:
         raise last_err
 
 
-def _extract_content(raw: dict[str, Any]) -> str:
+def _extract_message(
+    raw: dict[str, Any],
+) -> tuple[str, tuple[ToolCall, ...] | None, str | None]:
     try:
-        return raw["choices"][0]["message"]["content"] or ""
+        choice = raw["choices"][0]
+        msg = choice["message"]
     except (KeyError, IndexError, TypeError) as exc:
         raise GrokError(f"malformed response: {raw!r}") from exc
+    content = msg.get("content") or ""
+    raw_calls = msg.get("tool_calls") or []
+    calls = tuple(ToolCall.from_payload(c) for c in raw_calls) if raw_calls else None
+    finish_reason = choice.get("finish_reason")
+    return content, calls, finish_reason

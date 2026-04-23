@@ -2,6 +2,54 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — §2 #4 tool-use-orchestrator
+
+**Shipped** `frok.tools` + tool-use plumbing on `GrokClient`.
+
+* **`GrokClient` / `GrokMessage` / `GrokResponse` extension**
+  * New `ToolCall` dataclass (`id`, `name`, `arguments` as a JSON string).
+  * `GrokMessage` carries optional `tool_calls` + `tool_call_id`; its
+    payload emits `content: null` alongside `tool_calls` as the xAI /
+    OpenAI spec expects for assistant turns.
+  * `GrokResponse` exposes `tool_calls` and `finish_reason`. Safety
+    pre-flight now preserves `tool_calls` + `tool_call_id` across its
+    rebuild (fix caught by tests).
+* **`frok.tools.schema`** — zero-dep Draft-07 subset validator (type,
+  enum, required, additionalProperties, items, min/max, length) plus a
+  `infer_schema(fn)` that turns a Python signature into a JSON Schema —
+  handles `Optional`, PEP-604 `A | B`, `Literal`, `Enum`, `list[T]`,
+  `dict`, and defaults.
+* **`frok.tools.registry`** — `Tool`, a `@tool` decorator (param/no-param
+  forms), and `ToolRegistry` with `.spec()` (OpenAI-compatible) and
+  `.dispatch(name, args, dry_run=...)` that validates args, awaits
+  async handlers, stringifies structured results, and honours
+  `side_effects=False` / a custom `dry_run_handler`.
+* **`frok.tools.orchestrator`** — `ToolOrchestrator` runs the full loop
+  against `GrokClient`: send → if `tool_calls` → dispatch each → append
+  assistant + tool messages → repeat until `finish_reason != tool_calls`
+  or `max_steps`. Bad-arg / unknown-tool / handler-raised errors are
+  surfaced *back to the model* as tool-message content so it can
+  recover rather than crashing the run.
+
+**Verification.** `python3 -m pytest -q` → 72 passed in 0.22s (30 new).
+
+**Decisions / trade-offs.**
+* Parallel `tool_calls` in one turn execute sequentially on purpose —
+  deterministic ordering matters more than latency at this stage, and
+  `asyncio.gather` is a one-line swap when it doesn't.
+* Dry-run policy is per-tool: side-effectful tools stub to a predictable
+  `[dry-run] name({args})` string unless they provide a `dry_run_handler`;
+  read-only tools (`side_effects=False`) run for real. This lets the
+  loop still make forward progress under dry-run.
+* Schema inference stays permissive on unknown annotations (empty
+  schema) rather than failing import-time — a broken annotation
+  shouldn't break registration.
+
+**Next suggested action:** `Continue Phase 2 with §2 #7 telemetry — a
+pluggable structured-log / trace sink that every GrokClient.chat,
+MemoryStore op, and ToolOrchestrator invocation can emit to, so #8
+evals can regress on runs later.`
+
 ## 2026-04-23 — §2 #3 persistent-memory
 
 **Shipped** `frok.memory` on top of Phase 2 #1/#2.

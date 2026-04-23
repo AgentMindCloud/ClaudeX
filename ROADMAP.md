@@ -24,7 +24,10 @@ builds on these three.
    *Shipped 2026-04-23:* `frok.memory` (SQLite + pluggable `Embedder`),
    `MemoryAgent` wiring through `GrokClient`.
 4. **tool-use-orchestrator** — Tool registry + dispatch for Grok-style
-   function calling.
+   function calling. *Shipped 2026-04-23:* `frok.tools` (Tool / @tool /
+   ToolRegistry / ToolOrchestrator), zero-dep JSON Schema validator +
+   signature inference, dry-run mode, full loop wired through
+   `GrokClient.chat(tools=...)`.
 5. **multimodal-adapter** — Vision/voice IO adapter surface.
 6. **agent-team-runtime** — Lightweight multi-agent scheduler.
 7. **telemetry** — Structured logs, traces, and evals hook.
