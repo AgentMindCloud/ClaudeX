@@ -17,3 +17,37 @@
 - **Suggested labels**: `release`, `version-coherence`, `packaging`, `S1`, `phase-1b`
 
 ---
+
+## Context
+
+`grok-install-cli`'s `pyproject.toml` declares `name = "grok-install"`
+at version `0.1.0`. No GitHub releases are tagged on the repo at
+audit time (2026-04-23). Meanwhile, `grok-install-action`'s
+`action.yml` pins `cli-version: 2.14.0` and invokes the CLI as an
+npm package. The resulting state: the action's `2.14.0` pin has no
+corresponding artefact in the CLI's source tree — there is no tag,
+no release, no PyPI publication at `2.14.0` traceable to this
+repo.
+
+§2 #6 (the prerequisite) reconciles *which install channel is
+canonical* — PyPI, npm, or both. This issue (§2 #7) is the next
+layer: once the channel is settled, publish proper GitHub releases
+whose tag matches a version that actually ships to that channel,
+and update the action's pin to match.
+
+The split between #6 and #7 is deliberate:
+
+- #6 is about **which wire format** the CLI is distributed in.
+- #7 is about **version coherence** between the CLI's source tree,
+  its published release artefacts, and any consumer that pins
+  against it.
+
+Both must land to close VER-3, but they close different sides of
+it: #6 closes the "install doesn't resolve" side; #7 closes the
+"the pin has no corresponding artefact" side.
+
+Secondary benefit: publishing proper GitHub releases gives this
+repo a visible release cadence (other ecosystem repos have 1–3;
+this one has zero), which itself signals that the CLI is
+maintained rather than abandoned. For a repo downstream adopters
+pin against on every CI run, release visibility matters.
