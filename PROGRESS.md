@@ -385,3 +385,222 @@ Pick one (Session 2 trigger):
 - `"Proceed to Session 2; draft #1/#11/#17 as one coordinated file, not three siblings."` *(tighter trio but less honest — each targets a different repo.)*
 - `"Pause Phase 1B."` *(12 drafts sit ready; resume any time.)*
 - `"File the 12 drafts first, then reopen Session 2."` *(path A: widen MCP scope and file before drafting further; path B: manual GitHub UI filing from filing-packets/.)*
+
+---
+
+## Session: 2026-04-23 (cont.) — Phase 1B (Session 2): speculative post-filing follow-ups
+
+### Status: Session 2 complete — 6 speculative drafts (cumulative: 18 drafts covering 16 of 20 §2 recs)
+
+### Scope
+User accepted the kickoff prompt's recommended defaults: proceed
+to Session 2; defer §2 #4 (since §2 #10 is still not drafted);
+draft the #1/#11/#17 trio as three sibling files (each targeting
+a different repo — more honest than a single coordinated file).
+
+Six speculative drafts in this pass:
+- §2 #16 (`vscode-grok-yaml` v0.1.0 bootstrap) — gated on §2 #15.
+- §2 #7 (`grok-install-cli` tagged releases + action pin
+  alignment) — gated on §2 #6.
+- §2 #12 (replace `awesome-grok-agents`' `grok_install_stub`
+  with real CLI) — gated on §2 #6 + #7 (deepest).
+- §2 #1 (shared `grok-safety-rules` package) — trio member;
+  gated on §2 #5.
+- §2 #11 (permissive-profile exemplar template) — trio member;
+  gated on §2 #5.
+- §2 #17 (orchestra bootstrap + behavioural Lucas veto) — trio
+  member; gated on §2 #5 + §2 #1 (deepest).
+
+### Speculative-draft discipline
+Every Session-2 draft carries the mandatory
+speculative-draft metadata header:
+- **Prerequisite status**: drafted in `phase-1b/drafts/<prereq>.md`;
+  not yet filed upstream; speculative.
+- **Re-review trigger**: specific rewrite conditions if the
+  prerequisite issue is substantively changed during upstream
+  review.
+
+Policy recorded in `phase-1b/README.md` (speculative drafts) +
+`phase-1b/ISSUES.md §Post-filing follow-ups` (per-row rewrite
+triggers + which prerequisite is itself speculative).
+
+### MCP-scope constraint (unchanged)
+Still `agentmindcloud/claudex`-only. All 18 drafts (cumulative
+across Sessions 0-2) await user filing upstream.
+`phase-1b/filing-packets/` updated to reflect Session-2
+primaries on the 4 affected per-repo packets (07, 03, 06, 10).
+
+### What was done
+1. Drafted §2 #16 → `drafts/16-vscode-grok-yaml-bootstrap.md`.
+   Two-part acceptance: (A) minimum-viable extension (package.json
+   + TypeScript source + governance files + Marketplace publish);
+   (B) schema-fetch strategy (B1 fetch from grok-docs mirror vs.
+   B2 bundle in repo) + CI. Speculative on §2 #15a/#15b.
+2. Drafted §2 #7 → `drafts/07-grok-install-cli-releases-pyproject-alignment.md`.
+   Two-part acceptance: (A) tagged release pipeline with PyPI
+   Trusted Publisher; (B) action-pin alignment under each of §2
+   #6's three acceptance options. Speculative on §2 #6.
+3. Drafted §2 #12 → `drafts/12-awesome-grok-agents-replace-install-stub.md`.
+   Two-part acceptance: (A) replace stub with real CLI invocation
+   in validate-templates.yml + delete `scripts/grok_install_stub/`;
+   (B) optional rubric-conformance matrix once §2 #5 lands.
+   Speculative on §2 #6 + #7 (deepest — transitive through #7).
+4. Drafted §2 #1 → `drafts/01-shared-grok-safety-rules-package.md`.
+   Two-part acceptance: (A) package shape + ownership (A1 in-repo
+   vs. A2 new repo, recommending A2) + seven-axis API mirroring
+   §2 #5's rubric; (B) consumer adoption sequencing (CLI first,
+   bridge second, gallery transitive, orchestra day-one).
+   Speculative on §2 #5.
+5. Drafted §2 #11 → `drafts/11-awesome-grok-agents-permissive-exemplar.md`.
+   Two-part acceptance: (A) `internal-ci-assistant/` template
+   with `grok-install.yaml` body mirroring §2 #5's `permissive`
+   row cell-for-cell + registry entry + README; (B) optional CI
+   distribution report. Speculative on §2 #5.
+6. Drafted §2 #17 → `drafts/17-grok-agent-orchestra-bootstrap.md`.
+   Two-part acceptance: (A) v0.1.0 plan-execute-critique pattern
+   + package scaffolding + §2 #18 CI template adoption from day
+   one + governance files; (B) Lucas safety veto behavioural
+   contract ("strictest profile claimed by any agent in team"
+   + `safety/lucas.py` implementation + two CI veto fixtures).
+   Speculative on §2 #5 + §2 #1 (deepest — two layers, with
+   #1 having an explicit fall-back).
+7. Updated `phase-1b/ISSUES.md`: added "Session-2 speculative
+   drafts" table (6 rows with speculative-depth column);
+   rewrote Post-filing follow-ups table to mark Session-2
+   drafts linked + flag §2 #4 as still deferred pending §2 #10.
+8. Updated filing-packets: `07-vscode-grok-yaml.md` (+§2 #16),
+   `03-grok-install-cli.md` (+§2 #7 + #1), `06-awesome-grok-agents.md`
+   (+§2 #11 + #12), `10-grok-agent-orchestra.md` (+§2 #17).
+
+### Metrics
+- §2 recs drafted this pass: **6** (#1, #7, #11, #12, #16, #17).
+- Draft files created this pass: **6**.
+- Cumulative §2 recs drafted (across all passes): **16 of 20**
+  (#1, #3, #5, #6, #7, #8, #9, #11, #12, #13, #14, #15, #16,
+  #17, #18, #20).
+- Cumulative draft files: **18**.
+- Still undrafted from §2: **#2** (shared Grok API client, L),
+  **#4** (repository_dispatch, gated on #10), **#10** (grok-docs
+  v2.14, L), **#19** (x-platform-toolkit CI, M).
+- Risks closed outright (on all upstream merges): **VER-2**
+  (S2, #8), **GOV-2** (S2, #20), **UNV-3** (S3, #17), **UNV-4**
+  (S3, #1).
+- Risks partially closed pending consumer adoption:
+  **UNV-3** (partial via #5), **SEC-1** (partial via #1's
+  shared static-scan layer), **GOV-3** (partial via #16 + #17;
+  full closure also needs §2 #15).
+- Recs no longer blocked anywhere in the graph (draft exists
+  for every prerequisite): **§2 #7, #12, #16, #1, #11, #17**.
+- Recs still blocked at draft time for the correct reason:
+  **§2 #4** (gated on #10 which remains undrafted; deferred
+  per user decision at S1→S2 kickoff).
+- Phase-1B commits on `claude/phase-1b-session-continuation-zQBET`
+  this pass: **44** (36 draft micro-commits + 2 ISSUES + 4
+  filing-packet + this PROGRESS + CHANGELOG + ROADMAP + final
+  sanity-check unit).
+- Cumulative Phase-1B commits across 1st-pass / 2nd-pass /
+  addendum / 3rd-pass / Session 2: ~14 (through addendum) +
+  29 (3rd pass) + 44 (Session 2) = **~87**.
+- Lines of fabricated product code: **0** (drafting-only phase).
+
+### Decisions & trade-offs
+- **User decisions at S1→S2 kickoff, recorded verbatim.**
+  (1) Proceed to Session 2 now. (2) Defer §2 #4 (do NOT draft
+  §2 #10 inside Session 2 to unblock #4). (3) Draft §2
+  #1/#11/#17 as three sibling files. Defaults matched the
+  kickoff prompt's pre-chosen safest path; no widening-scope
+  discussion required.
+- **Speculative-draft metadata header is mandatory across
+  all 6 drafts.** Each draft spells out which in-repo
+  prerequisite it depends on + what conditions trigger a
+  rewrite. The ISSUES.md Post-filing-follow-ups table
+  cross-references the same data so a reviewer can see the
+  speculative-depth tree at a glance.
+- **Deepest speculation: §2 #12 (through #7→#6) and §2 #17
+  (through #1→#5).** Both are two layers deep. Filing order
+  matters: do not file either until both of their
+  prerequisites have merged upstream. The drafts explicitly
+  ask reviewers to wait for the prerequisite-merge signal
+  rather than racing.
+- **§2 #1 recommends a new-repo path (A2) over in-repo
+  extraction (A1).** Rationale in the draft's Notes: shared
+  libraries with ambiguous ownership across 4 consumer repos
+  create compound-interest governance debt; a new repo makes
+  the boundary explicit. A1 is valid and cheaper short-term
+  but creates circular governance.
+- **§2 #17 Lucas veto is team-level, not per-agent.** The
+  draft explicitly defends "check against strictest profile
+  claimed by any agent in team" over "check against proposing
+  agent's own profile". Conservative by design; prevents
+  permissive scratchpad agents from laundering actions past
+  strict executors.
+- **§2 #7 version-naming recommendation: A1 (`0.1.0`).** Match
+  today's `pyproject.toml` honestly rather than inflating to
+  `2.14.0` to chase the action pin. The consumer (action)
+  should pin to the CLI's actual version, not vice versa.
+  Flagged explicitly for maintainer review.
+- **§2 #11 chose internal-CI-assistant as exemplar** over
+  customer-facing permissive agents. Customer-facing
+  permissive is a policy decision most operators should
+  refuse; modeling it in a gallery template is dangerous.
+  Internal-CI teaches "permissive is honest when the
+  environment sandboxes you" — a durable framing.
+- **§2 #12 deletes the stub rather than keeping it as
+  fallback.** A fallback path no one exercises rots. If CI
+  only exercises the real CLI, the stub is dead code that
+  looks alive. Better to remove cleanly.
+- **§2 #16 recommends Option B1 (fetch from grok-docs daily
+  mirror).** Avoids adding a fourth schema-distribution
+  location. If `grok-docs` does not yet expose
+  `/assets/schemas/latest/`, a one-comment coordination
+  post after §2 #15 merges is enough to add it.
+
+### Files changed this pass
+- Added: `phase-1b/drafts/01-shared-grok-safety-rules-package.md`,
+  `phase-1b/drafts/07-grok-install-cli-releases-pyproject-alignment.md`,
+  `phase-1b/drafts/11-awesome-grok-agents-permissive-exemplar.md`,
+  `phase-1b/drafts/12-awesome-grok-agents-replace-install-stub.md`,
+  `phase-1b/drafts/16-vscode-grok-yaml-bootstrap.md`,
+  `phase-1b/drafts/17-grok-agent-orchestra-bootstrap.md`.
+- Modified: `phase-1b/ISSUES.md` (Session-2 table + post-filing
+  follow-ups rewrite), `phase-1b/filing-packets/07-vscode-grok-yaml.md`,
+  `phase-1b/filing-packets/03-grok-install-cli.md`,
+  `phase-1b/filing-packets/06-awesome-grok-agents.md`,
+  `phase-1b/filing-packets/10-grok-agent-orchestra.md`.
+- Modified (this + next two units): `PROGRESS.md`, `CHANGELOG.md`,
+  `ROADMAP.md`.
+
+### Open at session close
+- **Filing** — 18 drafts await upstream filing. Filing order
+  must respect blocked-by chains: first-pass (#6, #9, #14,
+  #15) → second-pass (#3, #13, #18) → third-pass (#5, #8,
+  #20) → Session-2 drafts only after their prerequisites
+  merge. `filing-packets/README.md §Path A/B` covers
+  mechanics.
+- **Undrafted §2 recs** — #2 (shared Grok API client), #10
+  (grok-docs v2.14), #19 (x-platform-toolkit CI), #4 (gated
+  on #10; user deferred).
+- **Speculative-draft re-review posture** — each Session-2
+  draft's metadata header lists specific conditions that
+  trigger a rewrite. If upstream review of any prerequisite
+  changes the prerequisite's acceptance criteria materially,
+  the listed Session-2 draft(s) need a PR in this repo
+  updating the speculative body before the user files
+  upstream. ISSUES.md §Post-filing follow-ups table is the
+  coordination surface.
+
+### Next suggested action
+Pick one:
+- `"Draft §2 #10 (grok-docs v2.14 + 7 standards reference)."`
+  *(L-effort; unblocks §2 #4 once drafted — the only gated
+  follow-up still waiting for its prerequisite draft.)*
+- `"Draft §2 #2 (shared Grok API client)."` *(L-effort, reach
+  5 — highest reach in §2. Highest-impact remaining undrafted
+  rec.)*
+- `"Draft §2 #19 (x-platform-toolkit CI minimum)."` *(M-effort,
+  reach 2 — lowest-effort remaining. Closes SUP-5.)*
+- `"Draft §2 #4 after §2 #10."` *(natural continuation after
+  #10 lands in this repo.)*
+- `"File the 18 drafts now."` *(Path A: widen MCP scope; Path
+  B: manual GitHub UI.)*
+- `"Pause Phase 1B."` *(18 drafts sit ready; resume any time.)*
