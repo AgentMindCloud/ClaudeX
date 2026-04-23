@@ -3,7 +3,7 @@
 - **Target repo**: https://github.com/AgentMindCloud/grok-docs
 - **New issue URL**: https://github.com/AgentMindCloud/grok-docs/issues/new
 - **Drafts primary-targeting this repo**: 1 (§2 #10 — fourth pass 2026-04-23)
-- **Cross-ref / adopter follow-ups**: 2 (§2 #3 variant, §2 #18 adopter)
+- **Cross-ref / adopter follow-ups**: 3 (§2 #3 variant, §2 #18 adopter, §2 #4 subscriber)
 
 The fourth-pass added §2 #10 as the primary for this repo: ship
 `grok-docs` v2.14 content + reference pages for the 7 missing
@@ -54,3 +54,13 @@ L-effort; content-writing dominates.
   Pair with §2 #10 if convenient — §2 #10 ships v2.14 content and 7
   reference pages, which is the natural moment to regenerate the build.
   ```
+
+### Cross-ref C — §2 #4 subscriber: Install spec-release listener workflow
+
+- **Open only after**: §2 #4's primary issue lands in `grok-install` (see `01-grok-install.md` Issue 3) **AND** §2 #10 has merged in this repo (otherwise the banner-bump path in the listener points at a `spec_version` convention that may not exist yet).
+- **Primary issue URL (fill in once it lands)**: `<TODO: primary URL from grok-install>`
+- **Draft source**: [`phase-1b/drafts/04-repository-dispatch-spec-to-consumers.md`](../drafts/04-repository-dispatch-spec-to-consumers.md) — §Part B, "Subscriber 1 — grok-docs".
+- **Suggested title**: `Install spec-release listener workflow (tracks <TODO: primary URL>)`
+- **Suggested labels**: `ci`, `automation`, `docs`, `phase-1b`
+- **Suggested body**: paste only Subscriber-1's section from Part B. Includes the sibling workflow `.github/workflows/spec-release-listener.yml` that forwards to `sync-schemas.yml` (with a `force_version` input) and opens a PR bumping `extra.spec_version` in `mkdocs.yml`.
+- **Filing note**: ships alongside §2 #10's publication-layer changes. If §2 #10's `mkdocs.yml extra.spec_version` convention is renamed during review, update this listener's `sed` target to match. The speculative-draft header on §2 #4 captures this re-review trigger.

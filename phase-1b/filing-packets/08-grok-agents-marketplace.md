@@ -3,7 +3,7 @@
 - **Target repo**: https://github.com/AgentMindCloud/grok-agents-marketplace
 - **New issue URL**: https://github.com/AgentMindCloud/grok-agents-marketplace/issues/new
 - **Drafts primary-targeting this repo**: 1 (§2 #20 — third pass)
-- **Cross-ref / adopter follow-ups**: 2 (§2 #3 variant, §2 #18 adopter)
+- **Cross-ref / adopter follow-ups**: 3 (§2 #3 variant, §2 #18 adopter, §2 #4 subscriber)
 
 The third-pass draft §2 #20 (triage the 12 open PRs, publish
 `CODEOWNERS`, document a review SLA) now targets this repo. §2 #20
@@ -72,3 +72,13 @@ day one.
   be warranted if this adoption proves awkward — surface that here
   as a follow-up sub-issue if needed.
   ```
+
+### Cross-ref C — §2 #4 subscriber: Install spec-release listener workflow
+
+- **Open only after**: §2 #4's primary issue lands in `grok-install` (see `01-grok-install.md` Issue 3).
+- **Primary issue URL (fill in once it lands)**: `<TODO: primary URL from grok-install>`
+- **Draft source**: [`phase-1b/drafts/04-repository-dispatch-spec-to-consumers.md`](../drafts/04-repository-dispatch-spec-to-consumers.md) — §Part B, "Subscriber 3 — grok-agents-marketplace".
+- **Suggested title**: `Install spec-release listener workflow (tracks <TODO: primary URL>)`
+- **Suggested labels**: `ci`, `automation`, `spec-release`, `phase-1b`
+- **Suggested body**: paste only Subscriber-3's section from Part B. The listener opens a tracking issue (not a PR) on every spec release because this repo's follow-up work is often rendering-logic-flavoured (non-mechanical — submission-form accepted versions, `visuals:` block rendering, etc.).
+- **Filing note**: pairs with §2 #20's CODEOWNERS landing — once CODEOWNERS is in place, the auto-opened issue routes to a named owner and surfaces under the SLA clock (see §2 #20's Part C).

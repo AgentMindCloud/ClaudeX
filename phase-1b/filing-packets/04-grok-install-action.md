@@ -3,7 +3,7 @@
 - **Target repo**: https://github.com/AgentMindCloud/grok-install-action
 - **New issue URL**: https://github.com/AgentMindCloud/grok-install-action/issues/new
 - **Drafts primary-targeting this repo**: 1 (§2 #14a)
-- **Cross-ref / adopter follow-ups**: 3 (§2 #6 cross-ref, §2 #3 variant, §2 #18 adopter)
+- **Cross-ref / adopter follow-ups**: 4 (§2 #6 cross-ref, §2 #3 variant, §2 #18 adopter, §2 #4 subscriber)
 
 ## Primaries to file
 
@@ -75,3 +75,13 @@
   The §2 #18 primary flags a parallel JS-flavour reusable workflow as a
   possible follow-up if the straight adoption proves awkward.
   ```
+
+### Cross-ref D — §2 #4 subscriber: Install spec-release listener workflow
+
+- **Open only after**: §2 #4's primary issue lands in `grok-install` (see `01-grok-install.md` Issue 3).
+- **Primary issue URL (fill in once it lands)**: `<TODO: primary URL from grok-install>`
+- **Draft source**: [`phase-1b/drafts/04-repository-dispatch-spec-to-consumers.md`](../drafts/04-repository-dispatch-spec-to-consumers.md) — §Part B, "Subscriber 2 — grok-install-action".
+- **Suggested title**: `Install spec-release listener workflow (tracks <TODO: primary URL>)`
+- **Suggested labels**: `ci`, `automation`, `version-coherence`, `phase-1b`
+- **Suggested body**: paste only Subscriber-2's section from Part B (not the whole draft). Includes the workflow file (`.github/workflows/spec-release-listener.yml`) that bumps `action.yml` `cli-version` default and README spec-version prose via `peter-evans/create-pull-request`, gated by a human review on the generated PR.
+- **Filing note**: coordinate with §2 #7's CLI-version axis — the listener updates *spec*-version prose (v2.14 → v2.15), not the *CLI*-version pin. Those are different axes; the draft spells this out.

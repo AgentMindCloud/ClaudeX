@@ -2,7 +2,7 @@
 
 - **Target repo**: https://github.com/AgentMindCloud/grok-install
 - **New issue URL**: https://github.com/AgentMindCloud/grok-install/issues/new
-- **Drafts primary-targeting this repo**: 2 (§2 #9, §2 #3)
+- **Drafts primary-targeting this repo**: 3 (§2 #9, §2 #3, §2 #4 — latter added fifth pass, speculative)
 - **Cross-ref / adopter follow-ups**: 1 (§2 #18 adopter)
 
 ## Primaries to file
@@ -21,6 +21,17 @@
 - **Suggested labels**: `security`, `supply-chain`, `ci`, `ecosystem`, `phase-1b`
 - **Body**: paste the content of `phase-1b/drafts/03-sha-pin-actions-ecosystem.md` below the first `---` separator.
 - **Filing note**: this is the coordination issue per the draft's metadata; `grok-install` is the recommended primary because it is the ecosystem spec root. If you prefer 8 per-repo variants instead, file the same body against each of the 8 CI-enabled repos (see `../README.md §Troubleshooting → coordination-issue alternative`).
+
+### Issue 3 — §2 #4: Wire repository_dispatch from grok-install → 3 consumers (speculative — fifth pass)
+
+- **Draft source**: [`phase-1b/drafts/04-repository-dispatch-spec-to-consumers.md`](../drafts/04-repository-dispatch-spec-to-consumers.md)
+- **Title** (paste verbatim): `Wire repository_dispatch from grok-install → grok-docs, grok-install-action, grok-agents-marketplace`
+- **Suggested labels**: `ci`, `automation`, `version-coherence`, `ecosystem`, `phase-1b`
+- **Body**: paste the content of the draft below the first `---` separator.
+- **Filing note (SPECULATIVE)**: this draft is speculative on §2 #10. Do NOT file until §2 #10 has merged upstream in `grok-docs` — the `grok-docs` subscriber workflow in Part B references the `mkdocs.yml extra.spec_version` convention §2 #10 Part C establishes.
+- **Filing note**: Part A (publisher side) lives in this repo. Part B (3 subscriber listener workflows) are **separate cross-ref follow-up issues**, opened AFTER this primary merges. Subscriber packets: `04-grok-install-action.md` (listener), `05-grok-docs.md` (listener), `08-grok-agents-marketplace.md` (listener).
+- **Filing note**: one-time maintainer setup required — generate a fine-grained PAT scoped to the 3 subscriber repos (`repo → contents: read, metadata: read`) and add as `FANOUT_DISPATCH_PAT` secret on this repo. The draft's Part A spells out the exact PAT scope and includes an alternative GitHub-App path for orgs that prefer it.
+- **Filing note**: Part A recommends Option A1 (trigger `on: release: [published]`) over A2 (trigger on tag push). If `grok-install` does not currently cut GitHub Releases, adding them is a one-time setup (10 minutes) and is worth doing for human-readable release notes regardless.
 
 ## Cross-ref / adopter follow-ups
 
