@@ -16,3 +16,45 @@
 - **Suggested labels**: `bootstrap`, `v0.1.0`, `multi-agent`, `lucas-veto`, `phase-1b`
 
 ---
+
+## Context
+
+`grok-agent-orchestra` is the multi-agent framework the
+ecosystem advertises — README describes "5 patterns" and a
+"Lucas safety veto". The repo today contains **only LICENSE**:
+1 commit total, no README (the description lives on the GitHub
+repo landing page), no source, no CI, no issues template. Like
+`vscode-grok-yaml`, it is a shell. Unlike `vscode-grok-yaml`,
+its advertised feature set is materially more ambitious — a
+multi-agent orchestrator with a named safety veto is not a
+one-afternoon extension; it is a framework.
+
+Two concrete problems fall out:
+
+1. **The repo's marketing outruns reality.** §2 #15b (already
+   drafted + in repo) downgrades the description. This rec
+   closes the other half: ship a real v0.1.0 with *one* working
+   multi-agent pattern so "multi-agent framework" is a true
+   statement.
+
+2. **Lucas has no source.** The "Lucas safety veto" is named on
+   the repo landing page but defined nowhere. UNV-3 in the risk
+   register. Without a behavioural contract, Lucas is branding.
+   This rec defines Lucas in terms of §2 #5's rubric — a named
+   function that vetoes multi-agent actions violating the
+   *strictest* safety profile claimed by any agent in the team.
+
+The goal for v0.1.0 is **one pattern, done well**, not five
+patterns half-done. Candidate: a **plan-execute-critique** loop
+— three agents (planner, executor, critic) collaborating on a
+single user task, with Lucas checking each proposed action
+against the rubric before execution. This is the smallest
+pattern that actually exercises multi-agent coordination +
+safety-veto integration; the other four patterns the repo
+advertised (per README) can layer on top in later releases.
+
+Secondary constraint: the bootstrap must adopt §2 #1's shared
+`grok-safety-rules` from day one. The orchestra is the one
+repo where "day one" is still ahead of us; adopting the shared
+package here avoids adding a fourth parallel safety
+implementation that §2 #1 would then immediately retire.
