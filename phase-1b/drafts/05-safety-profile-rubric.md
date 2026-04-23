@@ -364,3 +364,65 @@ Linked follow-up issues in each consumer repo ticked these off.
       consumer-specific checklist above. Do NOT open the
       follow-ups before this primary merges — the rubric's
       normative values may shift during review.
+
+## Notes
+
+- **Profile vs. level — two different axes.** `standards-overview.md`
+  already categorises the 12 standards by *level* (Low / Medium /
+  High / Critical), which answers "how sensitive is the thing the
+  standard touches?". This rubric answers "how tightly must an
+  agent consuming the standard behave?". Both are useful; they
+  are independent. The rubric MUST explicitly state the
+  distinction so future contributors don't collapse them.
+
+- **Relationship to §2 #1 (shared `grok-safety-rules` package).**
+  §2 #1 is marked L-effort and `Blocked by 5`. This rec is the
+  unblocker. The shape: once `grok-install-cli` and
+  `grok-build-bridge` both consume the published rubric (Part D),
+  the three parallel static-regex implementations
+  (`rules.py`, `_patterns.py`, `scan_template.py`) have a shared
+  contract and can be extracted into a single package without
+  breaking any consumer. Do not attempt §2 #1 before this rec
+  merges.
+
+- **Relationship to §2 #11 (permissive exemplar).** §2 #11 is
+  S-effort and `Blocked by 5`. Once this rec merges with a
+  normative `permissive` row in Part A, the exemplar template
+  has something concrete to calibrate against. §2 #11 is also a
+  natural conformance-test contribution: the exemplar template
+  ships with its own `tests/conformance/` case that exercises
+  the permissive profile end-to-end.
+
+- **Relationship to §2 #17 (`grok-agent-orchestra` bootstrap).**
+  §2 #17 is L-effort and `Blocked by 5`. The rubric lets Lucas
+  be defined behaviourally rather than vibes-ly. Until then, any
+  orchestra code written against "Lucas veto" is building on
+  undefined behaviour.
+
+- **Coordination with §2 #8 (draft-2020-12 migration).** If §2
+  #8 lands first, the rubric's schema file uses draft-2020-12
+  with zero friction. If this rec lands first, the rubric's
+  schema is the one draft-2020-12 file in a repo otherwise on
+  draft-07 — the `schema-smoke` CI job is parameterised to
+  tolerate the exception, or a comment in the job flags it as
+  "migrates when §2 #8 lands". Pick whichever filing order is
+  convenient; neither blocks the other.
+
+- **Out of scope here.** This issue deliberately does NOT:
+  - rename the profile vocabulary (the existing three names are
+    in widespread use; changing them is a breaking change for
+    every consumer);
+  - prescribe how `grok-install-cli` refactors internally to
+    consume the rubric (Part D states the contract, not the
+    implementation);
+  - ship the permissive exemplar itself (that is §2 #11);
+  - define "Lucas" beyond "vetoes on violation of the strictest
+    claimed profile in a team" (full semantics live in §2 #17).
+
+- **Filing strategy.** Single coordination issue in
+  `grok-yaml-standards`. Consumer-repo follow-ups (the four
+  Part-D bullets) are opened as separate short issues *after*
+  this primary merges, each pointing at the merged rubric URL.
+  Do not pre-file the follow-ups — the rubric's normative values
+  may shift during review, which would invalidate the follow-up
+  checklists.
