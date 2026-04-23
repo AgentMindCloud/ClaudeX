@@ -202,3 +202,50 @@ Land a single PR that edits
       rec was meant to surface — fix the template (or the
       CLI, if the CLI's behaviour turns out to be wrong), don't
       paper over it with a stub revival.
+
+### Part B — Add rubric-conformance matrix (once §2 #5 lands)
+
+Optional companion: once the safety-profile rubric from §2 #5
+ships in `grok-yaml-standards` with the reference validator
+(`tools/check_profile_conformance.py`), add a new `conformance`
+job that exercises each template against its declared
+`safety_profile`.
+
+- [ ] **Add a `conformance` matrix job** to
+      `validate-templates.yml`. One row per template; each row
+      runs:
+      ```
+      check_profile_conformance \
+          --rubric <mirrored rubric values JSON from grok-yaml-standards> \
+          --claim templates/<name>/grok-install.yaml
+      ```
+      Exit code 0 ⇒ conformant; 1 ⇒ violations; 2 ⇒
+      over-conformant (logged, non-fatal); 3 ⇒ schema error
+      (fatal).
+
+- [ ] **Fetch the rubric values from `grok-yaml-standards`**
+      (the §2 #5 draft publishes
+      `schemas/safety-profile-rubric-v1.values.json` at repo
+      root). Use the same "pull latest on schedule" pattern
+      §2 #16's Part B uses for its schema fetch. Pin to a
+      specific version tag (e.g. `v1.3.0`) to avoid surprise
+      regressions when upstream bumps.
+
+- [ ] **Update `featured-agents.json` registry** only if Part A's
+      stub replacement surfaces a drift between a template's
+      declared profile and its behaviour. If drift is found,
+      either fix the template to match the profile or update
+      the profile in the registry to match observed behaviour —
+      do NOT downgrade silently.
+
+- [ ] **Part B scheduling**: land Part A first. Part B can ship
+      in the same PR if §2 #5 is already merged upstream at
+      write time; otherwise Part B is a follow-up issue/PR once
+      §2 #5 merges.
+
+- [ ] **Close linkage to §2 #1**: once this draft's Part A + §2
+      #1 both land, the ecosystem has no parallel safety
+      implementations inside awesome-grok-agents — the real
+      CLI is the source, `grok-safety-rules` is the shared
+      library the CLI consumes. UNV-4 closes fully at that
+      point.
