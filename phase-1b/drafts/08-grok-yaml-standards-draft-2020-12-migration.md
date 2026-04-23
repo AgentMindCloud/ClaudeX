@@ -133,3 +133,55 @@ changes once `$schema` flips):
 
 (Not every schema will touch every construct above; the
 migration PR's diff is the ground truth.)
+
+## Acceptance criteria
+
+Two parts. Part A is the migration itself; Part B is the
+coordination to land it cleanly across downstream consumers. The
+issue closes when both merge and v1.3.0 (or chosen release tag)
+ships with the migrated schemas.
+
+### Part A — Core migration (in `grok-yaml-standards`)
+
+- [ ] **Flip `$schema`** across all 12 schema files:
+      `"$schema": "http://json-schema.org/draft-07/schema#"`
+      → `"$schema": "https://json-schema.org/draft/2020-12/schema"`.
+      Do this in one PR per schema, or one PR for all 12; either
+      is fine. Landing all 12 together simplifies the CI flip in
+      the next bullet.
+- [ ] **Rewrite syntactic constructs** that moved between drafts
+      (see Evidence §):
+      - Rename `definitions` → `$defs`; update every `$ref` that
+        pointed at the old name.
+      - Replace `dependencies` with `dependentRequired` +
+        `dependentSchemas` wherever it is used.
+      - Audit numeric/boolean `exclusiveMinimum` / `exclusiveMaximum`
+        usage; should already be numeric.
+      - Leave `$id` values unchanged (URLs stay stable; the
+        schema's identity is the `$id`, not the `$schema`).
+- [ ] **Update `schema-smoke` CI job** in
+      `.github/workflows/validate-schemas.yml` to assert
+      `$schema` is the draft-2020-12 URL instead of draft-07.
+      Keep the existing `$id` / `title` / `description` assertions.
+- [ ] **Confirm `ajv-validate` CI job still passes** against all
+      12 `grok-*/example.yaml`. `ajv-cli@5.0.0` supports
+      draft-2020-12 out of the box; no version bump needed.
+      If a regression appears, the fix is to add `--spec=draft2020`
+      explicitly — but default behaviour honours the `$schema`
+      keyword, so no flag should be necessary.
+- [ ] **Publish release notes** in `CHANGELOG.md` under `v1.3.0`
+      (or `v1.2.1` if the team prefers not to bump minor for a
+      migration): call out the `$schema` flip, the `definitions`
+      → `$defs` rename, and any other syntactic rewrites. Include
+      a "migration notes for consumers" subsection that says
+      "drop any draft-07-specific validator flags; default
+      `$schema`-keyword-aware behaviour works across every
+      validator in the Grok ecosystem today".
+- [ ] **Update `standards-overview.md`** to mark the
+      draft-07/draft-2020 migration as *complete* rather than
+      *deferred* (currently deferred to v1.3 in the document
+      body; flip the language once the PR lands).
+- [ ] **Update `version-reconciliation.md`** with a one-line
+      entry recording when v1.3 closed the draft-07 chapter —
+      this is the repo's audit-trail convention for
+      version-related changes.
