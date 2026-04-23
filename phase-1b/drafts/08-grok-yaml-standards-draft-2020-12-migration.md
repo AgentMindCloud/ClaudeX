@@ -233,3 +233,55 @@ release day.
       `grok-agents-marketplace`** unless the smoke tests above
       surface a real problem. The migration is transparent to
       them; follow-up noise dilutes the audit trail.
+
+## Notes
+
+- **Release name.** The `standards-overview.md` body and the
+  §2 #8 text both call this the "v1.3 migration". Shipping under
+  `v1.3.0` matches the existing expectation. If the team prefers
+  `v1.2.1` (no breaking schema semantics in the migration),
+  that's fine — but update `standards-overview.md` to match.
+  The acceptance criteria above read `v1.3.0 (or chosen release
+  tag)` for exactly this reason.
+
+- **Why this is not a breaking change for schema users.**
+  `$id` values stay the same; the set of valid documents under
+  each schema stays the same (the draft-2020-12 constructs used
+  in the migration are strictly more expressive than draft-07,
+  not restrictive). Consumers that already validate via
+  `$schema`-keyword-aware libraries (ajv-cli v5+, Python
+  `jsonschema>=4.17`) pick up the new behaviour transparently.
+  Consumers that hard-coded draft-07 in their validator (rare;
+  only `grok-yaml-standards/schema-smoke` does this in the
+  ecosystem) need one-line fixes.
+
+- **Interaction with §2 #18 (CI template promotion).** §2 #18
+  promotes `grok-build-bridge`'s CI workflow as the ecosystem
+  baseline. The template's `schema-check` job uses
+  `jsonschema.Draft202012Validator`. Once this rec lands,
+  `grok-yaml-standards` can adopt the §2 #18 template without
+  parameterising the draft version. If §2 #18 lands first (the
+  cross-refs in the §2 #18 draft flag this as an option),
+  `grok-yaml-standards` adopts the template's schema-check job
+  with a `DRAFT=draft07` input or skips that job until this rec
+  ships — both paths are documented in the §2 #18 draft.
+
+- **Interaction with §2 #5 (safety-profile rubric).** §2 #5
+  ships a new schema (`safety-profile-rubric.schema.json`) that
+  already uses draft-2020-12 (per that draft's Part B). If §2 #5
+  lands first, the rubric schema is the one draft-2020-12 file
+  in an otherwise-draft-07 repo; this rec then extends the
+  pattern across the other 12. If §2 #8 lands first, §2 #5's
+  schema fits the pattern from day one. Either order is fine.
+
+- **What's *not* in this migration.** Cross-spec validation
+  jobs that smoke-test `grok-install` v2.x schemas against
+  standards versions (audit 02 §9 row 4 — the
+  `cross-repo-compat` job idea) are a separate follow-up and
+  live in `audits/99-recommendations.md §3.2` as a deferred
+  per-repo row. Not drafted here.
+
+- **Filing strategy.** Single primary issue in
+  `grok-yaml-standards`. No cross-ref issues needed — Part B's
+  smoke tests happen against the pre-release branch from inside
+  the primary PR discussion.
