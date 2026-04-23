@@ -6,26 +6,26 @@ Phase status legend: `proposed` (drafted, needs review) · `approved` (agent may
 
 ---
 
-## Phase 0 — Bootstrap (in-progress)
+## Phase 0 — Bootstrap (done)
 Establish the skeleton so later phases have somewhere to land.
 
 Scope:
 - Rename `CLAUDE.me` → `CLAUDE.md`. ✅
-- Seed `README.md`, `ROADMAP.md`, `PROGRESS.md`, `CHANGELOG.md`.
-- Fill `CLAUDE.md` "Current Active Phase" with this phase.
-- Surface the remaining placeholder: `CLAUDE.md` "Primary Repos & Focus Areas" still needs real repo URLs from the user.
+- Seed `README.md`, `ROADMAP.md`, `PROGRESS.md`, `CHANGELOG.md`. ✅
+- Fill `CLAUDE.md` "Current Active Phase" with this phase. ✅
+- Surface the remaining placeholder: `CLAUDE.md` "Primary Repos & Focus Areas" still needs real repo URLs from the user. (Carried into Phase 1A risk register as `GOV-5`.)
 
-Exit: User approves or rewrites one of the Phase 1 candidates below.
+Exit: User approved Phase 1A (the codebase audit). Closed 2026-04-23.
 
 ---
 
-## Phase 1 candidates (all `proposed` — pick one or write your own)
+## Phase 1 candidates (1A `done`; 1B/1C/1D still `proposed` — pick one or write your own)
 
-### 1A. Codebase audit of existing Grok/X repos
-- User supplies 1–N repo URLs (e.g. `frok-super-agent`, `grok-x-tools`).
-- Agent clones each, maps structure, runs static analysis, and produces an audit report with the top 5 highest-leverage improvements per repo.
-- Output: `audits/<repo>.md`.
-- Pick this when: you have existing code you want triaged.
+### 1A. Codebase audit of existing Grok/X repos (done)
+- User supplied 12 AgentMindCloud repos at Phase 0 close.
+- Agent audited each via WebFetch (one local for ClaudeX self-audit), mapped structure, and produced an audit report with the top-5 highest-leverage improvements per repo.
+- Output: `audits/01-grok-install.md` … `audits/12-claudex.md` + cross-cuts `audits/00-ecosystem-overview.md`, `audits/97-methodology.md`, `audits/98-risk-register.md`, `audits/99-recommendations.md`.
+- **Backlog for the next phase lives in `audits/99-recommendations.md`** — 20 ecosystem-wide top-line recommendations + 28 deferrals, each cross-linked to its source audit and risk-register row.
 
 ### 1B. Greenfield `frok-super-agent` v0.1 scaffold
 - Agent scaffolds a minimal Python (or TypeScript) package for the Super AI Frok core: agent loop, tool registry, persistent memory stub, Grok API client, X API client, test harness, CI config.
