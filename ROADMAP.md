@@ -19,7 +19,7 @@ Exit: User approved Phase 1A (the codebase audit). Closed 2026-04-23.
 
 ---
 
-## Phase 1 candidates (1A `done`; 1B/1C/1D still `proposed` — pick one or write your own)
+## Phase 1 (1A `done`; 1B upstream-drafting `in-progress`; 1C / 1D / 1E still `proposed`)
 
 ### 1A. Codebase audit of existing Grok/X repos (done)
 - User supplied 12 AgentMindCloud repos at Phase 0 close.
@@ -27,10 +27,15 @@ Exit: User approved Phase 1A (the codebase audit). Closed 2026-04-23.
 - Output: `audits/01-grok-install.md` … `audits/12-claudex.md` + cross-cuts `audits/00-ecosystem-overview.md`, `audits/97-methodology.md`, `audits/98-risk-register.md`, `audits/99-recommendations.md`.
 - **Backlog for the next phase lives in `audits/99-recommendations.md`** — 20 ecosystem-wide top-line recommendations + 28 deferrals, each cross-linked to its source audit and risk-register row.
 
-### 1B. Greenfield `frok-super-agent` v0.1 scaffold
-- Agent scaffolds a minimal Python (or TypeScript) package for the Super AI Frok core: agent loop, tool registry, persistent memory stub, Grok API client, X API client, test harness, CI config.
-- Output: a runnable `hello-frok` demo that calls Grok and posts to a test X account (mock or real).
-- Pick this when: you want to start building Frok from zero in this repo.
+### 1B. Upstream issue drafting — in-progress (first pass done 2026-04-23)
+- Turn `audits/99-recommendations.md §2` top-20 recs into ready-to-file GitHub issue bodies under `phase-1b/drafts/`, indexed by `phase-1b/ISSUES.md`.
+- **MCP-scope constraint**: drafts only. The Phase 1B agent's GitHub MCP scope is `agentmindcloud/claudex`-only; it cannot open issues on upstream AgentMindCloud Grok repos. The user files each draft manually and back-fills `phase-1b/ISSUES.md`'s **Filed** column.
+- **First-pass slice**: 4 §2 recs (#6, #9, #14, #15) → 6 draft files; all S-effort, no `Blocked by` dependencies; closes VER-1 / VER-3 / UNV-1 outright and DOC-1 / GOV-3 / DOC-3 on sibling-draft landing.
+- **Tracker**: [`phase-1b/ISSUES.md`](phase-1b/ISSUES.md) — first-pass table, next-batch candidates (§2 #3 / #13 / #18), blocked-by chains, filing audit trail.
+- **Branch**: `claude/phase-1b-issue-drafts-rzjg8` (branched from Phase-1A tip `37d464f`).
+- **Status**: first pass complete; next batch + later blocked-chain passes await user go-ahead.
+
+> **Label note**: "1B" here is the upstream issue drafting effort selected after Phase 1A close. The originally-proposed "1B. Greenfield `frok-super-agent` v0.1 scaffold" candidate has been relabelled to **1E** below; its content is unchanged and it remains `proposed`.
 
 ### 1C. Grok API wrapper + tool-use library
 - Agent builds an SDK wrapping xAI's Grok API: streaming, tool calls, structured output, retries, cost tracking.
@@ -41,6 +46,11 @@ Exit: User approved Phase 1A (the codebase audit). Closed 2026-04-23.
 - Agent builds a small service that subscribes to X data (firehose or filtered stream), enriches posts via Grok, and emits structured events.
 - Output: `x-stream-agent/` with a replayable fixture so it's testable without live X credentials.
 - Pick this when: real-time X awareness is the priority.
+
+### 1E. Greenfield `frok-super-agent` v0.1 scaffold *(originally labelled 1B — relabelled after 1B was assigned to upstream issue drafting)*
+- Agent scaffolds a minimal Python (or TypeScript) package for the Super AI Frok core: agent loop, tool registry, persistent memory stub, Grok API client, X API client, test harness, CI config.
+- Output: a runnable `hello-frok` demo that calls Grok and posts to a test X account (mock or real).
+- Pick this when: you want to start building Frok from zero in this repo.
 
 ---
 

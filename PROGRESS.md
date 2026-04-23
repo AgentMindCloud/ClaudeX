@@ -159,3 +159,55 @@ Choose one:
 - **Phase 1B** — turn `audits/99-recommendations.md §2` into upstream issues / draft PRs against the affected repos (sequenced by `Blocked by` chains: 5 → {1,11,17}; 6 → {7,12}; 10 → 4; 15 → 16). Suggested kickoff: `"Begin Phase 1B. Open upstream issues for §2 #6, #9, #14, #15 first (all S/effort, no blockers, immediate ecosystem coherence wins)."`
 - **Phase 2** — pivot to building (e.g. the Super AI Frok core, a shared `grok-safety-rules` library per §2 #1, or the shared Grok API client per §2 #2).
 - **Defer** — leave Phase 1A as a finished artefact and return later with a Phase 1B/2 decision.
+
+---
+
+## Session: 2026-04-23 (cont.) — Phase 1B (first pass): upstream issue drafts
+
+### Status: First pass complete — 6 drafts ready for user filing upstream
+
+### Scope
+Turn `audits/99-recommendations.md §2` top-20 recs into markdown issue-body drafts under `phase-1b/drafts/`, indexed by `phase-1b/ISSUES.md`. First-pass slice deliberately limited to 4 §2 recs (#6, #9, #14, #15) — all S-effort, no `Blocked by` dependencies, all closing S1 or S3 risks.
+
+### MCP-scope constraint — drafts only
+The Phase 1B agent's GitHub MCP scope is restricted to `agentmindcloud/claudex` only. It cannot open issues on upstream AgentMindCloud Grok repos. Every Phase 1B output is a markdown file in this repo; the user files each draft manually (via the GitHub UI or a differently-scoped session) and back-fills `phase-1b/ISSUES.md`'s **Filed** column with the resulting issue URL. Drafts are therefore authoritative audit-trail artefacts, not throwaway intermediates.
+
+### What was done
+1. Scaffolded `phase-1b/` with `README.md` (filing workflow + MCP constraint + mapping rules), `ISSUES.md` (index + first-pass table + next-batch candidates + blocked-by chains), and a `drafts/` directory.
+2. Drafted §2 #6 — npm-vs-Python CLI install mismatch → `drafts/06-cli-install-mechanism.md` (coordinated issue across grok-install-cli + grok-install-action; closes VER-3 + UNV-1, both S1).
+3. Drafted §2 #9 — v2.14 examples coverage → `drafts/09-v2-14-examples-coverage.md` (lists the 5 v2.13-pinned examples + a one-command migration + a CI gate; closes VER-1, S1).
+4. Drafted §2 #14 — "14 → 12" standards phrasing → `drafts/14a-grok-install-action-readme.md` + `drafts/14b-vscode-grok-yaml-landing.md` (closes DOC-1 once both halves land).
+5. Drafted §2 #15 — shell-repo description downgrade → `drafts/15a-vscode-grok-yaml-description.md` + `drafts/15b-grok-agent-orchestra-description.md` (closes GOV-3 + DOC-3 once both halves land).
+6. Enriched `phase-1b/ISSUES.md` with Risks-closed + Unblocks-§2 columns and a slice-criteria preamble.
+7. This progress update + CHANGELOG / ROADMAP entries.
+
+### Metrics
+- §2 recs drafted: **4** (of 20; #6, #9, #14, #15).
+- Draft files created: **6** (4 single-target + 2 sibling pairs).
+- Upstream target repos touched: **6** — grok-install-cli, grok-install-action (cross-ref for #6 + primary for #14a), grok-install, vscode-grok-yaml (targets of #14b + #15a), grok-agent-orchestra.
+- Risks closed outright by this batch: **3 S1** (VER-1, VER-3, UNV-1).
+- Risks partially closed (close on sibling-draft landing): **3** (DOC-1 S2, GOV-3 S3, DOC-3 S3).
+- Phase-1B commits on `claude/phase-1b-issue-drafts-rzjg8` so far: **7** (scaffold + 4 drafting units + ISSUES enrichment + this progress update).
+- Lines of fabricated product code: **0** (drafting-only phase).
+
+### Decisions & trade-offs
+- **Per-unit commit protocol.** Inherited from Phase 1A: one unit = one logical change + one commit + one push, convention `phase-1b: <short description>`. Eight units total (scaffold, four drafting units, ISSUES enrichment, progress update, final sanity verify).
+- **Slice selection.** Rather than attempt all 20 §2 recs, the first pass is restricted to the four S-effort recs with no `Blocked by` entry. This respects the full §2 dependency chains (`#5 → {#1, #11, #17}`, `#6 → {#7, #12}`, `#10 → #4`, `#15 → #16`) — nothing in the first batch blocks or is blocked by another first-batch item. `phase-1b/ISSUES.md §Next batch candidates` queues up §2 #3, #13, #18 for the follow-up pass.
+- **Sibling drafts for two-target §2 rows.** Recs #14 and #15 each name two target repos; splitting into `(a/b)` files lets each target repo own its own issue thread while sharing the same §2 row and canonical source citation. DOC-1 / GOV-3 / DOC-3 are marked *partial* in ISSUES.md until both halves land.
+- **Drafts are audit-trail artefacts.** Scope-restricted MCP means we cannot file upstream from this session; every draft is therefore a ready-to-paste GitHub issue body plus a `<!-- phase-1b metadata -->` header (`§2 rec`, `Target repo`, `Risks closed`, `Source audits`, `Blocked by`, `Suggested labels`). The metadata stays in this repo; only the content below the `---` separator is pasted upstream. `phase-1b/ISSUES.md §Filing audit trail` captures the expected workflow.
+- **ISSUES.md consolidated into the scaffold unit.** The Unit 1 / Unit 6 split in the original plan had Unit 1 create a skeleton index and Unit 6 populate it. The scaffold was written with the fully populated table up-front (rows, next-batch candidates, blocked-by chains); Unit 6 added two columns (`Risks closed`, `Unblocks §2`) that were only derivable once the draft metadata existed. Net result is the same final state; fewer no-op commits.
+
+### Files changed this phase
+- Added: `phase-1b/README.md`, `phase-1b/ISSUES.md`, `phase-1b/drafts/.gitkeep`, and 6 draft files (`06-cli-install-mechanism.md`, `09-v2-14-examples-coverage.md`, `14a-grok-install-action-readme.md`, `14b-vscode-grok-yaml-landing.md`, `15a-vscode-grok-yaml-description.md`, `15b-grok-agent-orchestra-description.md`).
+- Modified: `PROGRESS.md`, `CHANGELOG.md`, `ROADMAP.md`.
+
+### Open at phase close
+- **Filing** — the 6 drafts await manual filing upstream. On filing, the user back-fills `phase-1b/ISSUES.md`'s **Filed** column and flips **Status** from `drafted` to `filed`.
+- **Next batch** — §2 #3 (SHA pinning + Renovate), #13 (blocking `pip-audit` + secret scanning), #18 (grok-build-bridge CI template promotion) are ready to draft whenever the user calls for it; all three carry no `Blocked by` entry.
+- **Blocked chains still ahead** — #7, #12 (gated by #6); #4 (by #10); #16 (by #15); #1, #11, #17 (by #5). Drafting any of these before the prerequisite lands upstream risks the prerequisite changing assumptions mid-flight.
+
+### Next suggested action
+Pick one:
+- `"File the 6 drafts in phase-1b/drafts/ against their upstream repos (see phase-1b/ISSUES.md for target repos + suggested labels), then back-fill the Filed column."`
+- `"Begin next batch — draft §2 #3, #13, #18."` *(does not require the first batch to be filed upstream first; they're independent.)*
+- `"Pause Phase 1B."` *(leave the first-pass drafts as-is; resume later.)*
