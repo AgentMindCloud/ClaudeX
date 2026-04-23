@@ -102,3 +102,60 @@ Pick a Phase 1 candidate and reply, e.g.:
 - `"Approve Phase 1A. Primary repos: <url1>, <url2>. Run autonomously up to 20 iterations."`
 - `"Approve Phase 1B. Language: Python. Run autonomously up to 20 iterations."`
 - Or edit `ROADMAP.md` directly and reply `"Begin the approved phase."`
+
+---
+
+## Session: 2026-04-23 (cont.) — Phase 1A: Ecosystem audit
+
+### Status: Phase 1A complete — 12 per-repo audits + 4 cross-cut files written, evidence-discipline gate met across the board
+
+### Scope
+Orientation-grade audit of the 12 AgentMindCloud repos identified at Phase 0 close. Goal: produce reproducible, evidence-anchored per-repo audits + four cross-cut artefacts (ecosystem overview, methodology, risk register, recommendations).
+
+### What was done
+- **12 per-repo audits** written to `audits/01-grok-install.md` … `audits/12-claudex.md`, each following `audits/_template.md` (sections 1–11, evidence log mandatory).
+- **`audits/00-ecosystem-overview.md`** — 9 sections: dependency graph (ASCII + Mermaid), spec-version pin matrix, JSON Schema draft matrix, standards-count coherence, release cadence, safety-profile distribution, docs drift, inventory corrections, cross-cutting concerns A–H.
+- **`audits/97-methodology.md`** — access-mode rationale, evidence discipline, security-disclosure policy, audit-order rationale, checkpoints, evidence-log row counts (71 total, 10-orchestra exception documented).
+- **`audits/98-risk-register.md`** — 29 risk rows across 6 categories (SEC/SUP/GOV/VER/DOC/UNV), severity S1–S4, likelihood L-low/med/high, source cross-refs to per-repo audits.
+- **`audits/99-recommendations.md`** — three-axis rubric (cross-repo reach × local leverage × effort), 20 ecosystem-wide top-line recommendations in §2, 23 deferrals + 5 ClaudeX-specific recs + 2 absorbed-by-merge in §3, 60-row partition closed and tallied.
+
+### Headline findings (already in 00-ecosystem-overview.md §9 + 98-risk-register.md)
+- `grok-install` v2.14 schema validates only 1 of 6 in-repo examples (VER-1, S1).
+- npm-install path in `grok-install-action` invokes `grok-install-cli@2.14.0`, but the upstream CLI is a Python `pyproject.toml` at `0.1.0` (VER-3 + UNV-1, both S1).
+- LLM-audit layer in `grok-build-bridge` is prompt-injection-susceptible (SEC-1, S1).
+- JSON Schema **draft-07 vs draft-2020-12** split between the two spec roots (VER-2; planned fix at standards v1.3).
+- "5 / 12 / 14 standards" phrasing inconsistent across docs / action / vscode landing (DOC-1).
+- Safety-profile distribution: **6 strict / 4 standard / 0 permissive** — tripartite model lacks its permissive exemplar.
+- 12 open unreviewed PRs on `grok-agents-marketplace` (GOV-2); two repos (`vscode-grok-yaml`, `grok-agent-orchestra`) are LICENSE+README-only shells (GOV-3).
+- Ecosystem-wide GitHub-Actions pinning by major tag rather than commit SHA (SUP-1).
+- ClaudeX itself: no `LICENSE`, `CLAUDE.md §Primary Repos` still template placeholder (GOV-5).
+
+### Metrics
+- Per-repo audits: **12**.
+- Cross-cut files: **4** (00, 97, 98, 99).
+- Evidence-log rows across all audits: **71** (10/7/8/5/5/6/3/5/6/1/8/7).
+- Risks catalogued: **29** across 6 categories; **3 S1** (SEC-1, VER-1, VER-3).
+- Recommendations in §2 (top-line): **20**; deferred in §3: **28** (23 + 5).
+- Phase-1A commits on `claude/audit-phase-1a-synthesis-fdT9D`: **27**.
+- Lines of fabricated product code: **0** (audit phase only).
+
+### Decisions & trade-offs
+- **Per-unit commit protocol.** Each unit (one §, one file edit, or one logical sub-section) = one commit + push, with conventional message `audit(phase-1a): <short description>`. Never leave the worktree dirty across a turn boundary; never batch commits across units. Forces the stop-hook contract to hold even mid-synthesis.
+- **Force-push reset at session start.** The synthesis worktree was rebased against `claude/audit-phase-1a-synthesis-fdT9D` rather than the harness-assigned `xklXQ` branch (whose origin had been deleted). The earlier `xklXQ` branch was preserved locally but not republished.
+- **WebFetch over clone.** Phase 1A stayed orientation-grade; deep code-quality / coverage-percentage / cross-repo-grep work was deferred to Phase 1C-or-later, where it's actionable. ClaudeX self-audit was the one local-only audit (7 local-evidence rows; documented in `97-methodology.md`).
+- **ClaudeX recs separated from §2.** All 5 audit-12 recommendations have cross-repo reach = 1 by definition; per the rubric they live in `99 §3.3`, not the top-20 table.
+- **#19 (`x-platform-toolkit` CI) kept in §2 despite borderline reach.** Justified to reach=2 because the toolkit publishes user-facing tools that read live spec versions; flagged inline for Phase 1B re-litigation.
+
+### Files changed this phase
+- Added: `audits/_template.md`, `audits/00-ecosystem-overview.md`, `audits/01–12-*.md` (12 files), `audits/97-methodology.md`, `audits/98-risk-register.md`, `audits/99-recommendations.md`, `audits/assets/dependency-graph.txt`.
+- Modified (this unit and the next three): `PROGRESS.md`, `CHANGELOG.md`, `ROADMAP.md`.
+
+### Open at phase close
+- Self-review pass (Unit 18) still to run: confirm every audit hits the ≥3-evidence-row floor (10-orchestra exception aside) and every CI claim in `00-ecosystem-overview.md` cites a workflow URL.
+- Final sanity push (Unit 19): `git status` clean + all commits on origin.
+
+### Next suggested action
+Choose one:
+- **Phase 1B** — turn `audits/99-recommendations.md §2` into upstream issues / draft PRs against the affected repos (sequenced by `Blocked by` chains: 5 → {1,11,17}; 6 → {7,12}; 10 → 4; 15 → 16). Suggested kickoff: `"Begin Phase 1B. Open upstream issues for §2 #6, #9, #14, #15 first (all S/effort, no blockers, immediate ecosystem coherence wins)."`
+- **Phase 2** — pivot to building (e.g. the Super AI Frok core, a shared `grok-safety-rules` library per §2 #1, or the shared Grok API client per §2 #2).
+- **Defer** — leave Phase 1A as a finished artefact and return later with a Phase 1B/2 decision.
