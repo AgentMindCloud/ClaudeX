@@ -27,7 +27,7 @@ Exit: User approved Phase 1A (the codebase audit). Closed 2026-04-23.
 - Output: `audits/01-grok-install.md` … `audits/12-claudex.md` + cross-cuts `audits/00-ecosystem-overview.md`, `audits/97-methodology.md`, `audits/98-risk-register.md`, `audits/99-recommendations.md`.
 - **Backlog for the next phase lives in `audits/99-recommendations.md`** — 20 ecosystem-wide top-line recommendations + 28 deferrals, each cross-linked to its source audit and risk-register row.
 
-### 1B. Upstream issue drafting — in-progress (first + second + third + Session 2 + fourth + fifth pass done 2026-04-23)
+### 1B. Upstream issue drafting — in-progress (first + second + third + Session 2 + fourth + fifth + sixth pass done 2026-04-23)
 - Turn `audits/99-recommendations.md §2` top-20 recs into ready-to-file GitHub issue bodies under `phase-1b/drafts/`, indexed by `phase-1b/ISSUES.md`.
 - **MCP-scope constraint**: drafts only. The Phase 1B agent's GitHub MCP scope is `agentmindcloud/claudex`-only; it cannot open issues on upstream AgentMindCloud Grok repos. The user files each draft manually and back-fills `phase-1b/ISSUES.md`'s **Filed** column.
 - **First-pass slice (S-effort, no blockers)**: 4 §2 recs (#6, #9, #14, #15) → 6 draft files.
@@ -36,12 +36,13 @@ Exit: User approved Phase 1A (the codebase audit). Closed 2026-04-23.
 - **Session-2 slice (speculative post-filing follow-ups, variable effort)**: 6 §2 recs (#1, #7, #11, #12, #16, #17) → 6 draft files. Every Session-2 draft carries the mandatory speculative-draft metadata header (prerequisite status + re-review trigger) and cannot be filed upstream until its prerequisite merges upstream first. Deepest speculation: §2 #12 (through #7→#6) and §2 #17 (through #1→#5).
 - **Fourth-pass slice (grok-docs v2.14 unblocker, L-effort)**: 1 §2 rec (#10) → 1 draft file. Closes VER-4 + DOC-2 outright. Unblocks §2 #4 drafting.
 - **Fifth-pass slice (repository_dispatch wiring, M-effort, speculative-on-#10)**: 1 §2 rec (#4) → 1 draft file. Two-part acceptance (publisher workflow in `grok-install` + three subscriber listener workflows). Closes VER-4 *trigger* side (§2 #10 closed the content side); partial DOC-1. Full VER-4 closure requires both this + #10 to merge upstream.
-- **Cumulative**: **18 of 20 §2 recs drafted**; 20 draft files; 0 issues filed upstream (MCP scope limitation).
-- **Undrafted §2 residual (2 of 20)**: #2 (shared Grok API client, L, reach 5), #19 (x-platform-toolkit CI, M, reach 2).
-- **Tracker**: [`phase-1b/ISSUES.md`](phase-1b/ISSUES.md) — first/second/third/Session-2/fourth-pass/fifth-pass tables; next-pass candidates (§2 #2, #19); post-filing follow-ups (all drafted); blocked-by chains; filing audit trail.
-- **Filing packets**: [`phase-1b/filing-packets/`](phase-1b/filing-packets/) — per-upstream-repo filing instructions. Session-2 content lives in packets 03 (§2 #7 + §2 #1), 06 (§2 #11 + §2 #12), 07 (§2 #16), 10 (§2 #17). Fourth-pass content in packet 05 (§2 #10). Fifth-pass content in packet 01 (§2 #4 primary) + subscriber cross-refs in packets 04, 05, 08.
+- **Sixth-pass slice (shared Grok API client, L-effort, non-speculative)**: 1 §2 rec (#2) → 1 draft file. Three-part acceptance (package shape + feature surface + consumer adoption). Closes the "four parallel Grok API clients" cross-cutting concern from `audits/00-ecosystem-overview.md §9.A`. Highest reach (5) remaining in §2 at the start of the pass.
+- **Cumulative**: **19 of 20 §2 recs drafted**; 21 draft files; 0 issues filed upstream (MCP scope limitation).
+- **Undrafted §2 residual (1 of 20)**: #19 (x-platform-toolkit CI minimum, M, reach 2).
+- **Tracker**: [`phase-1b/ISSUES.md`](phase-1b/ISSUES.md) — tables through sixth pass; next-pass candidates (§2 #19 only); post-filing follow-ups (all drafted); blocked-by chains; filing audit trail.
+- **Filing packets**: [`phase-1b/filing-packets/`](phase-1b/filing-packets/) — per-upstream-repo filing instructions. Packet 03 (grok-install-cli) now carries 5 primaries (§2 #6, #13, #7, #1, #2). Session-2 content in packets 06 (§2 #11 + #12), 07 (§2 #16), 10 (§2 #17). Fourth-pass content in packet 05 (§2 #10). Fifth-pass content in packet 01 (§2 #4 primary) + subscriber cross-refs in packets 04, 05, 08.
 - **Branch**: `claude/phase-1b-session-continuation-zQBET` (branched from Phase-1B tip `e1d32ae`).
-- **Status**: five drafting passes complete; filing-packets updated; 20 drafts await upstream filing. One pass away from §2 top-20 completion. Next-pass decision: draft §2 #2, §2 #19, both in one pass, file current drafts, or pause. See `PROGRESS.md` Phase-1B fifth-pass "Next suggested action".
+- **Status**: six drafting passes complete; filing-packets updated; 21 drafts await upstream filing. One pass from §2 top-20 completion. Next-pass decision: draft §2 #19 (finisher), file current drafts, or pause. See `PROGRESS.md` Phase-1B sixth-pass "Next suggested action".
 
 > **Label note**: "1B" here is the upstream issue drafting effort selected after Phase 1A close. The originally-proposed "1B. Greenfield `frok-super-agent` v0.1 scaffold" candidate has been relabelled to **1E** below; its content is unchanged and it remains `proposed`.
 
