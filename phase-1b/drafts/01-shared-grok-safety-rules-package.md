@@ -230,3 +230,64 @@ adopted it on `main`.
       "seeking second maintainer" in README. Single-maintainer
       shared libraries are a governance smell; make it visible
       so it gets addressed.
+
+### Part B — Consumer adoption sequencing
+
+Each consumer gets its own follow-up PR (or linked issue + PR)
+filed **after** the `grok-safety-rules` v0.1.0 release ships.
+Do NOT pre-file the follow-ups — the package's API may shift
+during v0.1.0 review.
+
+- [ ] **Consumer 1 — `grok-install-cli`**: refactor
+      `src/grok_install/safety/rules.py` + `scanner.py` to be
+      a thin wrapper over the new package. Drop the pattern
+      definitions in `rules.py`; import them from
+      `grok_safety_rules`. Keep the CLI's subcommand surface
+      unchanged; only the implementation moves. First adopter
+      because this repo has the most mature implementation to
+      compare behaviour against.
+
+- [ ] **Consumer 2 — `grok-build-bridge`**: refactor
+      `_patterns.py` to import from `grok_safety_rules`.
+      Update `xai_client.py` so the LLM-audit context includes
+      "Findings from shared `grok-safety-rules` package v0.1.0"
+      — the LLM auditor sees the exact same static-scan
+      output other consumers see. Second adopter because the
+      bridge is the most divergent current implementation.
+
+- [ ] **Consumer 3 — `awesome-grok-agents`**: §2 #12 removes
+      the stub; once §12 lands the gallery's validation goes
+      through the real CLI, which goes through
+      `grok-safety-rules`. No direct dependency in
+      `awesome-grok-agents` — it transitively inherits the
+      shared package via the CLI. No action required here;
+      flag in §Notes so this is explicit.
+
+- [ ] **Consumer 4 — `grok-agent-orchestra`**: §2 #17 bootstraps
+      the orchestra with this package as a day-one dependency.
+      Avoids adding a fourth parallel implementation. §2 #17's
+      draft (sibling to this one in Session 2) names
+      `grok-safety-rules` in its dependency list; if §2 #17
+      merges before this rec, it'll pin an unreleased package
+      (flag this in §17's draft; this is exactly what
+      speculative-draft coordination looks like).
+
+- [ ] **Cross-cut verification after all adopters land**:
+      run the §2 #5 conformance-test suite against all four
+      consumers. Zero divergence between them is the pass
+      criterion. Any divergence found is either a bug in one
+      consumer (fix) or a rubric ambiguity (surface in §2 #5
+      follow-up).
+
+- [ ] **UNV-4 closure mechanics**: the risk closes when the
+      first two adopters (CLI + bridge) land. The remaining
+      two are ecosystem consistency, not risk-closure.
+      Document the partial/full closure in `98-risk-register.md`
+      as follow-up PRs land.
+
+- [ ] **Per-consumer CHANGELOG entries**. Each consumer's
+      CHANGELOG `[Unreleased]` section cites the version of
+      `grok-safety-rules` adopted and flags any behavioural
+      diff versus the previous local implementation (if any
+      finding count changed on a canonical fixture).
+
