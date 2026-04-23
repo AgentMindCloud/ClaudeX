@@ -237,3 +237,75 @@ consumers can pin them without spelunking nested paths.
       can jump to the strict/standard/permissive-profile
       discussion (they are orthogonal axes; the overview should
       say so).
+
+### Part C — Conformance-test format (the teeth)
+
+The rubric without conformance tests is prose. Ship a published
+conformance-test format so a consumer repo's CI can answer, on
+every PR, "does this agent actually honour the profile it claims
+in its `grok-install.yaml`?".
+
+- [ ] Add `tests/conformance/` to `grok-yaml-standards`. Each
+      conformance case is a directory with:
+
+      ```
+      tests/conformance/<case_id>/
+        claim.yaml        # excerpt of grok-install.yaml under test
+        expected.json     # {"conformant": true|false, "violations": [...]}
+        rationale.md      # why this case is in the suite
+      ```
+
+      `claim.yaml` is a minimal `grok-install.yaml` fragment that
+      declares a `safety_profile:` plus whatever fields the seven
+      axes evaluate against (`permissions:`, `network:`, `scan:`,
+      `approval:`, etc.). `expected.json` is the ground truth
+      verdict. `rationale.md` gives one paragraph explaining
+      which axis the case targets.
+
+- [ ] Publish at least **7 positive cases** (one canonical pass
+      for each of the seven axes) × 3 profiles = 21 passing cases,
+      and at least **7 negative cases** per profile = 21 failing
+      cases. Minimum suite: 42 cases. Additional cases encouraged
+      for well-known edge conditions (e.g. an agent claiming
+      `permissive` while declaring `external_writes:
+      per_action_approval` — should flag as *over-conformant*,
+      not non-conformant; define the behaviour explicitly).
+
+- [ ] Ship a reference validator at
+      `tools/check_profile_conformance.py` (Python 3.10+, depends
+      only on `jsonschema>=4.21` and `PyYAML`). Interface:
+
+      ```
+      check_profile_conformance \
+          --rubric schemas/safety-profile-rubric-v1.values.json \
+          --claim path/to/grok-install.yaml
+
+      # Exit codes:
+      #   0 — conformant
+      #   1 — non-conformant (prints violation list)
+      #   2 — over-conformant (prints which axes are stricter than claimed profile)
+      #   3 — schema error (claim is malformed)
+      ```
+
+- [ ] Wire the reference validator into
+      `.github/workflows/validate-schemas.yml` as a new
+      `conformance` job: iterate over `tests/conformance/*` and
+      compare `check_profile_conformance` output against
+      `expected.json`. Matrix over the three profiles. Failing
+      the matrix fails CI.
+
+- [ ] Document the format in
+      `docs/safety-profile-rubric-v1.md §Conformance tests` so
+      consumers can author their own cases. Include an
+      "authoring a new case" checklist (5 steps) and a note on
+      how to interpret exit code 2 (over-conformance is not a
+      bug — it means the agent is stricter than its stated
+      profile; consumers may either downgrade the profile
+      claim or accept the stricter behaviour).
+
+- [ ] Add a CONTRIBUTING note that every new standard added to
+      `grok-yaml-standards` (future additions via
+      `discussion/new-standard` per `version-reconciliation.md`)
+      must include at least one conformance case per profile
+      that exercises the new standard's safety surface. Keeps
+      the suite growing in lockstep with the catalogue.
