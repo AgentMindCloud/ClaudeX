@@ -2,6 +2,21 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.5.0] — 2026-04-23
+### Added
+- `frok.telemetry` — `Event` dataclass + four pluggable sinks
+  (`NullSink`, `InMemorySink`, `JsonlSink`, `MultiSink`) and a
+  contextvar-scoped `Tracer` with async `span()` context manager.
+  `read_jsonl()` replay helper. (§2 #7)
+- `GrokClient`, `MemoryStore`, and `ToolOrchestrator` now accept an
+  optional `tracer` and emit structured spans:
+  * `grok.chat` with token / safety / finish-reason attrs
+  * `memory.remember` / `memory.recall` / `memory.forget`
+  * `tool.run` wrapping nested `tool.invoke` spans; all share a
+    trace_id so a full run reconstructs as one tree.
+- Tests: 18 new (sinks, tracer semantics, cross-component integration);
+  90 total.
+
 ## [0.4.0] — 2026-04-23
 ### Added
 - `frok.tools` — JSON Schema validator + signature inference, `@tool`

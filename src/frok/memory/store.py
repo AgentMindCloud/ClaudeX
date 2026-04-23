@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
+from ..telemetry import Tracer
 from .embedder import Embedder, cosine
 
 DEFAULT_KIND = "episode"
@@ -36,9 +37,16 @@ class MemoryRecord:
 class MemoryStore:
     """Persistent memory keyed by id, with semantic recall."""
 
-    def __init__(self, path: str | Path, embedder: Embedder):
+    def __init__(
+        self,
+        path: str | Path,
+        embedder: Embedder,
+        *,
+        tracer: Tracer | None = None,
+    ):
         self.path = str(path)
         self.embedder = embedder
+        self.tracer = tracer or Tracer()
         self._conn = sqlite3.connect(self.path)
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA journal_mode = WAL")
@@ -90,25 +98,32 @@ class MemoryStore:
         at: datetime | None = None,
         embed: bool = True,
     ) -> MemoryRecord:
-        ts = (at or datetime.now(timezone.utc)).astimezone(timezone.utc)
-        emb: list[float] | None = None
-        if embed:
-            emb = (await self.embedder.embed([content]))[0]
-        blob = _pack(emb) if emb is not None else None
-        meta = dict(metadata or {})
-        with self._conn:
-            cur = self._conn.execute(
-                "INSERT INTO memories(kind, content, created_at, metadata, embedding, dim) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
-                (kind, content, ts.isoformat(), json.dumps(meta), blob, len(emb) if emb else 0),
-            )
-        return MemoryRecord(
-            id=int(cur.lastrowid),
+        async with self.tracer.span(
+            "memory.remember",
             kind=kind,
-            content=content,
-            created_at=ts,
-            metadata=meta,
-        )
+            content_len=len(content),
+            embed=embed,
+        ) as span:
+            ts = (at or datetime.now(timezone.utc)).astimezone(timezone.utc)
+            emb: list[float] | None = None
+            if embed:
+                emb = (await self.embedder.embed([content]))[0]
+            blob = _pack(emb) if emb is not None else None
+            meta = dict(metadata or {})
+            with self._conn:
+                cur = self._conn.execute(
+                    "INSERT INTO memories(kind, content, created_at, metadata, embedding, dim) "
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                    (kind, content, ts.isoformat(), json.dumps(meta), blob, len(emb) if emb else 0),
+                )
+            span.set(memory_id=int(cur.lastrowid))
+            return MemoryRecord(
+                id=int(cur.lastrowid),
+                kind=kind,
+                content=content,
+                created_at=ts,
+                metadata=meta,
+            )
 
     async def remember_many(
         self,
@@ -146,11 +161,14 @@ class MemoryStore:
         return out
 
     async def forget(self, memory_id: int) -> bool:
-        with self._conn:
-            cur = self._conn.execute(
-                "DELETE FROM memories WHERE id = ?", (memory_id,)
-            )
-        return cur.rowcount > 0
+        async with self.tracer.span("memory.forget", memory_id=memory_id) as span:
+            with self._conn:
+                cur = self._conn.execute(
+                    "DELETE FROM memories WHERE id = ?", (memory_id,)
+                )
+            deleted = cur.rowcount > 0
+            span.set(deleted=deleted)
+            return deleted
 
     # ------------------------------------------------------------------
     # reads
@@ -165,31 +183,40 @@ class MemoryStore:
         until: datetime | None = None,
         min_score: float = -1.0,
     ) -> list[MemoryRecord]:
-        q_emb = (await self.embedder.embed([query]))[0]
-        where = ["embedding IS NOT NULL"]
-        params: list[Any] = []
-        if kind is not None:
-            where.append("kind = ?")
-            params.append(kind)
-        if since is not None:
-            where.append("created_at >= ?")
-            params.append(since.astimezone(timezone.utc).isoformat())
-        if until is not None:
-            where.append("created_at <= ?")
-            params.append(until.astimezone(timezone.utc).isoformat())
-        sql = (
-            "SELECT id, kind, content, created_at, metadata, embedding, dim "
-            f"FROM memories WHERE {' AND '.join(where)}"
-        )
-        rows = self._conn.execute(sql, params).fetchall()
-        scored: list[tuple[float, sqlite3.Row]] = []
-        for row in rows:
-            v = _unpack(row["embedding"], row["dim"])
-            score = cosine(q_emb, v)
-            if score >= min_score:
-                scored.append((score, row))
-        scored.sort(key=lambda t: t[0], reverse=True)
-        return [_row_to_record(r, score=s) for s, r in scored[:k]]
+        async with self.tracer.span(
+            "memory.recall",
+            k=k,
+            kind=kind,
+            query_len=len(query),
+            min_score=min_score,
+        ) as span:
+            q_emb = (await self.embedder.embed([query]))[0]
+            where = ["embedding IS NOT NULL"]
+            params: list[Any] = []
+            if kind is not None:
+                where.append("kind = ?")
+                params.append(kind)
+            if since is not None:
+                where.append("created_at >= ?")
+                params.append(since.astimezone(timezone.utc).isoformat())
+            if until is not None:
+                where.append("created_at <= ?")
+                params.append(until.astimezone(timezone.utc).isoformat())
+            sql = (
+                "SELECT id, kind, content, created_at, metadata, embedding, dim "
+                f"FROM memories WHERE {' AND '.join(where)}"
+            )
+            rows = self._conn.execute(sql, params).fetchall()
+            scored: list[tuple[float, sqlite3.Row]] = []
+            for row in rows:
+                v = _unpack(row["embedding"], row["dim"])
+                score = cosine(q_emb, v)
+                if score >= min_score:
+                    scored.append((score, row))
+            scored.sort(key=lambda t: t[0], reverse=True)
+            out = [_row_to_record(r, score=s) for s, r in scored[:k]]
+            span.set(candidates=len(rows), hit_count=len(out))
+            return out
 
     async def recent(
         self, *, k: int = 10, kind: str | None = None

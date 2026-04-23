@@ -31,6 +31,10 @@ builds on these three.
 5. **multimodal-adapter** — Vision/voice IO adapter surface.
 6. **agent-team-runtime** — Lightweight multi-agent scheduler.
 7. **telemetry** — Structured logs, traces, and evals hook.
+   *Shipped 2026-04-23:* `frok.telemetry` (Event + Null / InMemory /
+   Jsonl / Multi sinks, `Tracer` with contextvar-scoped spans). Wired
+   into `GrokClient.chat`, `MemoryStore.remember/recall/forget`, and
+   `ToolOrchestrator.run` + per-invocation spans.
 8. **eval-harness** — Regression + truthfulness scoring across model
    versions.
 9. **config-loader** — Layered config (env → file → CLI overrides).

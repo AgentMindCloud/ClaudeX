@@ -2,6 +2,59 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — §2 #7 telemetry
+
+**Shipped** `frok.telemetry` and wired it into every Phase-2 producer so
+§2 #8 evals can regress on structured traces.
+
+* **`frok.telemetry.sink`** — canonical `Event` dataclass (`ts`,
+  `trace_id`, `span_id`, `parent_span_id`, `kind`, `name`,
+  `duration_ms`, `data`, `error`) plus four sinks:
+  * `NullSink` — default; tracers fast-path around it so the
+    zero-consumer case is free.
+  * `InMemorySink` — collects events with `find` / `spans` / `errors`
+    query helpers; the shape the eval harness will consume.
+  * `JsonlSink` — append-only newline-delimited JSON, thread-safe, with
+    a `read_jsonl()` replay helper.
+  * `MultiSink` — fan-out across several sinks.
+* **`frok.telemetry.tracer`** — `Tracer.span(name, **attrs)` is an async
+  context manager that emits `span.start` + `span.end` and records
+  parent/child through `contextvars`. Exceptions are captured on the
+  span as `error` and re-raised. A `SpanHandle.set(**kwargs)` lets
+  producers attach measurements (tokens, hit-count, …) once known. The
+  `NullSink` fast-path short-circuits all allocation when no consumer
+  is attached.
+* **Wiring** (all backwards-compatible — defaults keep the null tracer):
+  * `GrokClient.chat` → `grok.chat` span with `model`,
+    `message_count`, `has_tools`, `prompt_tokens`, `completion_tokens`,
+    `total_tokens`, `tool_calls`, `finish_reason`, `safety_findings`,
+    plus a `safety_blocked` attr on ingress/egress blocks.
+  * `MemoryStore.remember/recall/forget` → `memory.remember`,
+    `memory.recall` (with `candidates` / `hit_count`), `memory.forget`.
+  * `ToolOrchestrator` → root `tool.run` span wrapping the loop and
+    a nested `tool.invoke` per call (`tool`, `call_id`, `dry_run`,
+    `error_kind`, `result_len`). Nested spans inherit `trace_id` so
+    a full run reconstructs as a single tree.
+
+**Verification.** `python3 -m pytest -q` → 90 passed in 0.40s (18 new).
+Integration tests pin the event shape + nesting contract so §2 #8 can
+rely on it.
+
+**Decisions / trade-offs.**
+* Clock + id generator are injectable on `Tracer` — tests want
+  determinism; production gets `time.time` + `secrets.token_hex(8)`.
+* No sampling / batching yet. `JsonlSink` flushes on every event; if it
+  becomes a bottleneck we can add buffering behind the same interface
+  without touching producers.
+* Span data is deliberately small (ints, floats, short strings) so it
+  can survive JSON round-trips. No message bodies / tool args are
+  emitted — PII already leaks into logs faster than people think.
+
+**Next suggested action:** `Continue Phase 2 with §2 #8 eval-harness:
+a deterministic replay/diff runner that re-plays a captured JsonlSink
+trace through a candidate model/client, scores truthfulness +
+tool-behavior regressions, and produces a compact verdict doc.`
+
 ## 2026-04-23 — §2 #4 tool-use-orchestrator
 
 **Shipped** `frok.tools` + tool-use plumbing on `GrokClient`.

@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Protocol
 
 from ..safety.rules import SafetyRuleSet, default_ruleset
+from ..telemetry import Tracer
 
 DEFAULT_BASE_URL = "https://api.x.ai/v1"
 DEFAULT_MODEL = "grok-4"
@@ -132,6 +133,7 @@ class GrokClient:
     transport: Transport | None = None
     safety: SafetyRuleSet = field(default_factory=default_ruleset)
     sleep: RetrySleep = asyncio.sleep
+    tracer: Tracer = field(default_factory=Tracer)
 
     # Aggregate cost accounting across the client lifetime.
     prompt_tokens_total: int = 0
@@ -149,67 +151,90 @@ class GrokClient:
         if not messages:
             raise GrokError("messages must not be empty")
 
-        # Pre-flight: apply safety rules to every inbound message.
-        guarded: list[GrokMessage] = []
-        pre_findings: list[Any] = []
-        for m in messages:
-            result = self.safety.apply(m.content)
-            pre_findings.extend(result.findings)
-            if result.blocked:
+        async with self.tracer.span(
+            "grok.chat",
+            model=self.model,
+            message_count=len(messages),
+            has_tools=tools is not None,
+        ) as span:
+            # Pre-flight: apply safety rules to every inbound message.
+            guarded: list[GrokMessage] = []
+            pre_findings: list[Any] = []
+            for m in messages:
+                result = self.safety.apply(m.content)
+                pre_findings.extend(result.findings)
+                if result.blocked:
+                    span.set(
+                        safety_blocked="prompt",
+                        safety_findings=len(pre_findings),
+                    )
+                    raise GrokError(
+                        f"prompt blocked by safety rule(s): "
+                        f"{[f.rule for f in result.findings if f.severity >= 40]}"
+                    )
+                guarded.append(
+                    GrokMessage(
+                        role=m.role,
+                        content=result.text,
+                        name=m.name,
+                        tool_calls=m.tool_calls,
+                        tool_call_id=m.tool_call_id,
+                    )
+                )
+
+            payload: dict[str, Any] = {
+                "model": self.model,
+                "messages": [m.to_payload() for m in guarded],
+            }
+            if tools is not None:
+                payload["tools"] = tools
+            if temperature is not None:
+                payload["temperature"] = temperature
+            if max_tokens is not None:
+                payload["max_tokens"] = max_tokens
+            if extra:
+                payload.update(extra)
+
+            raw = await self._post("/chat/completions", payload)
+            content, tool_calls, finish_reason = _extract_message(raw)
+
+            # Post-flight: rewrite model output through the same ruleset.
+            post = self.safety.apply(content)
+            if post.blocked:
+                span.set(
+                    safety_blocked="response",
+                    safety_findings=len(pre_findings) + len(post.findings),
+                )
                 raise GrokError(
-                    f"prompt blocked by safety rule(s): "
-                    f"{[f.rule for f in result.findings if f.severity >= 40]}"
+                    f"response blocked by safety rule(s): "
+                    f"{[f.rule for f in post.findings if f.severity >= 40]}"
                 )
-            guarded.append(
-                GrokMessage(
-                    role=m.role,
-                    content=result.text,
-                    name=m.name,
-                    tool_calls=m.tool_calls,
-                    tool_call_id=m.tool_call_id,
-                )
+
+            usage = raw.get("usage") or {}
+            prompt_tokens = int(usage.get("prompt_tokens", 0))
+            completion_tokens = int(usage.get("completion_tokens", 0))
+            self.prompt_tokens_total += prompt_tokens
+            self.completion_tokens_total += completion_tokens
+
+            span.set(
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                total_tokens=prompt_tokens + completion_tokens,
+                tool_calls=len(tool_calls) if tool_calls else 0,
+                finish_reason=finish_reason or "",
+                safety_findings=len(pre_findings) + len(post.findings),
             )
 
-        payload: dict[str, Any] = {
-            "model": self.model,
-            "messages": [m.to_payload() for m in guarded],
-        }
-        if tools is not None:
-            payload["tools"] = tools
-        if temperature is not None:
-            payload["temperature"] = temperature
-        if max_tokens is not None:
-            payload["max_tokens"] = max_tokens
-        if extra:
-            payload.update(extra)
-
-        raw = await self._post("/chat/completions", payload)
-        content, tool_calls, finish_reason = _extract_message(raw)
-
-        # Post-flight: rewrite model output through the same ruleset.
-        post = self.safety.apply(content)
-        if post.blocked:
-            raise GrokError(
-                f"response blocked by safety rule(s): "
-                f"{[f.rule for f in post.findings if f.severity >= 40]}"
+            return GrokResponse(
+                model=raw.get("model", self.model),
+                content=post.text,
+                raw=raw,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                safety_findings=pre_findings + post.findings,
+                tool_calls=tool_calls,
+                finish_reason=finish_reason,
             )
-
-        usage = raw.get("usage") or {}
-        prompt_tokens = int(usage.get("prompt_tokens", 0))
-        completion_tokens = int(usage.get("completion_tokens", 0))
-        self.prompt_tokens_total += prompt_tokens
-        self.completion_tokens_total += completion_tokens
-
-        return GrokResponse(
-            model=raw.get("model", self.model),
-            content=post.text,
-            raw=raw,
-            prompt_tokens=prompt_tokens,
-            completion_tokens=completion_tokens,
-            safety_findings=pre_findings + post.findings,
-            tool_calls=tool_calls,
-            finish_reason=finish_reason,
-        )
 
     async def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         if self.transport is None:
