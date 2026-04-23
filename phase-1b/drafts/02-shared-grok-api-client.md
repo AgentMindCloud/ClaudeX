@@ -264,3 +264,117 @@ have adopted it on `main`.
       in `CODEOWNERS`. Shared libraries consumed by 3+ repos
       with one maintainer are governance debt; make it
       visible.
+
+### Part B — Feature surface (v0.1.0 = current-implementation parity)
+
+v0.1.0 covers exactly what the two Python implementations
+(`grok-install-cli` via `runtime/` + `integrations/` and
+`grok-build-bridge/xai_client.py`) currently do — no new
+features. Parity, not ambition. Extensions land post-v0.1.0
+as each consumer's needs surface.
+
+Indicative public API (finalised in the v0.1.0 PR):
+
+```python
+from grok_client import (
+    GrokClient,              # primary entry
+    AsyncGrokClient,         # asyncio variant
+    ClientConfig,            # auth + retry + rate-limit config
+    Message,                 # dataclass: role, content, tool_calls
+    ToolDecl,                # dataclass: tool function schema
+    StreamChunk,             # dataclass: delta / usage / finish_reason
+    GrokAPIError,            # base exception
+    RateLimitError,          # 429 with Retry-After semantics
+    AuthError,               # 401 / 403
+    ServerError,             # 5xx (retryable)
+    TimeoutError,            # client-side timeouts
+)
+```
+
+- [ ] **Auth**:
+      - `ClientConfig(api_key, org_id?, base_url?)` —
+        `api_key` sourced from env `XAI_API_KEY` by default;
+        explicit arg wins; missing both raises `AuthError`
+        at client init, not on first call.
+      - Bearer header + org header (if set) injected
+        uniformly.
+      - Never echo the key to logs; `repr(ClientConfig)`
+        masks it.
+
+- [ ] **Retries**:
+      - Default policy: **3 retries**, exponential backoff
+        with jitter, retry on 429 (honouring `Retry-After`),
+        500, 502, 503, 504, and `TimeoutError`. No retry on
+        auth or 4xx-other (bad request, not-found).
+      - Configurable via `ClientConfig(retry=RetryPolicy(
+        max_retries=3, backoff_base=0.5, max_backoff=30))`.
+      - Observable: each retry emits a structured log line
+        (`event=retry attempt=N reason=...`). Callers can
+        intercept via `logging`.
+
+- [ ] **Streaming**:
+      - `chat(stream=True)` returns an iterator (or async
+        iterator) of `StreamChunk`.
+      - Chunks carry `delta` (new content), `tool_call_delta`
+        (partial tool-call JSON), `usage` (on final chunk),
+        and `finish_reason`.
+      - Decode is the one place the ecosystem has silently
+        diverged today — pin the SSE handling here and every
+        consumer inherits correctness.
+
+- [ ] **Rate limiting**:
+      - Parse `X-RateLimit-Remaining` + `X-RateLimit-Reset`
+        on every response; expose via
+        `client.last_rate_limit` for callers that want to
+        self-throttle.
+      - Automatic pre-emptive slow-down when
+        `remaining / window < threshold` (off by default;
+        opt-in via `ClientConfig`).
+      - `RateLimitError` carries the `retry_after` seconds
+        value from the `Retry-After` header so the retry
+        policy consumes it correctly.
+
+- [ ] **Tool calling**:
+      - `ToolDecl` matches the SDK's function-schema shape.
+      - `Message.tool_calls` is a list of tool invocations
+        the model requested; each has `id`, `name`,
+        `arguments` (parsed JSON).
+      - Helpers: `ToolDecl.from_callable(fn)` introspects a
+        Python function's signature to emit the schema —
+        reduces per-consumer boilerplate.
+
+- [ ] **Structured output (optional, v0.1.0)**:
+      - `chat(response_format={"type": "json_schema", ...})`
+        passthrough to the SDK.
+      - Result returned as `dict`; callers can validate via
+        `pydantic` or `jsonschema` per preference.
+
+- [ ] **SDK-version pin**:
+      - `xai-sdk == <exact>` pin in this package's
+        `pyproject.toml`. Bumping the SDK is a deliberate
+        PR here; consumers inherit via version-bumping this
+        package.
+      - Document the SDK pin philosophy in `README.md`: this
+        package is the ecosystem's SDK pin point; consumers
+        should NOT pin `xai-sdk` directly.
+
+- [ ] **Non-goals for v0.1.0** (documented in README):
+      - Caching / memoisation of completions.
+      - Automatic batching of requests.
+      - Cost tracking.
+      - Prompt templating / chain composition (that's
+        agent-framework territory; see §2 #17 for the
+        orchestra repo).
+      - JS / TypeScript port (see Part A JS-later path).
+
+- [ ] **Model-ID handling**:
+      - Models are passed as strings
+        (`GrokClient.chat(model="grok-4.20", ...)`); no
+        enum gatekeeping in v0.1.0. The ecosystem's single
+        hard-coded pin today (`grok-4.20` in
+        `grok-build-bridge/xai_client.py`) moves to
+        consumer-side config, not into this package.
+      - Helpful but non-gating: `grok_client.MODELS`
+        constant listing known model IDs for discoverability.
+        Consumers can pass arbitrary strings; this package
+        does not validate.
