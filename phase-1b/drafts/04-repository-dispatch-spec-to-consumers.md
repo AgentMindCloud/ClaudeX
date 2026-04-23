@@ -266,3 +266,182 @@ repos whenever a new spec version ships.
       "contributing" or "workflow" section):
       *"Spec releases fan out to downstream repos via
       `repository_dispatch`; see `docs/ci-dispatch.md`."*
+
+### Part B — Subscriber workflows (one per consumer repo)
+
+Three short follow-up issues, one per subscriber. Each installs
+a single workflow file that listens for
+`repository_dispatch: types: [grok-install-release]` and does
+repo-appropriate work. File these follow-ups **after** Part A
+merges — the dispatch-event contract could shift in review and
+each subscriber's code depends on that contract.
+
+Common structure across all three subscribers:
+
+```yaml
+on:
+  repository_dispatch:
+    types: [grok-install-release]
+  workflow_dispatch:
+    inputs:
+      version: { description: 'Version', required: true, type: string }
+
+jobs:
+  handle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Capture inputs
+        id: inputs
+        run: |
+          echo "version=${{ github.event.client_payload.version || inputs.version }}" >> "$GITHUB_OUTPUT"
+          echo "source=${{ github.event.client_payload.source_repo || 'AgentMindCloud/grok-install' }}" >> "$GITHUB_OUTPUT"
+          echo "release_url=${{ github.event.client_payload.release_url || 'N/A' }}" >> "$GITHUB_OUTPUT"
+      # ... per-subscriber work below ...
+```
+
+#### Subscriber 1 — `grok-docs` (follow-up issue)
+
+Target workflow extends the existing
+`sync-schemas.yml` OR ships as a new
+`spec-release-listener.yml`. Recommendation: sibling workflow
+because `sync-schemas.yml`'s cron semantics remain useful
+(safety net if a dispatch is missed) and mixing triggers in
+one file is hard to read.
+
+- [ ] **Install `.github/workflows/spec-release-listener.yml`**:
+      the common structure above, plus:
+
+      ```yaml
+      - name: Trigger sync-schemas workflow with forced refresh
+        uses: actions/github-script@<SHA>  # v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'sync-schemas.yml',
+              ref: 'main',
+              inputs: {
+                force_version: '${{ steps.inputs.outputs.version }}',
+              },
+            });
+      ```
+
+      `sync-schemas.yml` already accepts `workflow_dispatch`
+      inputs (see audit 05 §5). A `force_version` input is a
+      small addition that tells the sync job to pull a specific
+      tag rather than `@main`.
+
+- [ ] **Bump the `spec_version` banner from §2 #10 Part C**.
+      If §2 #10 already ships with a hardcoded
+      `extra: spec_version:` in `mkdocs.yml`, extend the
+      listener to commit a bump + push a PR:
+      ```yaml
+      - name: Bump spec_version in mkdocs.yml
+        run: |
+          sed -i "s/^\(\s*spec_version:\s*\).*/\1${{ steps.inputs.outputs.version }}/" mkdocs.yml
+      - uses: peter-evans/create-pull-request@<SHA>  # v6
+        with:
+          title: "docs: bump spec_version to ${{ steps.inputs.outputs.version }}"
+          branch: auto/spec-version-bump
+          body: "Auto-generated from grok-install-release dispatch. Source: ${{ steps.inputs.outputs.release_url }}"
+      ```
+      Opens a PR; maintainer merges. Avoids pushing directly
+      to `main`.
+
+- [ ] **CHANGELOG** entry referencing the listener + §2 #4's
+      primary URL.
+
+#### Subscriber 2 — `grok-install-action` (follow-up issue)
+
+Work: bump `cli-version` default in `action.yml` and update
+README's advertised spec version (the "validates v2.X spec"
+phrasing that §2 #14a already handles for the counts).
+
+- [ ] **Install `.github/workflows/spec-release-listener.yml`**
+      with the common structure, plus:
+
+      ```yaml
+      - name: Bump cli-version default + README claims
+        run: |
+          # action.yml cli-version default
+          yq -i '.inputs."cli-version".default = "${{ steps.inputs.outputs.version }}"' action.yml
+          # README: any "spec vX.Y" references in prose
+          sed -i -E "s/spec v[0-9]+\.[0-9]+/spec ${{ steps.inputs.outputs.version }}/g" README.md
+      - uses: peter-evans/create-pull-request@<SHA>
+        with:
+          title: "action: bump cli-version default to ${{ steps.inputs.outputs.version }}"
+          branch: auto/spec-version-bump
+          body: "Auto-generated from grok-install-release dispatch. Source: ${{ steps.inputs.outputs.release_url }}"
+      ```
+
+- [ ] **Coordination with §2 #7** (CLI tagged releases): the
+      action's `cli-version` default is the *CLI* version,
+      not the *spec* version. Those are different axes. Under
+      §2 #7's recommended A1 (CLI at `0.1.0`, spec at
+      `v2.14`), a spec release does NOT force a CLI bump.
+      The listener should bump the spec-version prose in the
+      README but NOT the `cli-version` default — that's §2
+      #7's territory. Clarify in the PR template.
+
+      *(Re-read §2 #6 + #7 drafts before filing this
+      follow-up to confirm the axis separation matches
+      whichever of #6's options landed upstream.)*
+
+- [ ] **CHANGELOG** entry referencing the listener + §2 #4
+      primary URL.
+
+#### Subscriber 3 — `grok-agents-marketplace` (follow-up issue)
+
+Work: ensure the submission form's accepted spec versions
+include the new one; render any new `grok-install.yaml`
+fields (e.g. v2.14's `visuals:` block) on agent detail
+pages.
+
+- [ ] **Install `.github/workflows/spec-release-listener.yml`**
+      with the common structure, plus:
+
+      ```yaml
+      - name: Open tracking issue for maintainer
+        uses: actions/github-script@<SHA>
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `spec ${{ steps.inputs.outputs.version }} released — review for frontend updates`,
+              body: `A new grok-install spec version was released.
+
+            - Source: ${{ steps.inputs.outputs.release_url }}
+            - Version: ${{ steps.inputs.outputs.version }}
+
+            Checklist:
+            - [ ] Confirm submission-form accepted-spec list includes ${{ steps.inputs.outputs.version }}.
+            - [ ] If new fields added (check release notes), surface them on agent detail pages.
+            - [ ] Bump any hardcoded version strings in src/.
+            `,
+              labels: ['spec-release', 'needs-triage']
+            });
+      ```
+
+      Open an issue rather than a PR because this repo's
+      changes are likelier to touch rendering logic
+      (non-mechanical). The issue is the maintainer's
+      checklist; the maintainer decides what code changes.
+
+- [ ] **Close-linkage with §2 #20** (CODEOWNERS + review
+      SLA): once §2 #20 lands in this repo, the auto-opened
+      issue routes to a named owner via CODEOWNERS and
+      surfaces under the SLA clock.
+
+- [ ] **CHANGELOG** entry referencing the listener + §2 #4
+      primary URL.
+
+#### Cross-cut: PAT visibility
+
+Each subscriber's listener runs as part of the dispatched
+repo's CI; no PAT needed *on the subscriber side*. The PAT
+from Part A lives only in `grok-install`. Subscribers use
+their default `GITHUB_TOKEN`. Spell this out in each
+subscriber's follow-up body so reviewers don't over-scope
+tokens.
