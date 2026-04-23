@@ -313,3 +313,75 @@ Pick one:
 - **File manually from the packets** (steps in `phase-1b/filing-packets/README.md §Path B`) — same end state, slower, no scope change required.
 - `"Begin third-pass drafts — §2 #5, #8, #20."` — if you'd rather keep drafting ahead of filing.
 - `"Pause Phase 1B."` — 9 drafts + filing-packets sit ready; resume any time.
+
+---
+
+## Session: 2026-04-23 (cont.) — Phase 1B (third pass): cross-ecosystem contracts + governance
+
+### Status: Third pass complete — 3 drafts across 3 §2 recs (cumulative: 12 drafts covering 10 of 20 §2 recs)
+
+### Scope
+Third-pass slice: §2 #5 (unified safety-profile rubric with
+conformance tests), §2 #8 (`grok-yaml-standards` → JSON Schema
+draft-2020-12 for v1.3), §2 #20 (triage 12 open PRs on
+`grok-agents-marketplace` + publish `CODEOWNERS` + document a
+review SLA). All three are M-effort with no `Blocked by` entry
+in §2. §2 #5 is the highest-fanout item in the §2 graph (three
+downstream recs — #1, #11, #17 — become eligible as speculative
+drafts once #5 is in repo).
+
+### MCP-scope constraint (unchanged)
+Still `agentmindcloud/claudex`-only. All three drafts are
+markdown files in this repo; filing remains a user action.
+`phase-1b/ISSUES.md`'s **Filed** column is the audit trail for
+upstream landing.
+
+### What was done
+1. Drafted §2 #5 — safety-profile rubric → `drafts/05-safety-profile-rubric.md`. Four-part acceptance: (A) rubric contents with a seven-axis normative table across `strict` / `standard` / `permissive`, (B) location in repo (`docs/safety-profile-rubric-v1.md` human-readable + `schemas/safety-profile-rubric.schema.json` draft-2020-12 companion), (C) conformance-test format (`tests/conformance/<case_id>/` structure + reference validator `tools/check_profile_conformance.py` + CI wiring into `validate-schemas.yml`), (D) consumer contract for the four downstream repos.
+2. Drafted §2 #8 — draft-2020-12 migration → `drafts/08-grok-yaml-standards-draft-2020-12-migration.md`. Two-part acceptance: (A) core migration (`$schema` flip across 12 schemas + `definitions` → `$defs` rename + `schema-smoke` CI flip + `standards-overview.md` + `version-reconciliation.md` updates + v1.3.0 release notes), (B) downstream smoke-test coordination (pre-release tests against grok-install, grok-docs, awesome-grok-agents, grok-install-cli, grok-build-bridge; announcement follow-ups only in grok-install + grok-docs).
+3. Drafted §2 #20 — PR triage + CODEOWNERS + SLA → `drafts/20-grok-agents-marketplace-pr-triage-codeowners.md`. Three-part acceptance, each independently mergeable: (A) PR triage sweep (tracking issue, 4-outcome classification, timebox 10 business days), (B) publish `.github/CODEOWNERS` + `SECURITY.md` + `CONTRIBUTING.md`, (C) review SLA doc with concrete first-response / first-review / follow-up / escalation / deviation-surfacing targets.
+4. Updated `phase-1b/ISSUES.md`: added third-pass table (rows 10–12), replaced "Next-pass candidates" with §2 #2 / #10 / #19, updated post-filing follow-ups to note #5 is now drafted + speculative-draft discipline for #7 / #12 / #16 / #1-#11-#17 + flagged the #10 gap that blocks #4.
+5. Updated filing-packets `02-grok-yaml-standards.md` (added §2 #5 and §2 #8 as primaries) and `08-grok-agents-marketplace.md` (added §2 #20 as primary); both packets' primary counts now reflect third-pass content.
+
+### Metrics
+- §2 recs drafted this pass: **3** (#5, #8, #20).
+- Draft files created this pass: **3**.
+- Cumulative §2 recs drafted (three passes): **10 of 20** (#3, #5, #6, #8, #9, #13, #14, #15, #18, #20).
+- Cumulative draft files: **12**.
+- Risks closed outright by this pass (on upstream merge): **VER-2** (S2, via #8), **GOV-2** (S2, via #20).
+- Risks partially closed (full closure gated on consumer-repo follow-ups): **UNV-3** (S3, via #5), **UNV-4** (S3, enabled by #5).
+- Recs unblocked for speculative drafting by this pass: **§2 #1, #11, #17** (all gated on #5, which is now drafted).
+- Recs still blocked at draft time for the correct reason: **§2 #4** (gated on #10, which remains undrafted — flagged for user decision in the prompt).
+- Phase-1B commits on `claude/phase-1b-session-continuation-zQBET` this pass: **29** (21 draft micro-commits + 3 ISSUES.md + 2 filing-packet + this PROGRESS entry + CHANGELOG + ROADMAP). Per-unit commit protocol held: each section of each draft is a single committed + pushed unit.
+- Cumulative Phase-1B commits across three passes + addendum: 14 (through addendum) + 29 (this pass) = **43**.
+- Lines of fabricated product code: **0** (drafting-only phase).
+
+### Decisions & trade-offs
+- **Micro-unit commit protocol.** The third pass adopted a finer commit granularity than passes 1–2. Each draft was built as a skeleton-first commit (H1 + metadata header + separator) followed by section commits (Context, Evidence, one commit per Acceptance-criteria Part, Notes). Each index/filing-packet/progress-doc update is also its own commit. Rationale: faster visible progress + smaller-diff review units + explicit checkpointing between acceptance sub-criteria. Total commits this pass (29) is larger than passes 1–2's per-pass counts (7 and 5) because of this deliberate decomposition. Cost: higher push volume. Value: a reviewer can disagree with one axis of the §2 #5 rubric (e.g. the `scan_severity_threshold` row of Part A) without having to reverse-engineer which commit introduced it.
+- **§2 #5 rubric: seven axes, not a prose definition.** The existing ecosystem references to `strict` / `standard` / `permissive` are prose. The draft deliberately ships a normative seven-axis table (external writes / secret access / code execution / approval gate / scan severity threshold / network egress / halt on anomaly) so the rubric has behavioural bite. Each axis takes an enumerated value across three profiles; the machine-readable companion schema (Part B) enforces the shape.
+- **§2 #5 Part D names consumer repos but does NOT file follow-ups.** The Part-D contract for `grok-install-cli` / `awesome-grok-agents` / `grok-build-bridge` / `grok-agent-orchestra` is the contract language this primary ships. Follow-up issues in each consumer repo open *only after the primary merges* — the rubric's normative values may shift in review, which would invalidate the follow-up checklists. Same discipline as the second-pass cross-refs and the first-pass post-filing follow-ups.
+- **§2 #8 coordination is smoke-test-only, not code changes.** Downstream Python validators (`jsonschema>=4.21` in CLI; hard-bound `Draft202012Validator` in bridge) and JS validators (`ajv-cli@5 + ajv-formats@3`) are all `$schema`-keyword-aware by default. The Part-B smoke tests confirm this empirically before release day; no consumer-repo code changes are expected. Announcement follow-ups go only in `grok-install` and `grok-docs` — the two repos where the draft-07/draft-2020-12 drift is user-visible. Other consumer repos get silence unless a smoke test surfaces a real problem, to keep the audit trail clean.
+- **§2 #20 CODEOWNERS placeholders are literal.** The draft ships `@<default-maintainer>` / `@<frontend-maintainer>` / `@<backend-maintainer>` / `@<platform-maintainer>` placeholder handles. Filing maintainer substitutes real GitHub handles at file time. If only one maintainer exists today, all rows point at the same handle — *explicit beats implicit*. When a second maintainer onboards, this file is the first place their scope is recorded.
+- **§2 #20 SLA targets flagged as dial-back candidates.** The draft's Part-C SLA numbers (5 / 10 / 14 / 30 business days) are aspirational defaults. The draft's Notes section tells the filing maintainer to dial back to what the team can actually hit — an SLA routinely missed is worse than an honest four-week one. This is the one acceptance-criteria decision the draft explicitly delegates to the filer.
+- **Speculative-draft discipline explicitly recorded in ISSUES.md.** Post-filing follow-ups (§2 #7, #12, #16, and the #1/#11/#17 trio) can now be drafted speculatively against the in-repo prerequisite drafts rather than waiting for upstream merge. Every such speculative draft must carry a metadata-header flag. ISSUES.md post-filing-follow-ups table was rewritten to encode this rule + flag the #4-blocked-by-#10 gap (which remains the one post-filing follow-up that still cannot be responsibly drafted without also drafting #10 first).
+- **Pause at the S1→S2 transition (mandatory).** Per the kickoff prompt, Session 1 closes here pending three user-decision questions: (1) proceed to Session 2 now or pause; (2) include §2 #4 (requires drafting §2 #10 first — L-effort) or defer #4 to a later session; (3) draft the #1/#11/#17 trio as one coordinated file or three sibling files. No Session-2 drafting happens until these decisions come back.
+
+### Files changed this pass
+- Added: `phase-1b/drafts/05-safety-profile-rubric.md`, `phase-1b/drafts/08-grok-yaml-standards-draft-2020-12-migration.md`, `phase-1b/drafts/20-grok-agents-marketplace-pr-triage-codeowners.md`.
+- Modified: `phase-1b/ISSUES.md` (third-pass table, next-pass candidates rewrite, post-filing follow-ups rewrite with speculative-draft discipline).
+- Modified: `phase-1b/filing-packets/02-grok-yaml-standards.md` (added §2 #5 and §2 #8 primaries), `phase-1b/filing-packets/08-grok-agents-marketplace.md` (added §2 #20 primary).
+- Modified (this unit and the next two): `PROGRESS.md`, `CHANGELOG.md`, `ROADMAP.md`.
+
+### Open at pass close (Session 1 of this chat)
+- **Filing** — 12 drafts total await manual upstream filing. MCP scope restricts this session from filing; `phase-1b/filing-packets/` is the operational path. Pre-bootstrap filing via a widened-scope session (`filing-packets/README.md §Path A`) remains the fastest route.
+- **Session 2 (in-chat)** — speculative drafts for §2 #7, #12, #16, and the #1/#11/#17 trio are ready to start once the three user-decision questions above are answered. Each Session-2 draft will carry the mandatory speculative-draft metadata header (*"drafted in `phase-1b/drafts/<prereq>.md`; not yet filed upstream; speculative"* + *"re-review trigger: rewrite this draft if the prerequisite is substantially rewritten during upstream review"*).
+- **§2 #4** — NOT on the Session-2 list until #10 is drafted or #4 is explicitly deferred. The kickoff prompt mandates surfacing this at Session-2 kickoff.
+- **Next-pass candidates (beyond Session 2)** — §2 #2 (shared Grok API client, L-effort, reach 5), §2 #10 (grok-docs v2.14 + 7 standards reference pages, L-effort, reach 4), §2 #19 (x-platform-toolkit CI, M-effort, reach 2).
+
+### Next suggested action
+Pick one (Session 2 trigger):
+- `"Proceed to Session 2; defer §2 #4 to a later session; draft #1/#11/#17 as three sibling files."` *(recommended default — matches the prompt's pre-chosen safest path.)*
+- `"Proceed to Session 2; draft §2 #10 first then §2 #4; #1/#11/#17 as three sibling files."` *(widens Session-2 scope to include the L-effort #10 drafting.)*
+- `"Proceed to Session 2; draft #1/#11/#17 as one coordinated file, not three siblings."` *(tighter trio but less honest — each targets a different repo.)*
+- `"Pause Phase 1B."` *(12 drafts sit ready; resume any time.)*
+- `"File the 12 drafts first, then reopen Session 2."` *(path A: widen MCP scope and file before drafting further; path B: manual GitHub UI filing from filing-packets/.)*
