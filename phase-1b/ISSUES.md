@@ -92,6 +92,7 @@ speculative (two prerequisites, one itself speculative).
 | 16 | #1  | L | #5 (drafted) | UNV-4 outright; partial SEC-1 | AgentMindCloud/grok-install-cli *(extraction primary; A2 new-repo alternative flagged in draft)* | [`drafts/01-shared-grok-safety-rules-package.md`](drafts/01-shared-grok-safety-rules-package.md) | speculative |
 | 17 | #11 | S | #5 (drafted) | closes 00 §6.2 "missing-exemplar" finding | AgentMindCloud/awesome-grok-agents | [`drafts/11-awesome-grok-agents-permissive-exemplar.md`](drafts/11-awesome-grok-agents-permissive-exemplar.md) | speculative |
 | 18 | #17 | L | #5, #1 (both drafted; #1 itself speculative) | UNV-3 outright; partial GOV-3 | AgentMindCloud/grok-agent-orchestra | [`drafts/17-grok-agent-orchestra-bootstrap.md`](drafts/17-grok-agent-orchestra-bootstrap.md) | speculative (deepest — transitive through #1) |
+| 20 | #4 | M | #10 (drafted fourth-pass) | VER-4 trigger; partial DOC-1 | AgentMindCloud/grok-install *(publisher)* + grok-docs + grok-install-action + grok-agents-marketplace *(3 subscriber cross-ref issues)* | [`drafts/04-repository-dispatch-spec-to-consumers.md`](drafts/04-repository-dispatch-spec-to-consumers.md) | speculative |
 
 ## Fourth-pass drafts (1 §2 rec, 1 file)
 
@@ -105,16 +106,13 @@ L-effort content-writing work; closes VER-4 + DOC-2 outright.
 
 ## Next-pass candidates
 
-With first-, second-, third-pass, Session-2, and fourth-pass
-slices covering §2 recs #1, #3, #5, #6, #7, #8, #9, #10, #11,
-#12, #13, #14, #15, #16, #17, #18, #20 (17 of 20), the
-remaining undrafted §2 recs are the two below + #4 which is
-now eligible (its prerequisite #10 is drafted in this repo).
+Cumulative coverage (through fifth pass): §2 recs #1, #3, #4,
+#5, #6, #7, #8, #9, #10, #11, #12, #13, #14, #15, #16, #17,
+#18, #20 — **18 of 20**. Two undrafted:
 
 | §2 # | Rec (short) | Effort | Reach | Unblocks §2 | Why this batch |
 |:-:|---|:-:|:-:|:-:|---|
 | #2 | Extract a shared Grok API client (auth, retries, streaming, rate-limit) — collapses the four parallel implementations in `00-ecosystem-overview.md §9.A`. | L | 5 | — | Highest reach in §2 (5). L-effort because it needs a coordination-plus-extraction write-up; the draft itself is a specification issue, not the implementation. |
-| #4 | Wire `repository_dispatch` from `grok-install` → `grok-docs`, `grok-install-action`, `grok-agents-marketplace`. Closes VER-4 trigger; partial DOC-1. | M | 4 | — | Now drafteable as a speculative-on-#10 draft. Previously deferred at S1→S2 kickoff because #10 was undrafted. Next natural pass. |
 | #19 | Add minimum CI to `x-platform-toolkit` (html-validate, css-lint, broken-link, Live-vs-Spec consistency). Closes SUP-5. | M | 2 | — | Closes the only SUP-category risk outside the #3/#13/#18 coverage. Reach-2 but the toolkit publishes user-facing tools that read live spec versions. |
 
 ### Post-filing follow-ups (not yet candidates — wait for upstream landing)
@@ -135,7 +133,7 @@ upstream merge. A speculative draft carries a metadata-header flag stating so. S
 |:-:|---|:-:|---|---|---|
 | #7 | Publish proper `grok-install-cli` GitHub releases whose tag matches `pyproject.toml`; align the action's pin. Closes VER-3. | #6 | drafted in `drafts/06-cli-install-mechanism.md`; not yet filed upstream | [`drafts/07-…`](drafts/07-grok-install-cli-releases-pyproject-alignment.md) (Session 2) | Part B enumerates pin-alignment behaviour under each of #6's three acceptance options. Re-review trigger: rewrite if #6's landed resolution differs materially. |
 | #12 | Replace `awesome-grok-agents`'s `grok_install_stub` with a real CLI invocation in CI. Closes partial UNV-4. | #6, #7 | both drafted (#7 itself speculative) | [`drafts/12-…`](drafts/12-awesome-grok-agents-replace-install-stub.md) (Session 2) | Deepest speculation (transitive through #7). File only after #6 AND #7 merge upstream. |
-| #4 | Wire `repository_dispatch` from `grok-install` → `grok-docs`, `grok-install-action`, `grok-agents-marketplace`. Closes VER-4 trigger; partial DOC-1. | #10 | drafted in `drafts/10-grok-docs-v2-14-plus-7-standards-reference.md` as of 2026-04-23 (fourth pass); not yet filed upstream | — | Now eligible as a speculative-on-#10 draft. See next-pass candidates below. |
+| #4 | Wire `repository_dispatch` from `grok-install` → `grok-docs`, `grok-install-action`, `grok-agents-marketplace`. Closes VER-4 trigger; partial DOC-1. | #10 | drafted in `drafts/10-grok-docs-v2-14-plus-7-standards-reference.md`; not yet filed upstream | [`drafts/04-…`](drafts/04-repository-dispatch-spec-to-consumers.md) (fifth pass) | Speculative-on-#10. Primary in `grok-install`; 3 subscriber cross-ref follow-ups in `grok-docs` / `grok-install-action` / `grok-agents-marketplace` after primary merges. |
 | #16 | Bootstrap `vscode-grok-yaml` v0.1.0 (read-only schema validation is enough). Closes partial GOV-3. | #15 | drafted in `drafts/15a-…` + `15b-…` | [`drafts/16-…`](drafts/16-vscode-grok-yaml-bootstrap.md) (Session 2) | Safest speculative draft — both #15 sibling options converge on "description is honest". |
 | #1 | Extract shared `grok-safety-rules` package consumed by CLI + bridge + orchestra + gallery. Closes UNV-4 outright; partial SEC-1. | #5 | drafted in `drafts/05-safety-profile-rubric.md` | [`drafts/01-…`](drafts/01-shared-grok-safety-rules-package.md) (Session 2) | Trio member 1 of 3 (different repo per draft). Speculative against #5's Part-A rubric shape. |
 | #11 | Add a permissive-profile exemplar template (`internal-ci-assistant`) to `awesome-grok-agents`. Closes 00 §6.2 missing-exemplar finding. | #5 | drafted in `drafts/05-safety-profile-rubric.md` | [`drafts/11-…`](drafts/11-awesome-grok-agents-permissive-exemplar.md) (Session 2) | Trio member 2 of 3. Template body mirrors #5's `permissive` row cell-for-cell. |
