@@ -291,3 +291,64 @@ during v0.1.0 review.
       diff versus the previous local implementation (if any
       finding count changed on a canonical fixture).
 
+## Notes
+
+- **Naming.** `grok-safety-rules` (hyphen on PyPI,
+  `grok_safety_rules` as Python import) is the name the rec
+  text uses in §2 and three audit §9 rows; keep it.
+
+- **Why a new repo (A2) over in-repo extraction (A1).** A1
+  leaves ownership ambiguous — every PR to the shared library
+  goes through `grok-install-cli`'s CODEOWNERS / review cadence
+  even though the bridge, orchestra, and gallery are all equal
+  consumers. A2 creates a clean boundary with its own review
+  flow. The A1 cost (an extra repo to maintain) is real but
+  bounded; the A2 cost (governance confusion) compounds.
+
+- **Relationship to §2 #12.** §12 removes the
+  `awesome-grok-agents` stub. After §12 merges, the ecosystem
+  has two (not three) parallel safety implementations. This
+  rec then consolidates those two. Filing order doesn't
+  matter; both end states are the same.
+
+- **Relationship to §2 #5.** §5 ships the contract; this rec
+  ships the implementation of that contract. The rubric's
+  `check_profile_conformance` reference validator (§5 Part C)
+  becomes part of this package (it logically lives next to
+  `scan` and `load_rubric_values`). Consider renaming the
+  `check_profile_conformance.py` tool that §5 describes to
+  `grok-safety-rules`' public API function — flag in §5's
+  follow-up PR.
+
+- **Relationship to §2 #17.** The orchestra bootstrap must
+  pin `grok-safety-rules` from day one. See the bootstrap's
+  draft ([`phase-1b/drafts/17-grok-agent-orchestra-bootstrap.md`](17-grok-agent-orchestra-bootstrap.md))
+  — speculative on the same prerequisite (#5) as this rec.
+  If §17 lands before this rec, §17 pins an unreleased
+  package; coordinate by either (a) landing this rec first,
+  or (b) letting §17 pin `== 0.1.0` and having this rec's
+  release be the pin-resolution trigger.
+
+- **Out of scope here.**
+  - The LLM-audit prompt-injection vulnerability (SEC-1) is
+    *separate*. This rec shares the static-scan layer; the LLM
+    auditor's prompt-isolation / output-shape validation work
+    belongs in a separate issue against `grok-build-bridge`
+    (not currently in §2).
+  - Ecosystem-wide secret-scanning (§2 #13) is a different
+    CI-layer defense. Consumers of this package can still
+    fail to run gitleaks.
+  - Lockfile hardening for the package itself is `grok-
+    safety-rules`-repo-local; adopt §2 #18's CI template.
+
+- **Filing strategy.** Coordination issue in
+  `grok-install-cli` (if A1) or first issue on the new
+  `grok-safety-rules` repo (if A2). Consumer adoption
+  follow-ups open after v0.1.0 ships.
+
+- **Speculative-draft honesty.** This draft's §Part-A package
+  API mirrors §2 #5's seven-axis rubric. If #5's rubric
+  changes during upstream review, rewrite Part A's API
+  snippet to match. Metadata header's re-review trigger
+  catches this.
+
