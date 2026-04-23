@@ -323,3 +323,79 @@ rubric was built for.
       (MAJOR), Lucas's implementation needs to re-audit the
       axis-mapping and may need to bump its own major
       version. Encode this relationship in the README.
+
+## Notes
+
+- **Why "strictest profile in team" over "proposing agent's
+  profile".** If Lucas only checked the proposing agent's
+  claimed profile, an attacker could construct a permissive
+  scratchpad agent to launder actions past strict teammates.
+  Team-level strictness is the conservative choice. Willing
+  to revisit after one pattern ships and we have real-world
+  experience; encoded as a design decision in `LUCAS.md`.
+
+- **Why plan-execute-critique and not one of the other four
+  patterns.** P-E-C is the smallest pattern that actually
+  exercises multi-agent coordination (three roles, one
+  control loop, one decision point). Single-agent patterns
+  don't demonstrate the safety-veto value proposition;
+  bigger patterns multiply implementation cost without
+  increasing learning. Ship this one; measure; pick the next
+  pattern based on what v0.1.0 users actually ask for.
+
+- **Fall-back if §2 #1 hasn't shipped at filing time.** The
+  speculative-draft metadata header spells this out: pin
+  `grok-install-cli`'s `safety/` module directly, leave a
+  `TODO: migrate to grok-safety-rules` comment in `lucas.py`,
+  update the import + pin once §2 #1 ships v0.1.0. Cost of
+  this migration is under an hour.
+
+- **Fall-back if §2 #5 hasn't shipped at filing time.** The
+  rubric is the prerequisite; without it, Lucas's normative
+  contract cites undefined-behaviour terms. Do NOT file this
+  rec upstream until §2 #5 has merged. (Unlike §2 #1 — whose
+  fall-back is trivial — there is no sensible fall-back for
+  #5; without the rubric, "the strictest profile" has no
+  meaning beyond English prose.)
+
+- **Interaction with §2 #2 (shared Grok API client).** §2 #2
+  is in the next-pass candidates (not drafted yet).
+  If #2 lands before this rec, the orchestra depends on the
+  shared client. If not, the orchestra ships with its own
+  thin httpx-based client (audit 00 §9.A names the orchestra
+  as one of the four parallel clients this ecosystem has;
+  adding a fifth is not worse than the status quo, and
+  migration to a shared client is one PR). Flag in the README.
+
+- **Out of scope for v0.1.0.**
+  - The remaining four patterns from the landing page
+    (names TBD; original list is marketing). Promise none;
+    ship one.
+  - Vector/episodic memory substrate (ROADMAP Phase 2; not
+    this rec).
+  - Multimodal (vision/voice) integration (ROADMAP Phase 4;
+    not this rec).
+  - An operator-override for Lucas vetoes (explicit: v0.2.0
+    or later, with full audit trail).
+  - Hosting / deployment recipes (the orchestra is a library,
+    not a service).
+
+- **Filing strategy.** Single primary issue in
+  `grok-agent-orchestra`. File only after BOTH §2 #5 has
+  merged upstream AND §2 #1 has merged (or §2 #1's fall-back
+  is explicitly chosen). #15b should also land first so the
+  repo's marketing matches the bootstrap ambition.
+
+- **Speculative-draft honesty.** This draft has two prerequisite
+  drafts in repo (§5 and §1), neither filed upstream. Part A's
+  package imports and Part B's veto implementation both
+  reference §1's package API. Part B's Lucas definition
+  references §5's rubric axes. The re-review trigger in the
+  metadata header explicitly lists both as rewrite conditions.
+
+- **Closes UNV-3 + partial GOV-3.** UNV-3 closes outright
+  (Lucas has a behavioural contract). GOV-3 closes partially
+  — full GOV-3 closure requires §2 #16 (vscode-grok-yaml
+  bootstrap) and §2 #15 (description honesty on both shell
+  repos); all three together.
+
