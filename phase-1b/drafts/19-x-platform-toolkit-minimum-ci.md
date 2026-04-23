@@ -138,3 +138,88 @@ untrue.
   more (audit 11 §9 row 4, author time).
 - Hosted demo index page (audit 11 §9 row 5, S-effort,
   separate row).
+
+## Acceptance criteria
+
+Two parts. Part A ships the three ecosystem-standard lint /
+link jobs (html-validate + stylelint + lychee). Part B ships
+the repo-specific Live-vs-Spec consistency check. The issue
+closes when CI is green on `main` after all four jobs land
+(three in Part A, one in Part B), and a PR that deliberately
+introduces a regression (malformed HTML, unknown CSS token,
+broken link, mis-labelled tool status) fails CI cleanly.
+
+### Part A — Lint + link-check jobs
+
+Create `.github/workflows/validate.yml` (name matches the
+ecosystem convention already used by `grok-install` and
+`grok-yaml-standards`). Single workflow, three jobs, runs
+on `push` + `pull_request`.
+
+- [ ] **Job 1 — `html-validate`**:
+      - Scope: every `tools/*/index.html` (the 8 Live
+        tools). Spec'd tools have no HTML to validate.
+      - Config: `.html-validate.json` at repo root with
+        `extends: ["html-validate:recommended"]`. The
+        `recommended` preset covers: required attributes
+        (`alt` on `img`, `label` on `input`), closing tags,
+        attribute quoting, duplicate `id`, invalid
+        nesting, etc.
+      - Install: `npm install --no-save html-validate@<pinned>`
+        in the workflow step (no `package.json` at repo
+        root needed — single dep, no lockfile to maintain).
+      - Fail on **error**, warn on **warning** (configurable
+        later; default posture is "any error blocks merge").
+      - Output: on failure, the GitHub annotation shows
+        line numbers in the failing `index.html`.
+- [ ] **Job 2 — `stylelint`**:
+      - Scope: `shared/ui-kit/*.css` — the two files
+        (`tokens.css`, `components.css`) that Live tools
+        inline. Per-tool CSS is inside `index.html` and
+        covered by the html-validate job's CSS parsing.
+      - Config: `.stylelintrc.json` at repo root with
+        `extends: ["stylelint-config-standard"]`. The
+        `standard` preset covers: no-invalid-hex-colors,
+        no-duplicate-selectors, declaration-block-no-shorthand-
+        property-overrides, etc.
+      - Custom rule: `custom-property-pattern` enforcing
+        `tokens.css`'s naming convention (confirm the
+        pattern with the maintainer; `^--[a-z][a-z0-9-]+$`
+        is the typical starting point).
+      - Install: `npm install --no-save stylelint@<pinned>
+        stylelint-config-standard@<pinned>` inline in the
+        step.
+      - Fail on any violation.
+- [ ] **Job 3 — `lychee` link-check**:
+      - Scope: every `*.md` in the repo — top-level
+        `README.md`, 20 × `tools/*/README.md`, 12 ×
+        `tools/*/SPEC.md`, `shared/ui-kit/README.md`,
+        `CHANGELOG.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`.
+      - Use the ecosystem-standard `lycheeverse/lychee-action`
+        (matches `grok-docs` + `awesome-grok-agents` usage).
+      - Accept HTTP 200, 204, 206; tolerant on 403 and 429
+        (X / social links rate-limit unauthenticated fetches —
+        matches `awesome-grok-agents` pattern per audit 06
+        §5).
+      - Offline mode OFF (this repo's external-link check
+        is the whole point; an offline-only check misses
+        X / X-article / SPEC-referenced URLs).
+      - Fail on broken links; allow a `.lycheeignore`
+        regex file at repo root for known-flaky URLs.
+- [ ] **Action pinning**: every action (actions/checkout,
+      actions/setup-node, lycheeverse/lychee-action, etc.)
+      pinned by 40-char SHA with trailing `# v<tag>`
+      comment — matches §2 #3 ecosystem discipline from
+      day one. This repo is in §2 #3's checklist; doing
+      the pinning here at CI-landing time avoids a later
+      SHA-pin-only PR.
+- [ ] **Concurrency**: `cancel-in-progress: true` on the
+      same ref, to match the ecosystem convention.
+- [ ] **Permissions**: workflow-level `contents: read`
+      only. No write scopes needed for this lint-only
+      workflow.
+- [ ] **Install versions exact-pinned**: `html-validate`,
+      `stylelint`, `stylelint-config-standard` all at
+      specific tagged versions in the workflow step.
+      Matches `grok-yaml-standards`' exact-pin discipline
+      for `ajv-cli` / `js-yaml` / `yamllint`.
