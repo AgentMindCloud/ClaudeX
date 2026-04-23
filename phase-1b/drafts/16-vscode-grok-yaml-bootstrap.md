@@ -56,3 +56,63 @@ extension's `yaml-language-server` — the standard way VS Code
 does YAML schema validation. This repo's contribution is a
 *schema-association manifest* plus packaging, not a new language
 server.
+
+## Evidence
+
+From `main` snapshot on 2026-04-23 (WebFetch; paths stable).
+
+**Current repo state** — `audits/07-vscode-grok-yaml.md §1, §2, §11`:
+- Repo contents: `LICENSE`, `README.md`, `media/` (appears
+  empty/unpopulated — no files enumerated on the tree view).
+- No `package.json`, no `src/`, no CI workflows, no tests.
+- 7 commits total; 1 open PR; 0 stars, 0 forks.
+- README / landing description says the extension supports "all
+  14 YAML standards" — the phrasing §2 #15a fixes (to
+  "12 standards" per `version-reconciliation.md`) and §2 #14b
+  fixes at the description layer.
+
+**What schema-validation consumers exist elsewhere**:
+- `grok-docs/docs/assets/schemas/latest/` — daily mirror of
+  `grok-yaml-standards/schemas/` *(audit 05 §5 `sync-schemas.yml`)*.
+  Audit 07 §9 row 3 already recommends this repo consume the
+  mirrored schemas rather than creating a fourth schema-distribution
+  location.
+- `grok-yaml-standards/schemas/grok-<name>.json` — 12 draft-07
+  schemas today; migrating to draft-2020-12 under §2 #8.
+  `ajv-cli@5.0.0 + ajv-formats@3` already honour `$schema`
+  keyword. *(audit 02 §5, §11 row 5.)*
+- `grok-install/schemas/v2.14/schema.json` — the outer spec's
+  schema. Draft-2020-12. *(audit 01 §7.)*
+
+**Standard VS Code YAML validation path** (widely used; no
+original research required):
+- The `redhat.vscode-yaml` extension (12M+ installs on the
+  marketplace) bundles `yaml-language-server`.
+- Schemas attach via either the extension's `yaml.schemas`
+  setting OR a consumer extension contributing to the
+  `redhat.vscode-yaml` schema-association API via the
+  `yamlValidation` `contributes` point in its `package.json`.
+- Our extension uses the *contributes* path — `package.json`
+  declares which file patterns map to which schema URLs. That
+  is the complete integration; the heavy lifting (parsing,
+  AST, diagnostics) is done by the Red Hat language server.
+
+**Governance surface** —
+`audits/00-ecosystem-overview.md §7.2`: `SECURITY.md` /
+`CONTRIBUTING.md` / `CODE_OF_CONDUCT.md` all missing on this
+repo today. Adding them in the bootstrap PR (see Part A below)
+closes part of GOV-4 at the same time.
+
+**Risk register** — `audits/98-risk-register.md`:
+- **GOV-3** (S3, L-high, `open`): "`vscode-grok-yaml` and
+  `grok-agent-orchestra` are LICENSE+README only — no source,
+  no CI, no issues template. The marketing-polished surface
+  implies a working product that does not exist."
+
+**Relationship to prerequisite (§2 #15a)** —
+[`phase-1b/drafts/15a-vscode-grok-yaml-description.md`](15a-vscode-grok-yaml-description.md):
+  Both of #15a's acceptance options produce an honest README and
+  repo description ("pre-alpha / empty shell" OR "marker repo
+  placeholder awaiting bootstrap PR"). Either outcome makes it
+  safe for this issue to land a real `package.json` + source
+  tree without the README still promising a shipped product.
