@@ -163,7 +163,31 @@ What each repo declares or pins, across the three version axes that matter: the 
 
 ## 3. JSON Schema draft matrix
 
-_(filled in unit 4)_
+The ecosystem runs on two JSON Schema drafts simultaneously. Drift is acknowledged in `grok-yaml-standards/standards-overview.md` and deferred to v1.3; until then every validator in the chain has to tolerate both.
+
+| Repo | Schema(s) declared | Draft | Validator in CI | Source |
+|------|--------------------|-------|-----------------|--------|
+| `grok-install` | `schemas/v2.14/schema.json` | **draft-2020-12** | `ajv-cli` + `ajv-formats` (Node 20) — `schema-v2-14` job (**janvisuals only**) | [→ 01, §5 validate.yml, §7] |
+| `grok-install` | `schemas/grok-install-v2.13.schema.json` (retained) | draft-07 | `ajv-cli` — `schema-v2-13` job (all 6 examples) | [→ 01, §5] |
+| `grok-install` | `schemas/featured-agents-v1.schema.json`, `trending-v1.schema.json` | draft-07 (inferred from naming/adjacency) | (not audited) | [→ 01, §2] |
+| `grok-yaml-standards` | 12 × `schemas/grok-<name>.json` | **draft-07** (all 12) | `ajv-cli@5.0.0 + ajv-formats` + Python schema-smoke asserting `$schema` = draft-07 | [→ 02, §5 validate-schemas.yml, §6] |
+| `grok-install-cli` | (consumes external schemas at runtime) | not verified — `jsonschema>=4.21` supports both | pytest via `test_validator.py` (coverage unknown) | [→ 03, §3, §10] |
+| `grok-install-action` | (delegates to CLI + uses ajv for internal report schema) | not verified | self-integration test on `tests/sample-agent` | [→ 04, §5] |
+| `grok-docs` | mirrors `grok-yaml-standards/schemas/` to `docs/assets/schemas/` daily | draft-07 (mirror of upstream) | no schema validation in site CI | [→ 05, §5 sync-schemas.yml] |
+| `awesome-grok-agents` | validates `featured-agents.json` against registry schema | draft-07 (schema from `grok-install` root) | `ajv-cli@5 + ajv-formats@3` — `schema` job | [→ 06, §3, §5] |
+| `grok-build-bridge` | `grok_build_bridge/schema/bridge.schema.json` (own) | **draft-2020-12** | `jsonschema.Draft202012Validator` — `schema-check` job | [→ 09, §5 ci.yml, §7] |
+| `grok-agents-marketplace` | runtime validation via `zod ^4.3.6` (not JSON Schema) | N/A | `vitest` (not schema-layer) | [→ 08, §3] |
+| `vscode-grok-yaml` | (intended consumer; no code) | — | — | [→ 07, §1] |
+| `grok-agent-orchestra` | (no code) | — | — | [→ 10, §1] |
+| `x-platform-toolkit` | no schemas | — | no CI | [→ 11, §5] |
+
+### Draft-split findings
+
+1. **Two spec roots disagree on drafts.** `grok-install` v2.14 → draft-2020-12; `grok-yaml-standards` v1.2.0 → draft-07. The disagreement is documented and deferred: `grok-yaml-standards/standards-overview.md` plans migration to draft-2020-12 in v1.3. Until then, any tool validating *both* schema families (the hoped-for `vscode-grok-yaml` extension, a unified CLI validator) must run two draft engines. [→ 02, §1, §6; → 01, §7]
+
+2. **Only 1 of 3 active Python validators is explicit about draft-2020-12.** `grok-build-bridge` hard-binds to `Draft202012Validator` and aligns with `grok-install` v2.14 on purpose. `grok-install-cli` uses `jsonschema>=4.21` (supports both, but the CLI source doesn't document which is called). `awesome-grok-agents` uses `ajv-cli@5` which honours the schema's `$schema` keyword. Unverified whether `grok-install-cli` picks the draft from the schema file or hard-codes one. [→ 09, §5; → 03, §3, §10; → 06, §5]
+
+3. **CI coverage of the draft-2020 migration is thin.** Only two CI jobs anywhere in the ecosystem actively exercise draft-2020-12: `grok-install/.github/workflows/validate.yml` (1 of 6 examples) and `grok-build-bridge/.github/workflows/ci.yml` (5 template YAMLs + 1 bridge.yaml). `grok-yaml-standards` and `grok-docs` are still pure draft-07. [→ 01, §5; → 09, §5; → 02, §5; → 05, §5]
 
 ## 4. Standards-count coherence — 5 / 12 / 14
 
