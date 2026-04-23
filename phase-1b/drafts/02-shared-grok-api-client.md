@@ -378,3 +378,97 @@ from grok_client import (
         constant listing known model IDs for discoverability.
         Consumers can pass arbitrary strings; this package
         does not validate.
+
+### Part C — Consumer adoption sequencing
+
+Each consumer gets its own follow-up PR (or linked issue +
+PR) filed **after** `grok-client` v0.1.0 ships to PyPI. Do
+NOT pre-file the follow-ups — Part B's API shape may shift
+during v0.1.0 review.
+
+Consumer sets:
+
+**Python consumers (current implementations — §9.A rows 2, 3):**
+
+- [ ] **Consumer 1 — `grok-install-cli`**: refactor
+      `src/grok_install/{runtime,integrations}/` Grok-calling
+      surface to be thin wrappers around `grok_client`.
+      Drop per-module retry/auth/streaming logic; import from
+      `grok_client`. Keep the CLI's subcommand surface
+      unchanged; only the implementation moves. **First
+      adopter** because this repo has the most mature
+      Python client implementation today; porting it first
+      validates that `grok_client`'s API covers real-world
+      needs.
+
+- [ ] **Consumer 2 — `grok-build-bridge`**: refactor
+      `xai_client.py` to be a thin wrapper around
+      `grok_client`. The LLM-audit safety layer in
+      `xai_client.py` is the subtlest consumer (it does
+      structured-output decoding from Grok); if the bridge
+      ports cleanly, the API covers every realistic case.
+      Drop the hard-coded `grok-4.20` model ID — move to
+      bridge-side config. **Second adopter** for the same
+      "most divergent implementation" reason §2 #1 gave.
+
+**Python consumers (future — §2 #2's "Affected repos" aspiration):**
+
+- [ ] **Consumer 3 — `awesome-grok-agents`**: the gallery's
+      Python scripts (`validate_template.py`,
+      `mock_run_template.py` — see audit 06 §5) don't call
+      Grok today; they validate templates. Once §2 #12
+      lands (replace stub with real CLI), the gallery
+      transitively consumes `grok_client` via the CLI. No
+      direct dependency in `awesome-grok-agents` — flag in
+      Notes so this is explicit.
+
+- [ ] **Consumer 4 — `grok-agents-marketplace`**: Next.js /
+      TypeScript. Does not consume this Python package. If
+      the marketplace develops server-side Python Grok calls
+      in the future (e.g. a background-job worker), it will
+      consume `grok_client` at that time. Not a v0.1.0
+      consumer; flag in Notes.
+
+**JS implementations (current but out of scope):**
+
+- [ ] **`grok-install` browser invocation (§9.A row 1)**:
+      NOT a v0.1.0 consumer. Browser-side Grok calls stay
+      per-repo until/unless a JS port lands (Part A's
+      JS-later path).
+
+- [ ] **`x-platform-toolkit` inlined JS (§9.A row 4)**: NOT
+      a v0.1.0 consumer. The single-file-HTML tools have no
+      build step; a shared JS package would need one. Out
+      of scope.
+
+**Cross-cut verification after Python consumers land:**
+
+- [ ] **Behavioural regression check**: build a shared
+      cassette test fixture (5–10 realistic Grok API
+      exchanges: chat, streaming, tool-calling,
+      rate-limit-hit, auth-fail) and run it against both the
+      pre-refactor and post-refactor implementations in CLI
+      + bridge. Zero observable difference in output is the
+      pass criterion. Any divergence found: either a bug in
+      `grok_client` (fix) or a per-implementation quirk the
+      consumer was silently relying on (surface explicitly
+      in `grok_client` issue tracker).
+
+- [ ] **SDK-version floor check**: after both CLI + bridge
+      adopt, the ecosystem has **one** `xai-sdk` pin. Audit
+      each repo's lockfile / `pyproject.toml` to confirm
+      `xai-sdk` appears only as a transitive through
+      `grok-client`. Any direct pin is a bug.
+
+- [ ] **Document the adoption rollout** in a follow-up
+      issue or ADR (`grok-client/docs/adr/0002-…`): which
+      consumer adopted when, what quirks surfaced, what was
+      upstream into `grok_client` as a result. Useful history
+      for when §2 #11's permissive exemplar or §2 #17's
+      orchestra bootstrap later adopts.
+
+- [ ] **Per-consumer CHANGELOG entries**. Each consumer's
+      CHANGELOG `[Unreleased]` cites the `grok-client`
+      version adopted and flags any behavioural diff visible
+      in the cassette suite. Mirrors §2 #1's adoption
+      discipline.
