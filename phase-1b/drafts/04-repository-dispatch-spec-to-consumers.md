@@ -17,3 +17,42 @@
 - **Suggested labels**: `ci`, `automation`, `version-coherence`, `ecosystem`, `phase-1b`
 
 ---
+
+## Context
+
+When `grok-install` cuts a new spec version (e.g. v2.13 →
+v2.14), three downstream repos need to notice:
+
+- **`grok-docs`** — republish the schemas + refresh content.
+  Currently relies on a daily cron (`sync-schemas.yml` at
+  03:00 UTC); up to 24h drift after a release.
+- **`grok-install-action`** — bump the `cli-version` default
+  and the "validates spec v2.X" claim in the README.
+  Currently does neither automatically; pin is a hard-coded
+  default.
+- **`grok-agents-marketplace`** — validate that the submission
+  form's accepted spec versions still include the new one, and
+  render any new `grok-install.yaml` fields (e.g. v2.14's
+  `visuals:` block). Currently has no dispatch from
+  `grok-install` at all.
+
+The cumulative effect is observable: on 2026-04-23, the docs
+site still advertised v2.12 while the spec had shipped v2.14
+two releases earlier (VER-4). Part of that gap is the content
+itself (§2 #10 closes it); the other part is the *trigger* —
+there is no automated signal telling consumers a new release
+landed.
+
+The fix is a standard GitHub pattern: `repository_dispatch`
+from the source-of-truth repo (`grok-install` — whichever
+workflow cuts the release) → a per-consumer listener workflow
+in each of the three downstream repos. The dispatched payload
+carries the version string; the listener decides what to do
+(rebuild docs, bump a pin, re-validate accepted spec versions).
+
+The design constraint that keeps this as M-effort: each
+consumer's listener does slightly different work, so the
+"dispatch event" contract has to be uniform enough for all
+three while leaving subscriber logic per-repo. The issue
+below specifies the contract explicitly (Part A) before each
+subscriber implements its listener (Part B).
