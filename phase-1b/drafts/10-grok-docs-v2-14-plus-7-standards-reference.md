@@ -339,3 +339,97 @@ with grok-security). Links are internal
   Auto-generation is a follow-up (tracked as
   `audits/99-recommendations.md §3.2` style hygiene — not
   blocking v2.14).
+
+### Part C — Publication layer: nav, version banner, Mike archive
+
+The content in Parts A + B is useless until the site surfaces
+it. Three small changes to the publication infrastructure.
+
+- [ ] **Update `mkdocs.yml` nav** to surface the 7 new pages
+      + confirm `grok-docs` the standard is represented by
+      the site's root (no separate reference page needed):
+
+      ```yaml
+      nav:
+        - Getting started: ...
+        - Spec:
+          - Core:
+            - grok-install: spec/grok-install.md
+            - grok-agent: spec/grok-agent.md
+            - grok-workflow: spec/grok-workflow.md
+            - grok-security: spec/grok-security.md
+            - grok-prompts: spec/grok-prompts.md
+            - grok-config: spec/grok-config.md      # NEW
+            - grok-update: spec/grok-update.md      # NEW
+            - grok-test: spec/grok-test.md          # NEW
+          - Extensions:
+            - grok-tools: spec/grok-tools.md        # NEW
+            - grok-deploy: spec/grok-deploy.md      # NEW
+            - grok-analytics: spec/grok-analytics.md  # NEW
+            - grok-ui: spec/grok-ui.md              # NEW
+        - Guides: ...
+        - CLI reference: ...
+      ```
+
+      The two-level grouping (Core / Extensions) matches
+      `grok-yaml-standards/standards-overview.md`'s
+      categorisation — important for keeping the docs site's
+      taxonomy consistent with the spec-catalogue repo's.
+
+- [ ] **Add a top-of-site version banner.** Audit 05 §9 row 3
+      calls this out as a stand-alone recommendation; bundling
+      it here is efficient because the v2.14 refresh is the
+      moment the version claim changes.
+
+      - Add `overrides/main.html` (or extend the existing
+        override if `overrides/` already has one):
+        ```html
+        {% extends "base.html" %}
+        {% block announce %}
+          <a href="{{ 'spec/grok-install/' | url }}">
+            Current spec version: <strong>{{ config.extra.spec_version }}</strong>
+          </a>
+        {% endblock %}
+        ```
+      - Add to `mkdocs.yml`:
+        ```yaml
+        extra:
+          spec_version: v2.14
+        ```
+      - Long-term: source `spec_version` from
+        `docs/assets/schemas/latest/VERSION` via a small
+        pre-build hook (`hooks:` in mkdocs). Not required for
+        v2.14 ship — a hardcoded value + manual bump at each
+        spec release is acceptable until §2 #4's dispatch
+        wiring lands. Flag as follow-up.
+
+- [ ] **Mike archive v2.12 content.** The Mike versioning
+      plugin is already configured. Before the main branch
+      rewrite to v2.14 content lands:
+      ```
+      mike deploy v2.12 --push
+      mike deploy v2.14 latest --push --update-aliases
+      mike set-default latest --push
+      ```
+      Users browsing the site see v2.14 as default with a
+      version switcher that includes v2.12. Archiving the
+      older version is important for users maintaining
+      v2.12 agents.
+
+- [ ] **Update `mkdocs.yml` site_description** and any `<meta>`
+      tags if they mention v2.12 explicitly.
+
+- [ ] **Release + deployment dry-run**:
+      `mkdocs build --strict` locally, then check the
+      published site after `deploy.yml` succeeds. Confirm:
+      - Banner shows "v2.14".
+      - All 7 new pages are reachable from the nav.
+      - v2.12 is accessible via the Mike version switcher.
+      - `link-check.yml` passes with no broken internal
+        links.
+
+- [ ] **Add a short release note** to the site's homepage
+      (`docs/index.md`): "Docs are now v2.14. v2.12
+      remains available via the version switcher at the
+      top-right of this page."
+
