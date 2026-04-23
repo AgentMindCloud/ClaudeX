@@ -156,3 +156,69 @@ not to merge or close every PR.
       notice before closing as wontfix or stale. This is
       etiquette, not policy — but documenting it here makes the
       triage sweep a one-time event, not a surprise cliff.
+
+### Part B — Publish `CODEOWNERS`
+
+Route every PR to a named owner by touched-path. Smallest
+concrete ask: create the file, populate it, enable required
+reviews from code owners for the `main` branch.
+
+- [ ] **Create `.github/CODEOWNERS`** (repo-root alternative also
+      works, but `.github/CODEOWNERS` is the GitHub convention
+      and avoids colliding with source directories). Seed it with
+      a default owner (`*`) and directory-specific overrides:
+
+      ```
+      # Default owner — everything not otherwise routed.
+      *                          @<default-maintainer>
+
+      # App code
+      /src/                      @<frontend-maintainer>
+      /next.config.ts            @<frontend-maintainer>
+      /tailwind.config.ts        @<frontend-maintainer>
+
+      # Data layer
+      /migrations/               @<backend-maintainer>
+      /src/**/api/               @<backend-maintainer>
+
+      # Platform / CI
+      /.github/                  @<platform-maintainer>
+      /package.json              @<platform-maintainer>
+      /tsconfig.json             @<platform-maintainer>
+      /vitest.config.ts          @<platform-maintainer>
+
+      # Governance files
+      /.github/CODEOWNERS        @<default-maintainer>
+      /SECURITY.md               @<default-maintainer>
+      /CONTRIBUTING.md           @<default-maintainer>
+      ```
+
+      The owner placeholders above are literal placeholders; the
+      filing maintainer substitutes real GitHub handles. If only
+      one maintainer exists today, all rows point at the same
+      handle — that is fine and explicit beats implicit. When a
+      second maintainer onboards, this file is the first place
+      their scope gets recorded.
+
+- [ ] **Enable "Require review from code owners"** on the `main`
+      branch protection ruleset. Combined with an existing
+      "Require pull request reviews" rule, this forces CODEOWNERS
+      routing to actually be honoured.
+
+- [ ] **Add `SECURITY.md`** at repo root (separate from the
+      `CODEOWNERS` file but naturally co-filed here). Content:
+      disclosure channel (email or private advisory), a
+      public-disclosure-window note, and the existing ecosystem
+      pointer to `grok-install/SECURITY.md §Enhanced Safety 2.0`.
+      This closes the repo's §4 governance-file gap in the same
+      PR as CODEOWNERS.
+
+- [ ] **Add `CONTRIBUTING.md`** at repo root: how to run the app
+      locally (`npm install && npm run dev`), how to submit a PR,
+      reference to the review SLA (Part C). One-screen file;
+      link to existing ecosystem-wide ROADMAP / architecture
+      docs if they exist.
+
+- [ ] **Update `README.md`** with a one-line pointer under the
+      existing features section: *"Contributing? See
+      `CONTRIBUTING.md` and `.github/CODEOWNERS`."*
