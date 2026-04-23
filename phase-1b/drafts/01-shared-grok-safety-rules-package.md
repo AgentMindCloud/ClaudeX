@@ -142,3 +142,91 @@ From `main` snapshots on 2026-04-23 (WebFetch; paths stable).
 - §2 #11 — the permissive exemplar template. Consumes this
   package via the CLI's `scan` subcommand; no additional
   work required in this rec.
+
+## Acceptance criteria
+
+Two parts. Part A is the extraction + package shape + ownership
+decisions. Part B is the consumer-adoption sequencing. The
+issue closes when the package v0.1.0 ships to PyPI and at least
+two consumer repos (primary targets: CLI + bridge) have
+adopted it on `main`.
+
+### Part A — Package shape + ownership
+
+- [ ] **Pick the package home.** Two honest options:
+
+      **A1 — Extract from `grok-install-cli` into a new
+      top-level package in the same repo** (e.g.
+      `src/grok_safety_rules/`), publish alongside
+      `grok-install` on PyPI as a separate distribution
+      (`grok-safety-rules`). CLI imports it as a library
+      dependency.
+
+      **A2 — Create a new dedicated repo**
+      `AgentMindCloud/grok-safety-rules`. Extract the module,
+      move it there, publish from there. CLI, bridge, etc.
+      depend on it.
+
+      Default recommendation: **A2**. The library's consumers
+      span repos; a separate repo makes the ownership boundary
+      explicit and prevents CLI-development cadence from
+      leaking into shared-library cadence. A1 is cheaper
+      short-term but creates circular governance between
+      "this is a CLI change" and "this is a shared-rules
+      change".
+
+- [ ] **Package API** — module surface. One primary entry
+      point plus strict data classes. Indicative signature
+      (concrete implementation ships in Part A's PR):
+
+      ```python
+      from grok_safety_rules import (
+          SafetyProfile,        # Enum: STRICT | STANDARD | PERMISSIVE
+          RubricAxis,           # Enum: EXTERNAL_WRITES | SECRET_ACCESS | ...
+          Finding,              # Dataclass: axis, severity, snippet, line
+          ScanResult,           # Dataclass: findings, profile, conformant: bool
+          scan,                 # (yaml_text: str, profile: SafetyProfile) -> ScanResult
+          check_profile_conformance,  # (yaml_text, profile, rubric_values) -> ConformanceVerdict
+          load_rubric_values,   # (path or URL) -> RubricValues
+      )
+      ```
+
+      The seven `RubricAxis` members match §2 #5 Part A's seven
+      normative axes verbatim. If §5's axis set changes during
+      upstream review, this enum changes with it (re-review
+      trigger — see metadata header).
+
+- [ ] **Pin library deps.** The package depends only on
+      Python stdlib + `PyYAML` + `jsonschema>=4.21`. No
+      direct `grok-install-cli` dependency; the dependency
+      flows the other direction (CLI depends on this package).
+      Pin PyYAML and jsonschema at exact versions in
+      `pyproject.toml` (matches `grok-yaml-standards`
+      discipline).
+
+- [ ] **Ship v0.1.0 to PyPI** via Trusted Publisher config
+      (same pattern §2 #7 Part A establishes for
+      `grok-install-cli`). Tag `v0.1.0`. Publish GitHub
+      release with generated notes.
+
+- [ ] **License**: Apache-2.0 to match the ecosystem's
+      post-v1.2.0 relicensing.
+
+- [ ] **Repo governance** (if A2): seed the new repo with
+      `README.md`, `LICENSE`, `CHANGELOG.md`, `SECURITY.md`
+      (points at `grok-install/SECURITY.md §Enhanced Safety
+      2.0`), `CONTRIBUTING.md`, `.github/CODEOWNERS`,
+      `.github/workflows/ci.yml` (adopt §2 #18's CI template
+      from day one per the pattern §2 #17 uses for orchestra
+      bootstrap).
+
+- [ ] **Test discipline** — the package ships with conformance
+      tests derived from §2 #5's `tests/conformance/` suite.
+      `pytest --cov-fail-under=85` (matches
+      `grok-build-bridge` discipline and §2 #18's template).
+
+- [ ] **Maintainer roster**: name at least two maintainers in
+      `CODEOWNERS`. If only one is available today, document
+      "seeking second maintainer" in README. Single-maintainer
+      shared libraries are a governance smell; make it visible
+      so it gets addressed.
