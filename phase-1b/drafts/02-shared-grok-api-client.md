@@ -472,3 +472,80 @@ Consumer sets:
       version adopted and flags any behavioural diff visible
       in the cassette suite. Mirrors §2 #1's adoption
       discipline.
+
+## Notes
+
+- **L-effort sizing honesty.** Auth / retries / streaming /
+  rate-limit are each non-trivial. Tool calling + structured
+  output add weeks. Consumer-side migration (refactor + diff
+  the cassette suite + land in a consumer release) is weeks
+  more. Budget 4–8 focused weeks for v0.1.0 + both Python
+  consumers adopting. Splitting into PRs per Part (A: skeleton,
+  B: feature, C: consumers) is encouraged; partial landings
+  are still value-positive.
+
+- **Relationship to §2 #1 (`grok-safety-rules`).** Parallel
+  extraction pattern. The two packages are independent but
+  the ownership-boundary decisions (A1 vs. A2) should agree
+  for ecosystem consistency. If §1 ships A2 (new repo)
+  first, §2 should follow. Naming: `grok-safety-rules` +
+  `grok-client` is the consistent dash-separated pair.
+
+- **Relationship to §2 #7 (`grok-install-cli` tagged releases).**
+  §7 establishes the ecosystem's Trusted-Publisher pattern
+  for PyPI. This rec adopts the same pattern. If §7 lands
+  first, copy the workflow verbatim. If this rec lands first,
+  §7's draft can reference this rec's workflow as the
+  template.
+
+- **Relationship to §2 #17 (orchestra bootstrap).** §17's
+  Part A lists this shared client as a day-one dependency
+  (falling back to `httpx` if `grok-client` isn't shipped
+  at bootstrap time). The two recs are independent; both
+  shipping is cheaper in aggregate than either alone.
+
+- **Relationship to §2 #12 (replace stub).** §12's v0.1.0
+  closes the stub/real-CLI gap in `awesome-grok-agents`.
+  Once §12 lands, the gallery transitively consumes
+  `grok-client` via the CLI. No direct dependency in
+  `awesome-grok-agents`; no action needed there for this
+  rec.
+
+- **JS port is a real question, not a deferral-forever.**
+  If/when `grok-install`'s browser playground grows beyond
+  its current shape, or `x-platform-toolkit` tools are
+  rewritten with a build step, a sibling `grok-client-js`
+  package (same feature surface, TypeScript, published to
+  npm) is the honest answer. README's "Scope: Python-first,
+  JS-second-or-never" section documents this so it's not
+  forgotten.
+
+- **Model-ID churn discipline.** xAI's model catalogue moves
+  (Grok-4.20, Grok-4.25, …). This package does NOT hard-code
+  model IDs (deliberate — audit 09 §9 row 3 calls out the
+  bridge's current hard-coded `grok-4.20` as a risk).
+  Consumer-side config is the right place for the pin. The
+  `grok_client.MODELS` constant is discoverability only.
+
+- **Out of scope here.**
+  - A TypeScript port (captured in "JS-later" path above).
+  - Prompt templating / chain composition (agent-framework
+    territory; see §2 #17).
+  - Cost tracking (separate concern; may pair with §2 #17's
+    orchestra telemetry).
+  - xAI-SDK-version auto-bumping (Renovate handles the pin
+    update; this package decides when to land it).
+  - HTTP-transport alternatives (`httpx` is the chosen
+    backend; `requests` or `aiohttp` ports are not v0.1.0).
+
+- **Filing strategy.** Coordination issue in
+  `grok-install-cli` (if A1) or first issue on the new
+  `grok-client` repo (if A2). Consumer adoption follow-ups
+  (Part C) open only after v0.1.0 ships. Pattern identical
+  to §2 #1's filing strategy.
+
+- **Non-speculative draft.** Unlike Session 2 drafts, this
+  one is NOT gated on an in-repo prerequisite. All
+  source-audit data lives in Phase 1A. Filing this upstream
+  does not wait on anything in `phase-1b/drafts/`.
+
