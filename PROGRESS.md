@@ -1053,3 +1053,158 @@ Pick one:
   manual UI. Skipping §19 is fine — it is a local-CI
   hygiene rec and does not block filing anything else.)*
 - `"Pause Phase 1B."` *(21 drafts sit ready.)*
+
+---
+
+## Session: 2026-04-23 (cont.) — Phase 1B (seventh pass): §2 top-20 COMPLETE
+
+### Status: Phase 1B §2 drafting complete — 22 draft files covering 20 of 20 §2 recs
+
+### Scope
+Final §2 draft. §2 #19 (x-platform-toolkit minimum CI).
+User chose explicitly ("Draft §2 #19") as the natural
+finisher. Closes SUP-5 outright.
+
+### MCP-scope constraint (unchanged)
+Still `agentmindcloud/claudex`-only. 22 drafts now await
+user filing upstream.
+
+### What was done
+1. Drafted §2 #19 →
+   `drafts/19-x-platform-toolkit-minimum-ci.md`.
+   Two-part acceptance:
+   - **Part A — Lint + link-check (3 jobs)**:
+     html-validate against the 8 Live `tools/*/index.html`
+     (config `.html-validate.json` at repo root,
+     `html-validate:recommended` preset); stylelint on
+     `shared/ui-kit/{tokens,components}.css`
+     (`stylelint-config-standard` + custom-property-pattern
+     rule); lychee link-check across every `*.md` in the
+     repo (tolerant 403/429 per ecosystem convention).
+     SHA-pinned actions from day one (satisfies §2 #3 for
+     this repo).
+   - **Part B — Live-vs-Spec consistency check**: a
+     Python script (`scripts/check-live-vs-spec.py`) parses
+     the top-level README's Live/Spec table and asserts
+     the invariant that Live tools have `index.html` and
+     Spec'd tools have `SPEC.md` (and not vice-versa).
+     Fails CI on drift. First-run behaviour may flag
+     pre-existing discrepancies — fix in the introducing
+     PR.
+2. Updated `phase-1b/ISSUES.md`: added "Seventh-pass
+   drafts" table (row 22, §2 #19); replaced the
+   "Next-pass candidates" section with a **"§2 top-20
+   drafting: COMPLETE"** marker documenting that all 20
+   §2 recs now have ready-to-file issue bodies under
+   `phase-1b/drafts/`.
+3. Updated `phase-1b/filing-packets/11-x-platform-toolkit.md`:
+   added §2 #19 as Issue 1 primary (previously the packet
+   carried only future-drafting notes).
+
+### Metrics
+- §2 recs drafted this pass: **1** (#19).
+- Draft files created this pass: **1**.
+- **Cumulative §2 recs drafted: 20 of 20 (complete)**.
+- Cumulative draft files: **22** (20 distinct §2 recs;
+  two §2 rows — #14, #15 — ship sibling `a/b` pairs).
+- Risks closed outright (on upstream merge of this pass):
+  **SUP-5** (S3).
+- Phase-1B commits this pass: **12** (6 draft micro-commits
+  + 1 ISSUES.md + 1 filing-packet + this PROGRESS +
+  CHANGELOG + ROADMAP + final sanity-check unit). One
+  transient remote 500 on push, resolved on the 2s retry
+  per the git-push guidance.
+- Cumulative Phase-1B commits across all passes + Session 2
+  + fourth through seventh passes: ~124 (through sixth
+  pass) + 12 (this pass) ≈ **~136**.
+- Lines of fabricated product code: **0**.
+
+### Cumulative Phase-1B summary across all passes
+
+| Pass | When | §2 recs drafted | Draft files | Key risks closed on upstream merge |
+|:-:|---|---|:-:|---|
+| 1st | original session | #6, #9, #14, #15 | 6 | VER-1, VER-3, UNV-1 outright; DOC-1/GOV-3/DOC-3 on sibling landing |
+| 2nd | original session | #3, #13, #18 | 3 | SEC-2, SEC-3 (pilot); SUP-1 across 8 repos |
+| 3rd | this branch | #5, #8, #20 | 3 | VER-2, GOV-2 outright; UNV-3/UNV-4 partial |
+| S2 | this branch | #1, #7, #11, #12, #16, #17 | 6 | UNV-3 outright (via #17); UNV-4 outright (via #1); partial SEC-1/GOV-3 |
+| 4th | this branch | #10 | 1 | VER-4 content; DOC-2 outright |
+| 5th | this branch | #4 | 1 | VER-4 trigger; partial DOC-1 |
+| 6th | this branch | #2 | 1 | 00 §9.A cross-cutting concern |
+| 7th | this branch | #19 | 1 | SUP-5 outright |
+| **Total** | | **20 of 20** | **22** | — |
+
+Filing-packets carry ready-to-paste title / labels / body
+pointers for every primary + cross-ref. 11 packets (one per
+upstream AgentMindCloud repo); `12-claudex.md` absent by
+design (own MCP scope).
+
+### Decisions & trade-offs
+- **Why #19 last.** Lowest reach (2) of the undrafted §2
+  recs. Local-hygiene flavour (one repo, one workflow
+  file). Natural finisher — completing §2 at 20/20
+  without having to re-open the scope decision.
+- **Reach=2 honest defense in Evidence.** `99-recommendations.md §Edge case: #19`
+  already flagged this rec's reach as borderline.
+  This draft's Evidence section cites the edge-case
+  argument verbatim and accepts it: the Live-vs-Spec
+  consistency check (Part B) is what makes this rec
+  ecosystem-relevant rather than purely local.
+- **Part B's first-run behaviour flagged honestly.** The
+  consistency script may find pre-existing Live/Spec
+  drift. Rather than hide that behind a grace period, the
+  draft asks the maintainer to fix the drift in the
+  introducing PR and document it in the PR description.
+  Audit-trail honesty > landing-without-diff.
+- **No §2 #18 CI-template adoption here.** The toolkit is
+  HTML/CSS, not Python; §2 #18's template doesn't apply
+  1:1. Notes section flags this repo as a candidate for a
+  future "JS/HTML-flavour sibling template" if §2 #18
+  grows a multi-language form — not this rec.
+- **SUP-5 closure mechanics flagged explicitly.** The
+  draft's Part B and Notes both call out that the
+  risk-register row flip to `mitigated` is a post-merge
+  manual step the Phase-1B review layer owns. Not buried;
+  not assumed.
+- **Filing-packet 11 promoted from "future-drafting notes"
+  to a real primary.** Previously the only packet with
+  zero primaries + zero cross-refs; now carries the §2
+  #19 primary. Phase 1B packets are now all non-empty —
+  every upstream AgentMindCloud repo has at least one
+  primary or cross-ref.
+
+### Files changed this pass
+- Added: `phase-1b/drafts/19-x-platform-toolkit-minimum-ci.md`.
+- Modified: `phase-1b/ISSUES.md` (seventh-pass table;
+  next-pass candidates replaced with "§2 top-20 drafting:
+  COMPLETE" marker), `phase-1b/filing-packets/11-x-platform-toolkit.md`
+  (added §2 #19 as Issue 1 primary).
+- Modified (this + next two units): `PROGRESS.md`,
+  `CHANGELOG.md`, `ROADMAP.md`.
+
+### Open at pass close (= end of Phase 1B §2 drafting)
+- **Filing** — 22 drafts across 20 §2 recs await upstream
+  filing. `phase-1b/filing-packets/` is the operational
+  path. Filing order respects blocked-by chains +
+  speculative-draft discipline per
+  `phase-1b/ISSUES.md §Post-filing follow-ups`.
+- **Undrafted §2 residual**: **none**. Phase 1B §2
+  drafting is complete.
+- **Deferred (not §2)**: `audits/99-recommendations.md §3.2`
+  per-repo hygiene rows + `§3.3` ClaudeX-specific rows
+  + `§3.1` absorbed rows. Not part of Phase 1B scope.
+
+### Next suggested action
+Pick one:
+- `"File the 22 drafts now."` *(Path A widen MCP; Path B
+  manual UI. `phase-1b/filing-packets/README.md` has the
+  ready-to-paste kickoff prompt for a widened-scope agent
+  session + the manual workflow for the GitHub UI.)*
+- `"Draft from §3 deferrals."` *(opens a separate pass
+  against per-repo hygiene rows that §2 intentionally
+  excluded.)*
+- `"Pause Phase 1B."` *(22 drafts + 11 filing-packets sit
+  ready; resume any time.)*
+- `"Begin Phase 2."` *(move to implementation — e.g.
+  §2 #1's shared `grok-safety-rules` package, §2 #2's
+  shared Grok client, §2 #10's content work, or Super
+  AI Frok core development.)*
