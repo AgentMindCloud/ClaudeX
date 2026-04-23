@@ -58,3 +58,68 @@ Secondary constraint: the bootstrap must adopt §2 #1's shared
 repo where "day one" is still ahead of us; adopting the shared
 package here avoids adding a fourth parallel safety
 implementation that §2 #1 would then immediately retire.
+
+## Evidence
+
+From `main` snapshot on 2026-04-23 (WebFetch; paths stable).
+
+**Current repo state** —
+`audits/10-grok-agent-orchestra.md §1, §2, §11 row 1`:
+- Repo contents: `LICENSE` only (Apache 2.0).
+- **1 commit total**; 1★, 0 forks, 0 issues, 0 PRs.
+- Landing page advertises: multi-agent framework, 5 patterns,
+  "Lucas safety veto".
+- No README file visible in the repo tree (description lives
+  on the GitHub repo-landing page).
+- No source, no `pyproject.toml` / `package.json`, no CI
+  workflows.
+
+**What the ecosystem already has** (so bootstrap does not need
+to reinvent):
+- `grok-install-cli` (Typer-based CLI with `safety/` layer) —
+  `audits/03 §2`.
+- `grok-build-bridge` (LLM audit + static scan; mature CI
+  template §2 #18 is promoting) — `audits/09 §5`.
+- `grok-yaml-standards` (the schema catalogue this orchestra's
+  agents will emit) — `audits/02 §2`.
+- `awesome-grok-agents` (gallery of 10 template agents the
+  orchestra will orchestrate) — `audits/06 §2`.
+
+**Risk register** — `audits/98-risk-register.md`:
+- **GOV-3** (S3, L-high, `open`): "`vscode-grok-yaml` and
+  `grok-agent-orchestra` are LICENSE+README only — no source,
+  no CI, no issues template. The marketing-polished surface
+  implies a working product that does not exist." *(This rec
+  closes half; §2 #16 closes the other half for vscode-grok-yaml.)*
+- **UNV-3** (S3, L-med, `needs-info`): "'Lucas safety veto'
+  (advertised on `grok-agent-orchestra`): no source defines
+  what Lucas is, what veto authority it carries, or how it
+  interacts with the strict / standard / permissive profiles.
+  Branding without a behavioural contract." *(This rec closes
+  UNV-3 outright by defining Lucas.)*
+
+**Audit recs that this rec absorbs** —
+`audits/10-grok-agent-orchestra.md §9`:
+- **Row 2** (direct source for §2 #17): "Ship a v0.1.0 with one
+  working multi-agent pattern + a behavioural Lucas definition."
+- **Row 3**: "Adopt `grok-build-bridge`'s CI template from day
+  one." Absorbed into Part A below.
+- **Row 4**: "Document 'Lucas safety veto' concretely." Absorbed
+  into Part B — Lucas's behavioural contract.
+- **Row 5**: "Share safety-layer code with `grok-install-cli`
+  and `grok-build-bridge` from the start." Absorbed into Part A
+  as the day-one dependency on `grok-safety-rules` (§2 #1).
+
+**Prerequisite state**:
+- §2 #5 draft: [`phase-1b/drafts/05-safety-profile-rubric.md`](05-safety-profile-rubric.md).
+- §2 #1 draft: [`phase-1b/drafts/01-shared-grok-safety-rules-package.md`](01-shared-grok-safety-rules-package.md).
+- §2 #15b draft: [`phase-1b/drafts/15b-grok-agent-orchestra-description.md`](15b-grok-agent-orchestra-description.md) — landing description
+  honesty for this repo; this rec's Part A assumes that landed.
+
+**Related §2 cross-refs**:
+- §2 #15b (honest landing description — first-pass draft).
+- §2 #5 (rubric — prerequisite).
+- §2 #1 (shared safety-rules package — prerequisite for clean
+  adoption; fall-back if #1 not yet merged is flagged in
+  metadata header).
+- §2 #18 (CI template — adopted from day one per audit 10 §9 row 3).
