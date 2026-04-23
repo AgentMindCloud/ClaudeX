@@ -354,3 +354,85 @@ moment it lands rather than on audit-time sampling.
       Document the initial discrepancy list in the PR
       description so the audit trail of the first-run
       is explicit.
+
+## Notes
+
+- **Why M-effort, not S.** Part A is close to S-effort —
+  three standard lint jobs with well-known configs. Part
+  B's consistency script is the weight. The regex against
+  the README shape will need one iteration; the script
+  needs test coverage (a small `tests/fixtures/` with
+  intentionally-broken README + tool-directory fixtures
+  so the script's own correctness is checked in CI). M
+  captures that iteration cost honestly.
+
+- **Why `.github/workflows/validate.yml` (not `ci.yml`).**
+  Matches the existing ecosystem naming in `grok-install/
+  validate.yml` and `grok-yaml-standards/validate-schemas.yml`.
+  A future `ci.yml` with build/deploy semantics (if the
+  toolkit ever gains a build step) stays separable from
+  the always-on linting.
+
+- **What this rec does NOT add**:
+  - A full dependency-review / `npm audit` step.
+    Justification: the toolkit has no `package.json`;
+    `npm install --no-save <pin>` inline in the workflow
+    steps above pulls tools for the run, not as
+    declared runtime deps. If a `package.json` emerges
+    (e.g. for a build step), add dependency-review at
+    that time.
+  - `gitleaks` / secret scanning. §2 #13 covers
+    secret-scanning as an ecosystem-wide concern and
+    recommends GitHub's native secret-scanning for
+    ecosystem-wide coverage. The toolkit inherits that
+    once it is enabled org-wide. This workflow does not
+    duplicate.
+  - JavaScript linting of inlined `<script>` blocks in
+    Live `index.html` files. Worth doing long-term
+    (ESLint configured to parse HTML via the appropriate
+    plugin), but out of scope for v1 — Part A's
+    html-validate catches the most common mistakes
+    (missing closing tags, invalid nesting) and the
+    explicit "each Live tool re-implements its logic"
+    finding in audit 11 §7 is a design constraint, not a
+    defect.
+  - Live-tool behaviour tests (Playwright / Puppeteer).
+    Each Live tool is a self-contained HTML opened in
+    a browser; end-to-end testing requires infrastructure
+    this rec isn't building. Out of scope.
+
+- **Relationship to §2 #3 (SHA-pin actions).** Part A
+  pins every action by SHA from day one. This repo is in
+  §2 #3's 8-repo checklist; landing §2 #19 first means
+  §2 #3's work here is already done.
+
+- **Relationship to §2 #18 (CI template adoption).**
+  §2 #18 promotes `grok-build-bridge`'s Python-centric CI
+  workflow. The toolkit's workflow here is HTML/CSS/link-
+  focused — the §2 #18 template doesn't apply 1:1. Flag
+  this workflow as a candidate for a future "JS/HTML-
+  flavour sibling template" extraction if §2 #18 grows
+  a multi-language form. Out of scope for this rec.
+
+- **Relationship to §2 #2 (shared Grok API client).**
+  §2 #2 is Python-first; this repo's `shared/grok-client/`
+  is JS. Not a consumer of §2 #2 in v0.1.0.
+
+- **SUP-5 closure mechanics.** On PR merge:
+  `audits/98-risk-register.md` row SUP-5 flips from
+  `open` to `mitigated`. Flag explicitly in the filed
+  issue body and in a final sub-bullet of Part B's
+  acceptance list — the audit-trail bump is the user's
+  responsibility post-merge, not the upstream maintainer's.
+
+- **§2 top-20 drafting complete.** This is the last §2
+  rec drafted in Phase 1B. 20 of 20 §2 recs now have
+  ready-to-file issue bodies under `phase-1b/drafts/`
+  once this rec merges into the repo. Flag in PROGRESS.md
+  + ROADMAP.md at session close.
+
+- **Filing strategy.** Single primary issue in
+  `x-platform-toolkit`. No cross-refs — this rec is
+  local to one repo. Independent of every other §2 rec's
+  filing timing.
+
