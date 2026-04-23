@@ -116,3 +116,86 @@ closes part of GOV-4 at the same time.
   placeholder awaiting bootstrap PR"). Either outcome makes it
   safe for this issue to land a real `package.json` + source
   tree without the README still promising a shipped product.
+
+## Acceptance criteria
+
+Two parts. Part A is the repo contents that constitute v0.1.0.
+Part B is the schema-fetch strategy plus CI. The issue closes
+when the extension is published to the VS Code Marketplace under
+publisher `agentmindcloud` at version `0.1.0`, and CI is green
+on `main`.
+
+### Part A — Minimum-viable extension contents
+
+Land a `feat/v0.1.0-bootstrap` PR containing:
+
+- [ ] **`package.json`** at repo root with:
+      - `"name": "vscode-grok-yaml"`, `"publisher": "agentmindcloud"`,
+        `"version": "0.1.0"`, `"engines": {"vscode": "^1.90.0"}`.
+      - `"extensionDependencies": ["redhat.vscode-yaml"]` —
+        hard dependency; we contribute to their schema
+        association API.
+      - `"contributes": { "yamlValidation": [ ... ] }` — an
+        array of `{ "fileMatch": "...", "url": "..." }` entries,
+        one per Grok YAML file pattern (see Part B for the URL
+        choice).
+      - `"categories": ["Other", "Linters"]`,
+        `"activationEvents": []` (implicit via file match).
+      - Scripts: `compile`, `watch`, `vscode:prepublish`,
+        `lint`, `test`.
+      - DevDeps: `@types/vscode`, `@vscode/test-electron`,
+        `typescript`, `eslint`, `vsce`. Versions exact-pinned
+        (match the ecosystem's `grok-yaml-standards` pinning
+        discipline, not the `grok-agents-marketplace` caret
+        style).
+
+- [ ] **`src/extension.ts`** — minimum activate / deactivate.
+      Activate can be a no-op (since schema association is
+      declarative in `package.json`); include the file so the
+      extension is identifiable as a TS-sourced project rather
+      than pure JSON.
+
+- [ ] **`tsconfig.json`** — strict mode, target ES2022.
+
+- [ ] **`README.md`** — rewrite per §2 #15a's guidance from the
+      prerequisite draft. Replace the promissory language with:
+      - One sentence: *"Read-only schema validation for Grok
+        YAML files (the 12 standards defined in
+        `grok-yaml-standards` v1.3+)."*
+      - "Requirements" section linking to the required
+        `redhat.vscode-yaml` extension.
+      - "What this extension does" + "What it does not yet do"
+        sections — the latter sets expectations for future
+        features without promising them.
+      - Link to `CHANGELOG.md` and the Marketplace listing.
+
+- [ ] **`CHANGELOG.md`** — Keep-a-Changelog format. Seed with
+      `[0.1.0]` section documenting the bootstrap.
+
+- [ ] **`LICENSE`** — already present; confirm it is Apache-2.0
+      (matches the rest of the ecosystem post-v1.2.0
+      relicensing).
+
+- [ ] **`CONTRIBUTING.md`** — minimum: how to build
+      (`npm install && npm run compile`), how to test
+      (`npm test`), how to run the extension in a VS Code
+      Extension Development Host (`F5` from the TypeScript
+      project).
+
+- [ ] **`SECURITY.md`** — matches the ecosystem pattern: point
+      at `grok-install/SECURITY.md §Enhanced Safety & Verification
+      2.0`; declare this extension's disclosure channel.
+
+- [ ] **`.vscodeignore`** — exclude `src/`, `node_modules/`,
+      `tsconfig.json`, `*.ts`, `.github/`, `CONTRIBUTING.md`,
+      test fixtures from the published `.vsix` package.
+
+- [ ] **`tests/fixtures/`** — a minimal `grok-install.yaml` per
+      profile (strict / standard / permissive) that the
+      integration tests validate against the shipped schema
+      associations. Drives the `npm test` invocation.
+
+- [ ] **Publish to the VS Code Marketplace** under publisher
+      `agentmindcloud`. Version `0.1.0`. Marketplace listing
+      matches the rewritten README's honesty (no "14 standards"
+      holdovers).
