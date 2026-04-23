@@ -210,11 +210,65 @@ The drift is cheap to fix: `version-reconciliation.md` already contains PR-ready
 
 ## 5. Release cadence snapshot
 
-_(filled in unit 6)_
+Snapshot on 2026-04-23. Every number below is sourced from the repo's GitHub landing-page counters or release page; cross-references point to the audit row where the number was recorded.
+
+| Repo | Commits | Releases | ★ / Forks | Issues / PRs (open) | Latest release | Source |
+|------|:-:|:-:|:-:|:-:|---|---|
+| `grok-install` | 259 | v2.14 (+ v2.13 & v2.12 retained) | 1 / 0 | 0 / 0 | v2.14 (recent; exact date not fetched) | [→ 01, §11 row 1] |
+| `grok-yaml-standards` | (not recorded) | **3 in 2 days** (v1.0.0, v1.1.0 on 2026-04-16; v1.2.0 on 2026-04-17) | 1 / 0 | 2 / 2 | v1.2.0 (2026-04-17) | [→ 02, §11 row 1, row 6] |
+| `grok-install-cli` | (not recorded) | **none** — `pyproject.toml` = 0.1.0 | 0 / 0 | 0 / 0 | — | [→ 03, §11 row 1, row 2] |
+| `grok-install-action` | (not recorded) | v1.0.0 (2026-04-21) | 0 / 0 | 0 / 0 | v1.0.0 | [→ 04, §11 row 1] |
+| `grok-docs` | **5 total** | none | 1 / 0 | 0 / 0 | — | [→ 05, §11 row 1] |
+| `awesome-grok-agents` | 10 | none | 1 / 0 | 0 / 2 | — (registry `featured-agents.json v1.0` updated 2026-04-21) | [→ 06, §11 row 1, row 3] |
+| `vscode-grok-yaml` | 7 | none | 0 / 0 | 0 / 1 | — (shell repo) | [→ 07, §11 row 1] |
+| `grok-agents-marketplace` | 11 | none (`package.json` = 0.1.0) | 0 / 0 | 0 / **12** | — | [→ 08, §11 row 1] |
+| `grok-build-bridge` | 13 | none (`pyproject.toml` = 0.1.0) | 1 / 0 | 0 / 0 | — | [→ 09, §11 row 1] |
+| `grok-agent-orchestra` | **1 total** | none | 1 / 0 | 0 / 0 | — (shell repo) | [→ 10, §11 row 1] |
+| `x-platform-toolkit` | 4 | none | 1 / 0 | 0 / 0 | — | [→ 11, §11 row 1] |
+| `ClaudeX` | 16 (at self-audit) | none | (private-ish; local) | — | — | [→ 12, §11 row 6] |
+
+### Cadence observations
+
+- **Hottest repo by PR volume**: `grok-agents-marketplace` with **12 open PRs** — an order of magnitude more than any other ecosystem repo (next highest is 2 PRs). Suggests active external contribution or Copilot-driven automation; no visible reviewer cadence. [→ 08, §1, §9 row 2]
+- **Hottest repo by release velocity**: `grok-yaml-standards` (3 releases in 2 days on 2026-04-16/17).
+- **Stalest active repo**: `grok-install-cli` — positioned as the primary runtime, but no releases, version stuck at 0.1.0, 0 issues and 0 PRs despite the action and marketplace depending on it. Combined with the npm-vs-Python drift this is the ecosystem's single thinnest load-bearing repo.
+- **"Shell repos"**: `vscode-grok-yaml` (7 commits, no source) and `grok-agent-orchestra` (1 commit, no source) are marketing-present but development-absent. Both describe shipped capabilities that don't exist yet.
+- **Commit count as maturity signal**: `grok-install` (259) sits one to two orders of magnitude above the rest (1 to 16). The spec root was built before most of the downstream surfaces.
 
 ## 6. Safety-profile distribution
 
-_(filled in unit 6)_
+The ecosystem advertises a **tripartite safety model** — `strict` / `standard` / `permissive` — across `grok-install/SECURITY.md` ("Enhanced Safety & Verification 2.0"), `grok-yaml-standards/grok-security` (the catalogue entry that operationalises it), and `grok-install-cli/src/grok_install/safety/` (the CLI enforcement). The only repo that surfaces the distribution across real agents is `awesome-grok-agents` via `featured-agents.json`.
+
+### 6.1 Distribution across the 10 featured agents
+
+| Profile | Count | Example agents | Notes |
+|---------|:-:|---|---|
+| `strict` | **6** | `reply-engagement-bot`, `code-reviewer`, … (full list in `awesome-grok-agents/featured-agents.json`) | Used for every agent with external write access (X posting, code changes). Majority profile. |
+| `standard` | **4** | (4 agents) | Used for read-mostly agents. |
+| `permissive` | **0** | — | **No exemplar** in the gallery. |
+
+Source: [→ 06, §6, §11 row 3 — `featured-agents.json` v1.0].
+
+### 6.2 The "missing permissive exemplar" finding
+
+The tripartite model needs a reference instance at each level for the profiles to be usable. With 0 permissive examples:
+
+- New adopters cannot calibrate what "permissive" should look like in practice.
+- There's no way to round-trip the `grok-install-cli` safety scanner against a permissive-profile agent (any test template is necessarily strict or standard).
+- The rubric in `grok-yaml-standards/grok-security` cannot be verified against a shipped instance.
+
+### 6.3 Where the safety-profile is defined vs. enforced
+
+| Repo | Role | What it contributes |
+|------|------|---------------------|
+| `grok-install` (spec) | Defines the model | `SECURITY.md` — Enhanced Safety 2.0: pre-install file scan, minimum-keys, halt-on-anomaly, "Verified by Grok" badge. [→ 01, §6] |
+| `grok-yaml-standards` (catalogue) | Categorises the 12 standards by security level (Low → Critical) in `standards-overview.md`; `grok-security.yaml` is the operational catalogue entry. [→ 02, §6] |
+| `grok-install-cli` (runtime) | Enforces at scan/install time — `src/grok_install/safety/rules.py` + `scanner.py`, called via `grok-install scan` subcommand. [→ 03, §6] |
+| `grok-build-bridge` (peer) | Implements its own dual-layer safety — `_patterns.py` (static regex) + Grok-powered LLM audit in `xai_client.py`. [→ 09, §1, §6] |
+| `awesome-grok-agents` (gallery) | Asserts a profile per template via `featured-agents.json`; validates via in-repo `scan_template.py` (fails on warnings). [→ 06, §6] |
+| `grok-install-action` (CI surface) | Surfaces `safety-score (0-100)` output on PR comments; delegates enforcement to the CLI. [→ 04, §8] |
+
+At least **three independent static-regex / pattern implementations** exist: `grok-install-cli/safety/rules.py`, `grok-build-bridge/_patterns.py`, `awesome-grok-agents/scripts/scan_template.py`. None share a source module. See §9 for the "shared safety-rules package" cross-cutting concern.
 
 ## 7. Docs drift observations
 
