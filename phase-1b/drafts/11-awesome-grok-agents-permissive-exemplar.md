@@ -127,3 +127,105 @@ From `main` snapshot on 2026-04-23 (WebFetch; paths stable).
   report to the CI summary" — naturally paired with this rec
   in §Part B below; surfaces the 2-of-3-gap closure
   automatically once the new template lands.
+
+## Acceptance criteria
+
+Two parts. Part A is the new template itself. Part B is the
+distribution-report CI companion that surfaces the gap closure
+automatically (audit 06 §9 row 4). Both can land in one PR; the
+distribution report is an S-effort add.
+
+### Part A — Add one `permissive` template
+
+Proposed template: **`internal-ci-assistant/`** — an agent that
+runs inside a trusted CI environment (maintainer's own
+organisation), consumes an internal code repository's diffs,
+writes structured feedback to a private Slack/Discord channel,
+and has no X write access. Internal-tool posture; open egress
++ operator-only halt make sense because the agent is sandboxed
+by the CI runtime itself, not by an application-layer
+`approval_gate`.
+
+- [ ] **Create `templates/internal-ci-assistant/`** with the
+      gallery's standard shape:
+      - `README.md` — what the agent does, why permissive is
+        honest for this use case, what it does NOT do
+        (cross-reference to the rubric's `permissive` row).
+      - `.env.example` — the env vars the agent reads
+        (Slack/Discord webhook URL, internal git token,
+        Grok API key).
+      - `grok-install.yaml` — the installable unit. Must match
+        §2 #5 Part A's `permissive` row cell-for-cell (see
+        template body below).
+      - `.grok/` — sample agent directory per ecosystem
+        convention.
+      - `tools/` — the one or two internal tools the agent
+        uses (e.g. a git-diff reader + a webhook poster).
+
+- [ ] **`grok-install.yaml` template body** — the parts that
+      encode the profile claim:
+
+      ```yaml
+      grok_install_version: 2.14
+      name: internal-ci-assistant
+      description: >
+        Internal CI assistant that reads private repo diffs,
+        summarises via Grok, and posts to a private operator
+        channel. Runs in a sandboxed CI environment.
+      safety_profile: permissive
+      permissions:
+        external_writes:
+          mode: open
+          channels: [slack_webhook, discord_webhook]
+        secret_access:
+          mode: read_passthrough
+          declared_secrets: [GROK_API_KEY, SLACK_WEBHOOK_URL, GIT_TOKEN]
+        code_execution:
+          mode: host_bounded
+        network_egress:
+          mode: open
+          rationale: "Runs in trusted CI; egress governed by runner's network policy, not by agent."
+        approval_gate:
+          mode: none
+        halt:
+          mode: operator_only
+      ```
+
+      The field names track §2 #5's seven-axis rubric. If the
+      rubric changes during upstream review, update this
+      template to match (speculative-draft discipline).
+
+- [ ] **Update `featured-agents.json`** to include the new
+      template entry:
+
+      ```json
+      {
+        "name": "internal-ci-assistant",
+        "safety_profile": "permissive",
+        "category": "internal-tooling",
+        "description": "Internal CI assistant: private repo diffs → Grok summary → operator channel. Sandboxed; no external writes."
+      }
+      ```
+
+- [ ] **Template README content checklist**:
+      - One-sentence summary.
+      - Why `permissive` is honest here (not a retreat from
+        security, but a match between environment and claim).
+      - Install instructions (standard `grok-install install ...`).
+      - Expected environment (CI-only; not for X-facing deploy).
+      - Link to §2 #5's rubric `docs/safety-profile-rubric-v1.md`
+        (once that lands in `grok-yaml-standards`).
+      - Explicit "What this is NOT": this template is NOT a
+        reference for customer-facing permissive agents (that
+        would be irresponsible); it is a reference for
+        sandboxed-environment permissive agents.
+
+- [ ] **CI signal**: the `discover` job auto-picks up the new
+      template. The `validate-matrix` job exercises it
+      (eventually against the real CLI, once §2 #12 lands).
+      The `spec-version` gate passes because the template
+      declares `2.14`.
+
+- [ ] **CHANGELOG** entry under `[Unreleased]`: "Added
+      permissive-profile exemplar `internal-ci-assistant`;
+      distribution now 6 strict / 4 standard / 1 permissive."
