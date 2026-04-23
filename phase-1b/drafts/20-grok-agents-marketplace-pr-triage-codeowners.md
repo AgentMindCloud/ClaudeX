@@ -11,3 +11,43 @@
 - **Suggested labels**: `governance`, `review-process`, `CODEOWNERS`, `phase-1b`
 
 ---
+
+## Context
+
+`grok-agents-marketplace` is the most actively-developed repo in
+the Grok ecosystem: **12 open PRs** at audit time (2026-04-23) —
+a 10× multiple on any other repo in the ecosystem. The same
+audit observed **zero visible reviewers** on those PRs and **no
+`CODEOWNERS` file** at the repo root. Contributor PRs stall; the
+incentive to fork instead of contribute rises with each unreviewed
+week.
+
+The repo is also the ecosystem's **consumer surface** — the
+Next.js app at `grokagents.dev` is what actual users see. The
+gap between "most contributor energy in the ecosystem" and
+"slowest review throughput in the ecosystem" concentrates
+governance risk here more than anywhere else.
+
+This issue's job is to close GOV-2 in three independently-landable
+parts:
+
+1. **Triage the 12 open PRs** — one timeboxed first-pass per PR,
+   producing one of four outcomes (merge / request-changes /
+   close-as-wontfix / escalate). This is the only half-variable
+   part of the issue — triage output depends on what's actually
+   in the PRs.
+
+2. **Publish `CODEOWNERS`** — route future PRs to the right
+   reviewer automatically. Routing is what prevents the problem
+   from recurring.
+
+3. **Document a review SLA** — set expectations for contributors
+   (how long until first review? how long from first review to
+   decision?) so the "filed two weeks ago, radio silence" pattern
+   becomes a visible deviation, not an unspoken norm.
+
+The three parts have no forced filing order: CODEOWNERS can ship
+before triage finishes (new PRs route correctly from day one);
+the SLA doc can be drafted in parallel. Triage is the slowest
+gate because it depends on maintainer time and on reviewers
+actually being available.
