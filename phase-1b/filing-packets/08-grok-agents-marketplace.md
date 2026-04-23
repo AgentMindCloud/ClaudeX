@@ -2,20 +2,44 @@
 
 - **Target repo**: https://github.com/AgentMindCloud/grok-agents-marketplace
 - **New issue URL**: https://github.com/AgentMindCloud/grok-agents-marketplace/issues/new
-- **Drafts primary-targeting this repo**: 0
+- **Drafts primary-targeting this repo**: 1 (§2 #20 — third pass)
 - **Cross-ref / adopter follow-ups**: 2 (§2 #3 variant, §2 #18 adopter)
 
-This repo has no Phase-1B drafts primary-targeting it. The main rec
-that *will* target this repo — §2 #20 (triage the 12 open PRs,
-publish `CODEOWNERS`, document a review SLA) — is catalogued as a
-**third-pass candidate** in `phase-1b/ISSUES.md`. §2 #20 closes
-GOV-2 outright and is M-effort, no blockers; it is a natural
-companion to the cross-refs below and could be drafted alongside
-them if the next pass runs before this packet gets filed.
+The third-pass draft §2 #20 (triage the 12 open PRs, publish
+`CODEOWNERS`, document a review SLA) now targets this repo. §2 #20
+closes GOV-2 outright and is M-effort with no blockers. Filing it
+before the two cross-refs below makes those adoptions cheaper,
+because CODEOWNERS routes their reviews to a named maintainer from
+day one.
 
 ## Primaries to file
 
-None from Phase 1B so far. §2 #20 is a third-pass candidate.
+### Primary A — §2 #20: Triage the 12 open PRs, publish CODEOWNERS, document a review SLA
+
+- **Draft source**: [`phase-1b/drafts/20-grok-agents-marketplace-pr-triage-codeowners.md`](../drafts/20-grok-agents-marketplace-pr-triage-codeowners.md)
+- **Suggested title**: `Triage the 12 open PRs, publish CODEOWNERS, document a review SLA`
+- **Suggested labels**: `governance`, `review-process`, `CODEOWNERS`, `phase-1b`
+- **Filing notes**:
+  - Three independently-landable parts: PR triage sweep (Part A),
+    CODEOWNERS + governance files (Part B), review SLA doc (Part
+    C). Each can merge in its own PR or all three in one. The
+    draft does not force an order — Part B (CODEOWNERS) is the
+    cheapest to ship first and starts routing new PRs immediately.
+  - **Maintainer-availability caveat in the draft's Notes**: if
+    the repo has one maintainer today, the SLA targets (5 / 10 /
+    14 / 30 business days) are aggressive. Dial back to what one
+    maintainer can reliably hit; an SLA routinely missed is worse
+    than an honest four-week one.
+  - **Intentionally out of scope** (flagged in the draft): caret-
+    ranged deps (SUP-2 / audit 08 §9 row 1), lighthouse thresholds
+    (§9 row 5), telemetry schema docs (§9 row 4). Each is a
+    future-row candidate in `99-recommendations.md §3.2`, not
+    smuggled into this issue.
+  - **Cross-ref interaction**: filing §2 #20 before the two cross-
+    refs below (§2 #3 variant + §2 #18 adopter) means those PRs
+    land with CODEOWNERS routing already in place. Not strictly
+    required — cross-refs can ship without CODEOWNERS — but
+    filing order matters a little here.
 
 ## Cross-ref / adopter follow-ups
 
