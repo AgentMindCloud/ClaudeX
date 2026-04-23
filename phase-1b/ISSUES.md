@@ -69,6 +69,30 @@ it — so drafting it first unlocks the gated post-filing follow-ups.
 | 11 | #8 | M | VER-2 (S2) outright | AgentMindCloud/grok-yaml-standards *(downstream validators inherit via `$schema`-keyword awareness — no cross-ref filings)* | [`drafts/08-grok-yaml-standards-draft-2020-12-migration.md`](drafts/08-grok-yaml-standards-draft-2020-12-migration.md) | — *(cleans up §2 #18's schema-check job once both land)* | — | drafted |
 | 12 | #20 | M | GOV-2 (S2) outright | AgentMindCloud/grok-agents-marketplace | [`drafts/20-grok-agents-marketplace-pr-triage-codeowners.md`](drafts/20-grok-agents-marketplace-pr-triage-codeowners.md) | — *(makes §2 #3 and §2 #18 cross-ref adoptions in this repo cheaper via reviewer routing)* | — | drafted |
 
+## Session-2 speculative drafts (6 §2 recs, 6 files)
+
+Slice chosen because each prerequisite lives in this repo (first-
+second- or third-pass drafts), not upstream. Per the Session-2
+policy recorded in `phase-1b/README.md` and each draft's
+metadata header, every draft below carries a **Prerequisite
+status** flag ("drafted in `drafts/<prereq>.md`; not yet filed
+upstream; speculative") + a **Re-review trigger** clause. Drafts
+marked `speculative` in the Status column cannot file upstream
+until their prerequisite merges upstream first.
+
+Ordering below = strength of speculation (safest first). §2 #16
+is safest (both #15 options converge). §2 #17 is most deeply
+speculative (two prerequisites, one itself speculative).
+
+| # | §2 rec | Effort | Speculative on | Risks closed (on prerequisite merge) | Upstream repo | Draft file | Status |
+|:-:|:-:|:-:|:-:|---|---|---|---|
+| 13 | #16 | M | #15a, #15b (both drafted) | partial GOV-3 | AgentMindCloud/vscode-grok-yaml | [`drafts/16-vscode-grok-yaml-bootstrap.md`](drafts/16-vscode-grok-yaml-bootstrap.md) | speculative |
+| 14 | #7  | S | #6 (drafted) | VER-3 (pin layer) | AgentMindCloud/grok-install-cli *(+ cross-ref follow-up in grok-install-action after primary releases)* | [`drafts/07-grok-install-cli-releases-pyproject-alignment.md`](drafts/07-grok-install-cli-releases-pyproject-alignment.md) | speculative |
+| 15 | #12 | S | #6, #7 (both drafted; #7 itself speculative) | partial UNV-4 | AgentMindCloud/awesome-grok-agents | [`drafts/12-awesome-grok-agents-replace-install-stub.md`](drafts/12-awesome-grok-agents-replace-install-stub.md) | speculative (deepest — transitive through #7) |
+| 16 | #1  | L | #5 (drafted) | UNV-4 outright; partial SEC-1 | AgentMindCloud/grok-install-cli *(extraction primary; A2 new-repo alternative flagged in draft)* | [`drafts/01-shared-grok-safety-rules-package.md`](drafts/01-shared-grok-safety-rules-package.md) | speculative |
+| 17 | #11 | S | #5 (drafted) | closes 00 §6.2 "missing-exemplar" finding | AgentMindCloud/awesome-grok-agents | [`drafts/11-awesome-grok-agents-permissive-exemplar.md`](drafts/11-awesome-grok-agents-permissive-exemplar.md) | speculative |
+| 18 | #17 | L | #5, #1 (both drafted; #1 itself speculative) | UNV-3 outright; partial GOV-3 | AgentMindCloud/grok-agent-orchestra | [`drafts/17-grok-agent-orchestra-bootstrap.md`](drafts/17-grok-agent-orchestra-bootstrap.md) | speculative (deepest — transitive through #1) |
+
 ## Next-pass candidates
 
 With first-, second-, and third-pass slices covering §2 recs #3,
