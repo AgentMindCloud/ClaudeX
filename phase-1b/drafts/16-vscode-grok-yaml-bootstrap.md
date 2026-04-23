@@ -199,3 +199,78 @@ Land a `feat/v0.1.0-bootstrap` PR containing:
       `agentmindcloud`. Version `0.1.0`. Marketplace listing
       matches the rewritten README's honesty (no "14 standards"
       holdovers).
+
+### Part B — Schema-fetch strategy + CI
+
+The extension's usefulness is only as good as the schemas it
+ships with. Pick **one** of (B1) or (B2) as the source of truth,
+and wire the CI that keeps it fresh. Audit 07 §9 row 3 already
+makes the case for B1; included here so the choice is explicit
+in the issue thread.
+
+#### Option B1 — Fetch from `grok-docs` daily mirror (recommended)
+
+- [ ] Each `yamlValidation` entry's `url:` points at the mirrored
+      schema in `grok-docs` Pages:
+      `https://agentmindcloud.github.io/grok-docs/assets/schemas/latest/grok-<name>.json`.
+      `latest/` is a convention on the docs site that resolves to
+      the newest `grok-yaml-standards` release's schemas (daily
+      mirror job — audit 05 §5 `sync-schemas.yml`).
+- [ ] Benefit: no schema duplication in this repo; the extension
+      tracks upstream automatically. If §2 #8 ships draft-2020-12
+      schemas, this extension picks them up with zero code
+      changes (the `yaml-language-server` honours the `$schema`
+      keyword).
+- [ ] Risk: the docs site's `latest/` path must exist and be
+      stable. Confirm with `grok-docs` maintainers before
+      shipping. If `latest/` is not yet a published convention,
+      either (a) coordinate with `grok-docs` to add it (small
+      Pages config change), or (b) pin to an explicit version:
+      `/assets/schemas/v1.3.0/...`. The version-pinned form needs
+      a bump PR per `grok-yaml-standards` release — acceptable
+      cost given the low release cadence.
+
+#### Option B2 — Bundle schemas in the extension itself
+
+- [ ] Each `yamlValidation` entry's `url:` is a relative path
+      resolving to a schema vendored into `schemas/grok-*.json`
+      inside this repo.
+- [ ] Benefit: offline-capable (no network fetch); no dependency
+      on `grok-docs` infra.
+- [ ] Cost: schemas become the fourth copy in the ecosystem
+      (audit 06 §9 row 5 already flags this as drift risk).
+      Requires a Renovate / Dependabot-equivalent job that bumps
+      the bundled schemas on each `grok-yaml-standards` release,
+      otherwise this repo silently pins to the version it was
+      last bumped to.
+- [ ] Pick only if B1 proves impractical.
+
+#### CI (applies to either option)
+
+- [ ] `.github/workflows/ci.yml` with three jobs:
+      - `lint` — `npm run lint` (eslint) + `tsc --noEmit`.
+      - `test` — `xvfb-run -a npm test` (integration tests run
+        in a VS Code Extension Host via `@vscode/test-electron`;
+        `xvfb-run` is the standard GitHub-hosted Linux runner
+        shim).
+      - `package` — `vsce package` produces a `.vsix` artefact,
+        retained for 7 days. Does NOT publish automatically;
+        publish is a manual `vsce publish` step on the
+        maintainer's machine (or a tag-triggered separate
+        workflow, out of scope for v0.1.0).
+- [ ] Pin every action by 40-char commit SHA with trailing
+      `# v<tag>` comment (matches §2 #3 discipline — this repo
+      is the last CI-enabled repo to adopt it).
+- [ ] A daily `cron` workflow (`schedule: - cron: '0 12 * * *'`)
+      that runs Option B1's schema URLs against
+      `tests/fixtures/` and fails if the schemas have changed
+      in a way that breaks the fixtures. Detects upstream-schema
+      drift at day granularity. (Skip this job if Option B2
+      chosen — B2's schemas don't drift without a repo PR.)
+
+#### CODEOWNERS + SLA (inherit from §2 #20's pattern)
+
+- [ ] `.github/CODEOWNERS` naming the bootstrap maintainer as
+      default owner (`*`). This repo is low-traffic — one-line
+      CODEOWNERS is enough. The file exists for consistency
+      with §2 #20's marketplace pattern.
