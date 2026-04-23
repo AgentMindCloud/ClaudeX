@@ -273,3 +273,51 @@ queue stops looking normal.
       significantly faster or slower than the target, tighten
       or widen accordingly. Do not run with a SLA no one
       achieves."*
+
+## Notes
+
+- **Out of scope here.**
+  - Fixing the caret-ranged runtime deps (audit 08 §9 row 1,
+    risk SUP-2) — tracked under `audits/99-recommendations.md
+    §3.2` as a separate per-repo row.
+  - Adding performance/a11y thresholds to `lighthouse.yml`
+    (audit 08 §9 row 5) — separate future row.
+  - Documenting the telemetry schema (audit 08 §9 row 4,
+    `migrations/001_telemetry.sql`) — separate future row.
+  - The new governance files added in Part B (`SECURITY.md`,
+    `CONTRIBUTING.md`) close GOV-2 + part of the ecosystem
+    GOV-4 gap for this repo specifically; they do *not*
+    resolve GOV-4 across the rest of the ecosystem.
+
+- **Why this closes GOV-2 outright.** GOV-2's two stated
+  components are (a) 12 unreviewed open PRs and (b) no
+  `CODEOWNERS`. Part A resolves (a); Part B resolves (b). The
+  SLA doc in Part C is insurance against the problem recurring
+  — it's not part of GOV-2's definition but without it, the
+  repo is one quiet month away from another 12-PR backlog.
+
+- **Cross-refs with §2 #3 and §2 #18.** Publishing CODEOWNERS
+  here makes two already-drafted cross-refs easier when they
+  land: §2 #3 (SHA-pin GitHub Actions) will touch
+  `.github/workflows/ci.yml` + `dependency-review.yml` +
+  `lighthouse.yml`, routed to the platform-maintainer via the
+  CODEOWNERS entries above; §2 #18 (CI baseline template
+  adoption) similarly routes to the same owner. Filing this
+  issue before the two cross-refs means the cross-ref PRs land
+  cleanly with a defined reviewer from day one.
+
+- **Maintainer-availability reality check.** If the
+  `<default-maintainer>` placeholder resolves to a single
+  person who is also the primary author of most of the 11
+  commits to date, the SLA targets in Part C (5 / 10 / 14 /
+  30 business days) may be aggressive. Dial them back to what
+  one maintainer can actually hit and document the widened
+  targets honestly. An SLA that says "10 business days" but is
+  routinely missed is worse than one that says "4 weeks" and
+  is reliably met.
+
+- **Filing strategy.** Single primary issue in
+  `grok-agents-marketplace`. The three parts can be landed in
+  separate PRs or a single PR — let the maintainer choose.
+  Linked implementation PRs tick Part-specific checkboxes as
+  they merge.
