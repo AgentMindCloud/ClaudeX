@@ -18,3 +18,51 @@
 - **Suggested labels**: `extraction`, `shared-library`, `safety`, `ecosystem`, `phase-1b`
 
 ---
+
+## Context
+
+Three repos in the Grok ecosystem independently implement
+"safety rules" — a pattern-based scanner that reads a
+`grok-install.yaml` agent definition and flags hardcoded secrets,
+over-broad permissions, unsafe external-write patterns, and the
+other surface the Enhanced Safety & Verification 2.0 model calls
+out:
+
+- `grok-install-cli/src/grok_install/safety/rules.py` +
+  `scanner.py` — the CLI's `grok-install scan` subcommand
+  backend. Most mature implementation; sibling of
+  `core/`, `deploy/`, `integrations/`, `runtime/`.
+- `grok-build-bridge/_patterns.py` — static regex layer,
+  one half of the bridge's "dual-layer safety" (the other
+  half is the LLM audit in `xai_client.py`).
+- `awesome-grok-agents/scripts/scan_template.py` — the
+  gallery's CI-time scanner. §2 #12 (covered in an earlier
+  Session-2 draft in this pass) removes this one by routing
+  through the real CLI instead.
+
+`grok-agent-orchestra` also plans to implement a safety layer
+once bootstrapped (§2 #17); without this extraction, the
+orchestra would make it *four* parallel implementations — a
+degradation `audits/10-grok-agent-orchestra.md §9 row 5`
+explicitly calls out as a failure mode to pre-empt.
+
+The drift risk is concrete. Today, the three implementations are
+"probably close" to each other — no one has systematically
+diffed them. As the ecosystem evolves, each implementation drifts
+against whichever axis its own repo cares about most (the CLI
+cares about install-time scanning; the bridge cares about LLM
+audit context; the gallery cares about CI speed). Nothing in the
+ecosystem's current process flags the divergence.
+
+The fix is extraction: one package, one source module, three (or
+four) consumers. §2 #5 provides the behavioural contract (the
+rubric's seven normative axes); this rec ships the code that
+implements that contract. After both land:
+
+- The rubric defines *what* a profile means.
+- The shared package is *how* it's enforced.
+- Consumers call into the package rather than re-implementing.
+
+That's the only configuration in which UNV-4 ("safety surfaces
+drifting apart unobserved") closes structurally rather than
+situationally.
