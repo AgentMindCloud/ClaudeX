@@ -222,3 +222,54 @@ reviews from code owners for the `main` branch.
 - [ ] **Update `README.md`** with a one-line pointer under the
       existing features section: *"Contributing? See
       `CONTRIBUTING.md` and `.github/CODEOWNERS`."*
+
+### Part C — Document the review SLA
+
+A short document. Its job is to set expectations so a silent PR
+queue stops looking normal.
+
+- [ ] **Create `docs/REVIEW_SLA.md`** (or inline it into
+      `CONTRIBUTING.md §Review SLA` — either works, the standalone
+      file is slightly easier to link from issue templates).
+      Minimum contents:
+
+      1. **First-response target** — *"A maintainer will
+         acknowledge every PR within 5 business days."*
+         Acknowledgement = any of: a review, a question, a
+         request for changes, a triage label, or a note
+         promising a timeline. Not merging silently.
+      2. **First-review target** — *"A substantive first review
+         is provided within 10 business days of opening,
+         assuming CI is green."* If the repo can't hit this
+         today, state so honestly and set the SLA at the
+         achievable level; widen later as capacity allows.
+      3. **Follow-up cadence** — *"After the first review, the
+         PR author is expected to respond within 14 business
+         days. PRs with no author response for 30 business days
+         after a `request-changes` review are closed as stale
+         (re-open is fine)."*
+      4. **Escalation path** — how to ping a second maintainer
+         if the first is unavailable (`@maintainer-team` team
+         mention, Discord/Slack channel, etc.).
+      5. **Holidays / blackout windows** — if the maintainer
+         team observes any, list them here. The SLA clock pauses
+         on published blackout days.
+
+- [ ] **Link the SLA from three places**: `CONTRIBUTING.md`,
+      `.github/pull_request_template.md` (creating this template
+      if missing — a 5-line template citing the SLA is enough),
+      and the repo's README.
+
+- [ ] **Define what counts as an SLA deviation** and how it is
+      surfaced. Suggested mechanism: the SLA doc says *"If a PR
+      has no acknowledgement after 5 business days, add the
+      `sla:overdue-first-response` label and comment `@<team>
+      SLA overdue`."* Deviations are then visible via label
+      query, not tribal knowledge.
+
+- [ ] **Review the SLA after 60 days**. Add a note at the bottom
+      of the SLA doc: *"This SLA will be reviewed 60 days after
+      adoption. If the observed first-response time is
+      significantly faster or slower than the target, tighten
+      or widen accordingly. Do not run with a SLA no one
+      achieves."*
