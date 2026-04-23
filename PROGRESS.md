@@ -2,6 +2,47 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — §2 #3 persistent-memory
+
+**Shipped** `frok.memory` on top of Phase 2 #1/#2.
+
+* **`Embedder` protocol + `HashEmbedder`** (`memory/embedder.py`)
+  * Deterministic feature-hashing fallback (blake2b → signed bucket),
+    L2-normalised. Zero deps, zero network — lets tests and offline
+    smoke runs produce meaningful cosine distances without a real
+    embedding provider. `Embedder` is a `@runtime_checkable` Protocol so
+    real xAI/Voyage/OpenAI embedders drop in.
+* **`MemoryStore`** (`memory/store.py`)
+  * SQLite-backed, embeddings stored as packed float32 BLOBs alongside
+    rows. Cosine similarity computed in Python — adequate for the
+    small-agent case; swap to sqlite-vss / ANN behind the same surface
+    when §2 #7 telemetry shows it's needed.
+  * API: `remember`, `remember_many`, `forget`, `recall` (k, kind, time
+    window, min-score), `recent`, `count`. Persists across reopen.
+* **`MemoryAgent`** (`memory/agent.py`)
+  * Wraps `GrokClient`. Each turn: sanitise user text via the client's
+    ruleset, recall top-k similar memories, inject them as a system
+    message, send to Grok, then store both turns (sanitised user +
+    assistant + usage metadata). PII-blocked prompts never reach the
+    store or the network.
+
+**Verification.** `python3 -m pytest -q` → 42 passed in 0.22s (18 new).
+
+**Decisions / trade-offs.**
+* Kept a single long-lived SQLite connection per `MemoryStore`. Simpler
+  and fine for single-agent use; a pool is trivial to add later.
+* Default recall `min_score=0.1` in `MemoryAgent` — filters out the
+  near-orthogonal junk the hash embedder produces on unrelated text.
+  Real embedders will want a different threshold; it's a field on the
+  agent.
+* Chose to sanitise user text **before** recall so prompt-injection and
+  PII shapes don't influence the recalled context either.
+
+**Next suggested action:** `Continue Phase 2 with §2 #4 tool-use-
+orchestrator: a Tool registry + dispatch layer that plugs into
+GrokClient.chat(tools=...) and routes the model's function calls to
+typed handlers, with schema validation and a dry-run mode.`
+
 ## 2026-04-23 — Phase 2 kickoff (branch `claude/super-ai-frok-phase-2-bWvah`)
 
 **Shipped** §2 items #1, #2, #10 as a usable first slice of the Super AI

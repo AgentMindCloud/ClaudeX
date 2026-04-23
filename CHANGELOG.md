@@ -2,6 +2,15 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.3.0] — 2026-04-23
+### Added
+- `frok.memory` — SQLite-backed `MemoryStore` with pluggable `Embedder`
+  protocol and a zero-dep `HashEmbedder` fallback. (§2 #3)
+- `frok.memory.MemoryAgent` wrapping `GrokClient`: sanitised recall,
+  injected-context chat, automatic exchange storage. (§2 #3)
+- Tests: embedder determinism + ranking, store recall / filters /
+  persistence, agent recall-injection and PII-sanitisation. 42 total.
+
 ## [0.2.0] — 2026-04-23
 ### Added
 - ROADMAP.md documenting Phase 2 (#1–#10).

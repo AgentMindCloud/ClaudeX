@@ -21,6 +21,8 @@ builds on these three.
    with retries, streaming, tool-use, and cost accounting. Wired to the
    safety rules from #1 by default.
 3. **persistent-memory** — Vector + episodic store for long-running agents.
+   *Shipped 2026-04-23:* `frok.memory` (SQLite + pluggable `Embedder`),
+   `MemoryAgent` wiring through `GrokClient`.
 4. **tool-use-orchestrator** — Tool registry + dispatch for Grok-style
    function calling.
 5. **multimodal-adapter** — Vision/voice IO adapter surface.
