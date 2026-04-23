@@ -114,3 +114,92 @@ resolves to that exact artefact on the canonical channel.
 - §2 #12 (replace `awesome-grok-agents`'s `grok_install_stub`)
   — needs a working install path (§6) **and** a tagged release
   (§7) to pin against. §12 is this draft's immediate downstream.
+
+## Acceptance criteria
+
+Two parts. Part A is the release pipeline and first tagged
+release (local to `grok-install-cli`). Part B is the
+cross-repo pin alignment on `grok-install-action`. The issue
+closes when both land and a consumer can pin against a tag
+that resolves to the correct artefact.
+
+### Part A — Publish a tagged GitHub release from `grok-install-cli`
+
+- [ ] **Pick a canonical version string** for the first release.
+      Two honest options:
+      - **A1 — `0.1.0`**: matches today's `pyproject.toml`; the
+        first release honestly reflects the CLI's maturity.
+        Downstream consumers (action, marketplace, stub)
+        discover this version exists and update their pins.
+      - **A2 — `2.14.0`**: matches the spec version the CLI
+        implements (`grok-install` v2.14) and the action's
+        current pin. Convenient for downstream inertia. Cost:
+        the CLI claims to be on v2.14 even though its first
+        release is bootstrap-level. Misleads on maturity.
+
+      Default recommendation: **A1**. The ecosystem already has
+      separate version axes for spec vs. implementation
+      (`00-ecosystem-overview.md §3` pin matrix); aligning the
+      CLI's own version to the spec's just because a consumer
+      pinned wrong is the wrong fix. The consumer (the action)
+      should pin to the CLI's actual version, not vice versa.
+
+- [ ] **Update `publish.yml`** (already exists per audit 03 §11
+      row 5) to cut both a **GitHub Release** and a
+      **PyPI publication** on push of a tag matching
+      `v[0-9]+.[0-9]+.[0-9]+`. Workflow outline:
+
+      ```
+      name: Publish
+      on:
+        push:
+          tags: ['v[0-9]+.[0-9]+.[0-9]+']
+      jobs:
+        release:
+          runs-on: ubuntu-latest
+          permissions:
+            contents: write          # create GitHub Release
+            id-token: write           # PyPI Trusted Publisher
+          steps:
+            - uses: actions/checkout@<SHA>  # v4
+            - uses: actions/setup-python@<SHA>  # v5
+              with: { python-version: '3.12' }
+            - run: python -m pip install --upgrade build
+            - run: python -m build           # wheel + sdist
+            - uses: pypa/gh-action-pypi-publish@<SHA>  # trusted publisher
+            - uses: softprops/action-gh-release@<SHA>  # v2
+              with:
+                files: dist/*
+                generate_release_notes: true
+      ```
+
+      All actions SHA-pinned per §2 #3.
+
+- [ ] **Add PyPI Trusted Publisher configuration** (PyPI-side:
+      one-time maintainer setup) so the workflow publishes
+      without a long-lived `PYPI_TOKEN` secret. PyPI docs:
+      https://docs.pypi.org/trusted-publishers/
+
+- [ ] **Tag the first release**. Steps:
+      1. Bump `pyproject.toml` if A2 chosen over A1.
+      2. Update `CHANGELOG.md` with the new version section.
+      3. `git tag -a vX.Y.Z -m "Release X.Y.Z"`.
+      4. `git push origin vX.Y.Z` — triggers `publish.yml`.
+      5. Verify the release appears on
+         `github.com/AgentMindCloud/grok-install-cli/releases`
+         AND on `pypi.org/project/grok-install/`.
+      6. Verify `pip install grok-install==X.Y.Z` resolves
+         from PyPI.
+
+- [ ] **Seed `CHANGELOG.md`** with Keep-a-Changelog sections for
+      v0.1.0 (or whichever version is picked). Every subsequent
+      release gets its own section before tag-push. The repo
+      currently has no CHANGELOG at audit time; adding one is
+      part of the release hygiene.
+
+- [ ] **Update README** with an `## Installation` section that
+      matches the chosen channel. For A1 + Option A of §2 #6:
+      `pip install grok-install`. Version-pin guidance
+      (`grok-install>=0.1,<0.2`) inline.
+
+- [ ] **Pin action consumers must update** deferred to Part B.
