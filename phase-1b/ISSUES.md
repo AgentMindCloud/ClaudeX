@@ -115,15 +115,35 @@ Non-speculative draft — highest-reach §2 rec still undrafted
 |:-:|:-:|:-:|---|---|---|:-:|---|---|
 | 21 | #2 | L | closes "drift identified in 00 §9.A" (cross-cutting concern; no direct risk-register row) | AgentMindCloud/grok-install-cli *(primary — or new `AgentMindCloud/grok-client` if A2 chosen)*; Python consumers adopt post-v0.1.0 (grok-install-cli + grok-build-bridge) | [`drafts/02-shared-grok-api-client.md`](drafts/02-shared-grok-api-client.md) | — | — | drafted |
 
-## Next-pass candidates
+## Seventh-pass drafts (1 §2 rec, 1 file) — §2 top-20 complete
 
-Cumulative coverage (through sixth pass): §2 recs #1, #2, #3,
-#4, #5, #6, #7, #8, #9, #10, #11, #12, #13, #14, #15, #16,
-#17, #18, #20 — **19 of 20**. One undrafted:
+Final §2 draft. Non-speculative; local to one repo. Closes
+SUP-5 outright. The `x-platform-toolkit` repo is the one
+repo in the ecosystem without CI — this rec adds a minimum
+validate.yml (html-validate + stylelint + lychee +
+Live-vs-Spec consistency).
 
-| §2 # | Rec (short) | Effort | Reach | Unblocks §2 | Why this batch |
-|:-:|---|:-:|:-:|:-:|---|
-| #19 | Add minimum CI to `x-platform-toolkit` (html-validate, css-lint, broken-link, Live-vs-Spec consistency). Closes SUP-5. | M | 2 | — | Only §2 rec still undrafted. Closes the only SUP-category risk outside the #3/#13/#18 coverage. Reach-2 but the toolkit publishes user-facing tools that read live spec versions. Drafting it closes the §2 top-20 at 20/20. |
+**With this draft in repo, all 20 §2 recs have ready-to-file
+issue bodies under `phase-1b/drafts/`.**
+
+| # | §2 rec | Effort | Risks closed | Upstream repo | Draft file | Unblocks §2 | Filed (link) | Status |
+|:-:|:-:|:-:|---|---|---|:-:|---|---|
+| 22 | #19 | M | SUP-5 (S3) | AgentMindCloud/x-platform-toolkit | [`drafts/19-x-platform-toolkit-minimum-ci.md`](drafts/19-x-platform-toolkit-minimum-ci.md) | — | — | drafted |
+
+## §2 top-20 drafting: COMPLETE
+
+All 20 §2 recs have ready-to-file issue bodies under
+`phase-1b/drafts/` as of the seventh pass (2026-04-23).
+**22 draft files** cover 20 distinct §2 recs — two §2
+rows (#14, #15) ship sibling `(a/b)` pairs targeting
+two repos each.
+
+Next-pass candidates is **empty** for §2. Future drafting
+work (if any) targets the `§3 deferrals` from
+`audits/99-recommendations.md` — local-hygiene and per-
+repo rows intentionally excluded from §2 by the reach
+rubric. No Phase-1B commitment to drafting them; separate
+pass if/when the user requests.
 
 ### Post-filing follow-ups (not yet candidates — wait for upstream landing)
 
