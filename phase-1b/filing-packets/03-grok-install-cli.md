@@ -2,7 +2,7 @@
 
 - **Target repo**: https://github.com/AgentMindCloud/grok-install-cli
 - **New issue URL**: https://github.com/AgentMindCloud/grok-install-cli/issues/new
-- **Drafts primary-targeting this repo**: 4 (§2 #6, §2 #13 + §2 #7 and §2 #1 — latter two added Session 2, speculative)
+- **Drafts primary-targeting this repo**: 5 (§2 #6, §2 #13, §2 #7, §2 #1, §2 #2 — latter three added in Sessions 2 / sixth pass; §2 #7 and §2 #1 are speculative, §2 #2 is non-speculative)
 - **Cross-ref / adopter follow-ups**: 2 (§2 #3 variant, §2 #18 adopter)
 
 ## Primaries to file
@@ -42,6 +42,19 @@
 - **Filing note (SPECULATIVE)**: this draft is speculative on §2 #5 (the safety-profile rubric). Do NOT file until §2 #5 has merged upstream in `grok-yaml-standards` — the package's public API mirrors #5's seven-axis rubric shape.
 - **Filing note**: Part A offers two ownership options (A1 = in-repo extraction from `grok-install-cli`; A2 = new `AgentMindCloud/grok-safety-rules` repo). Recommendation: A2. If A2, this packet's primary count above should shift — file as an issue on the new repo instead. If A1, file here; the primary count reads correctly as-is.
 - **Filing note**: Part B's consumer-adoption follow-ups (CLI refactor, bridge refactor) open only after v0.1.0 of the package ships. Do NOT pre-file the follow-ups — the package's API may shift during v0.1.0 review.
+
+### Issue 5 — §2 #2: Extract a shared Grok API client (non-speculative — sixth pass)
+
+- **Draft source**: [`phase-1b/drafts/02-shared-grok-api-client.md`](../drafts/02-shared-grok-api-client.md)
+- **Title** (paste verbatim): `Extract a shared Grok API client consumed by every Grok-calling repo`
+- **Suggested labels**: `extraction`, `shared-library`, `grok-api`, `ecosystem`, `phase-1b`
+- **Body**: paste the content of the draft below the first `---` separator.
+- **Filing note (NON-SPECULATIVE)**: unlike Issues 3–4 above, this draft has no in-repo prerequisite. File whenever convenient.
+- **Filing note**: Part A offers two ownership options (A1 = in-repo extraction as sibling `src/grok_client/`; A2 = new `AgentMindCloud/grok-client` repo). Recommendation: A2. If A2 is chosen, this packet's primary count shifts — file as an issue on the new repo instead. If A1, file here; the primary count reads correctly as-is.
+- **Filing note**: decisions on §2 #1's (safety-rules) A1/A2 and this rec's A1/A2 should agree for ecosystem consistency. See the draft's Notes. If §2 #1 already shipped A2, follow suit; if undecided, bundle the two ownership decisions in one review discussion.
+- **Filing note**: L-effort honestly (4–8 focused weeks for v0.1.0 + both Python consumers adopting). The draft's Parts A / B / C are designed to land incrementally — Part A ships the skeleton, Part B ships feature parity, Part C adopts in consumers.
+- **Filing note**: JS implementations (`grok-install` browser + `x-platform-toolkit` inlined) are **deliberately out of scope** for v0.1.0. README documents this as "Python-first, JS-second-or-never"; reviewer should understand this is a choice, not an oversight.
+- **Filing note**: the draft's Evidence section honestly flags a §2-row vs. `00-ecosystem-overview.md §9.A` discrepancy (the §2 row's "Affected repos" column names future consumers; §9.A's table names current parallel implementations). Substantive ground truth is §9.A; §2-row citation preserved verbatim.
 
 ## Cross-ref / adopter follow-ups
 
