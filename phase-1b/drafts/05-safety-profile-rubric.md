@@ -108,3 +108,53 @@ the safety-profile rubric alongside those artefacts keeps the
 ecosystem's single-source-of-truth discipline intact. The four
 consumer repos already import this repo's schemas; adding a rubric
 file is additive.
+
+## Acceptance criteria
+
+Four parts. Each part is independently testable; the issue closes
+when all four are merged into `grok-yaml-standards` and a release
+(candidate: v1.3.0 or v1.2.1) is cut carrying them.
+
+### Part A — Rubric contents (behavioural definitions, not prose)
+
+Publish `docs/safety-profile-rubric-v1.md` in `grok-yaml-standards`
+root. For each of the three profiles, the file MUST define **all
+seven** axes below. Every axis takes a concrete value; "left to the
+agent" is not a valid value.
+
+| Axis | `strict` | `standard` | `permissive` |
+|------|----------|------------|--------------|
+| **External writes** — may the agent post, comment, open PRs, or commit? | Allowed only after explicit per-action approval (human-in-the-loop gate). | Allowed for in-scope actions declared in `grok-install.yaml`; gated for anything outside scope. | Allowed without per-action gating. |
+| **Secret access** — may the agent read API tokens, credentials, `.env` content? | Read-only; never echoed to model output or logs. | Read-only; may be referenced in outputs by name, never by value. | Read+pass-through; still never echoed to logs. |
+| **Code execution** — may the agent run arbitrary shell / eval? | Denied. | Allowed in sandbox (container / nsjail / equivalent); outputs audited. | Allowed on host; still bounded by OS user perms. |
+| **Approval gate** — who signs off before a write lands? | Human. | Rule-based: a declared allowlist in `grok-install.yaml` is sufficient. | None required. |
+| **Scan severity threshold** — what does the pre-install scanner block on? | Any `warning` or higher. | `error` or higher; warnings surface but do not block. | `error` only; warnings logged. |
+| **Network egress** — may the agent reach arbitrary hosts? | Denylist + allowlist: default-deny, explicit allowlist in the agent's YAML. | Allowlist only, but declared at install time rather than per-action. | Open egress. |
+| **Halt-on-anomaly** — what triggers an auto-halt? | Any scanner finding ≥ warning. | Any finding ≥ error. | Scanner findings logged; halt is operator-initiated. |
+
+Notes on the table:
+
+- [ ] Each cell is a normative claim. No "should" / "may" / "etc.";
+      an axis value either holds or the agent is out of profile.
+- [ ] The `permissive` row is **not** "anything goes" — it still
+      has a concrete contract (open egress; logs are kept; operator
+      can halt). This is what makes the permissive exemplar in §2
+      #11 drafteable without hedging.
+- [ ] Axes are deliberately independent so consumers can
+      partial-check: e.g. `awesome-grok-agents/scan_template.py`
+      cares about the scan-severity and external-writes rows;
+      `grok-build-bridge` cares about the code-execution and
+      network-egress rows. A consumer that only implements a
+      subset states so explicitly; it is not "conformant" until
+      all seven apply.
+- [ ] The table carries a `rubric-v1` SemVer tag (MAJOR.MINOR).
+      Adding a new axis is a MAJOR bump; rewording an axis value
+      is MINOR; typo / clarification is PATCH. Consumers pin to a
+      rubric-v1.x range the way they already pin to
+      `grok-install` v2.x.
+- [ ] The rubric explicitly cross-references `grok-install/
+      SECURITY.md` (Enhanced Safety 2.0) so the two live
+      consistently; whichever artefact disagrees with the other
+      loses (rubric is canonical for the three profile
+      *definitions*; SECURITY.md is canonical for the overall
+      stance).
