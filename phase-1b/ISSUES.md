@@ -104,16 +104,26 @@ L-effort content-writing work; closes VER-4 + DOC-2 outright.
 |:-:|:-:|:-:|---|---|---|:-:|---|---|
 | 19 | #10 | L | VER-4 (S2), DOC-2 (S2) | AgentMindCloud/grok-docs | [`drafts/10-grok-docs-v2-14-plus-7-standards-reference.md`](drafts/10-grok-docs-v2-14-plus-7-standards-reference.md) | #4 | — | drafted |
 
+## Sixth-pass drafts (1 §2 rec, 1 file)
+
+Non-speculative draft — highest-reach §2 rec still undrafted
+(reach 5, leverage 4, no `Blocked by`). Closes the
+"four parallel Grok API clients" cross-cutting concern from
+`audits/00-ecosystem-overview.md §9.A`.
+
+| # | §2 rec | Effort | Risks closed | Upstream repo | Draft file | Unblocks §2 | Filed (link) | Status |
+|:-:|:-:|:-:|---|---|---|:-:|---|---|
+| 21 | #2 | L | closes "drift identified in 00 §9.A" (cross-cutting concern; no direct risk-register row) | AgentMindCloud/grok-install-cli *(primary — or new `AgentMindCloud/grok-client` if A2 chosen)*; Python consumers adopt post-v0.1.0 (grok-install-cli + grok-build-bridge) | [`drafts/02-shared-grok-api-client.md`](drafts/02-shared-grok-api-client.md) | — | — | drafted |
+
 ## Next-pass candidates
 
-Cumulative coverage (through fifth pass): §2 recs #1, #3, #4,
-#5, #6, #7, #8, #9, #10, #11, #12, #13, #14, #15, #16, #17,
-#18, #20 — **18 of 20**. Two undrafted:
+Cumulative coverage (through sixth pass): §2 recs #1, #2, #3,
+#4, #5, #6, #7, #8, #9, #10, #11, #12, #13, #14, #15, #16,
+#17, #18, #20 — **19 of 20**. One undrafted:
 
 | §2 # | Rec (short) | Effort | Reach | Unblocks §2 | Why this batch |
 |:-:|---|:-:|:-:|:-:|---|
-| #2 | Extract a shared Grok API client (auth, retries, streaming, rate-limit) — collapses the four parallel implementations in `00-ecosystem-overview.md §9.A`. | L | 5 | — | Highest reach in §2 (5). L-effort because it needs a coordination-plus-extraction write-up; the draft itself is a specification issue, not the implementation. |
-| #19 | Add minimum CI to `x-platform-toolkit` (html-validate, css-lint, broken-link, Live-vs-Spec consistency). Closes SUP-5. | M | 2 | — | Closes the only SUP-category risk outside the #3/#13/#18 coverage. Reach-2 but the toolkit publishes user-facing tools that read live spec versions. |
+| #19 | Add minimum CI to `x-platform-toolkit` (html-validate, css-lint, broken-link, Live-vs-Spec consistency). Closes SUP-5. | M | 2 | — | Only §2 rec still undrafted. Closes the only SUP-category risk outside the #3/#13/#18 coverage. Reach-2 but the toolkit publishes user-facing tools that read live spec versions. Drafting it closes the §2 top-20 at 20/20. |
 
 ### Post-filing follow-ups (not yet candidates — wait for upstream landing)
 
