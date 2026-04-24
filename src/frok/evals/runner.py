@@ -32,14 +32,25 @@ ClientFactory = Callable[[InMemorySink], GrokClient]
 class EvalRunner:
     client_factory: ClientFactory
 
-    async def run(self, cases: Sequence[EvalCase]) -> EvalReport:
+    async def run(
+        self, cases: Sequence[EvalCase], *, repeats: int = 1
+    ) -> EvalReport:
+        if repeats < 1:
+            raise ValueError(f"repeats must be >= 1, got {repeats}")
         results: list[EvalResult] = []
         for case in cases:
-            result = await self.run_case(case)
-            results.append(result)
+            for i in range(repeats):
+                result = await self.run_case(case, repeat=i, repeats=repeats)
+                results.append(result)
         return EvalReport(results=results)
 
-    async def run_case(self, case: EvalCase) -> EvalResult:
+    async def run_case(
+        self,
+        case: EvalCase,
+        *,
+        repeat: int = 0,
+        repeats: int = 1,
+    ) -> EvalResult:
         sink = InMemorySink()
         client = self.client_factory(sink)
         obs = await _execute(case, client, sink)
@@ -66,6 +77,8 @@ class EvalRunner:
             scores=scores,
             observation=obs,
             baseline_diff=baseline_diff,
+            repeat=repeat,
+            repeats=repeats,
         )
 
 

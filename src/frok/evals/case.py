@@ -106,13 +106,15 @@ class EvalResult:
     scores: list[Score]
     observation: Observation
     baseline_diff: dict[str, Any] | None = None
+    repeat: int = 0  # 0-based index of this run within the case's repeats
+    repeats: int = 1  # total repeats requested for this case
 
     @property
     def failed_scores(self) -> list[Score]:
         return [s for s in self.scores if not s.passed]
 
     def to_summary(self) -> dict[str, Any]:
-        return {
+        out: dict[str, Any] = {
             "case": self.case,
             "passed": self.passed,
             "scores": {s.name: s.passed for s in self.scores},
@@ -121,6 +123,10 @@ class EvalResult:
             "error": self.observation.error,
             "baseline_diff": self.baseline_diff,
         }
+        if self.repeats > 1:
+            out["repeat"] = self.repeat
+            out["repeats"] = self.repeats
+        return out
 
 
 @dataclass
@@ -143,8 +149,43 @@ class EvalReport:
     def total_latency_ms(self) -> float:
         return sum(r.observation.total_latency_ms for r in self.results)
 
-    def to_summary(self) -> dict[str, Any]:
+    # -- repeat-aware groupings -----------------------------------------
+    @property
+    def by_case(self) -> dict[str, list[EvalResult]]:
+        groups: dict[str, list[EvalResult]] = {}
+        for r in self.results:
+            groups.setdefault(r.case, []).append(r)
+        return groups
+
+    @property
+    def case_pass_rates(self) -> dict[str, float]:
         return {
+            name: sum(1 for r in results if r.passed) / len(results)
+            for name, results in self.by_case.items()
+        }
+
+    @property
+    def total_cases(self) -> int:
+        return len(self.by_case)
+
+    @property
+    def passed_cases(self) -> int:
+        return sum(1 for rate in self.case_pass_rates.values() if rate == 1.0)
+
+    @property
+    def failed_cases(self) -> int:
+        return sum(1 for rate in self.case_pass_rates.values() if rate == 0.0)
+
+    @property
+    def flaky_cases(self) -> int:
+        return sum(1 for rate in self.case_pass_rates.values() if 0.0 < rate < 1.0)
+
+    @property
+    def _has_repeats(self) -> bool:
+        return any(r.repeats > 1 for r in self.results)
+
+    def to_summary(self) -> dict[str, Any]:
+        out: dict[str, Any] = {
             "passed": self.passed,
             "failed": self.failed,
             "total": len(self.results),
@@ -152,8 +193,20 @@ class EvalReport:
             "total_latency_ms": round(self.total_latency_ms, 2),
             "cases": [r.to_summary() for r in self.results],
         }
+        if self._has_repeats:
+            out["total_cases"] = self.total_cases
+            out["passed_cases"] = self.passed_cases
+            out["failed_cases"] = self.failed_cases
+            out["flaky_cases"] = self.flaky_cases
+            out["case_pass_rates"] = self.case_pass_rates
+        return out
 
     def to_markdown(self) -> str:
+        if not self._has_repeats:
+            return self._to_markdown_flat()
+        return self._to_markdown_aggregated()
+
+    def _to_markdown_flat(self) -> str:
         lines = [
             "# Frok Eval Report",
             "",
@@ -185,5 +238,61 @@ class EvalReport:
             if r.baseline_diff and r.baseline_diff.get("regressed", False):
                 lines.append(f"- Baseline regression: {r.baseline_diff}")
             lines.append("")
+        return "\n".join(lines)
+
+    def _to_markdown_aggregated(self) -> str:
+        rates = self.case_pass_rates
+        lines = [
+            "# Frok Eval Report",
+            "",
+            f"- Cases passed: {self.passed_cases} / {self.total_cases}",
+            f"- Flaky cases: {self.flaky_cases}",
+            f"- Failed cases: {self.failed_cases}",
+            f"- Total runs: {len(self.results)} "
+            f"({self.passed} passed, {self.failed} failed)",
+            f"- Total tokens: {self.total_tokens}",
+            f"- Total time: {self.total_latency_ms:.1f} ms",
+            "",
+            "| Case | Pass rate | Passed | Result | Tokens | ms | Failed scorers |",
+            "|------|----------:|-------:|--------|-------:|---:|----------------|",
+        ]
+        for name, results in self.by_case.items():
+            total = len(results)
+            passed = sum(1 for r in results if r.passed)
+            rate = rates[name]
+            if rate == 1.0:
+                verdict = "PASS"
+            elif rate == 0.0:
+                verdict = "FAIL"
+            else:
+                verdict = "FLAKY"
+            failed_scorer_names = sorted(
+                {s.name for r in results for s in r.failed_scores}
+            )
+            failed = ", ".join(failed_scorer_names) or "-"
+            tokens = sum(r.observation.total_tokens for r in results)
+            ms = sum(r.observation.total_latency_ms for r in results)
+            lines.append(
+                f"| {name} | {rate * 100:.0f}% | {passed}/{total} | "
+                f"{verdict} | {tokens} | {ms:.1f} | {failed} |"
+            )
+        lines.append("")
+
+        # Per-case detail only for non-all-passing cases.
+        for name, results in self.by_case.items():
+            if rates[name] == 1.0:
+                continue
+            header = "FLAKY" if 0.0 < rates[name] < 1.0 else "FAIL"
+            lines.append(f"## {header}: {name} ({rates[name] * 100:.0f}%)")
+            for r in results:
+                if r.passed:
+                    lines.append(f"- repeat {r.repeat}: PASS")
+                    continue
+                fails = ", ".join(s.name for s in r.failed_scores) or "run error"
+                lines.append(f"- repeat {r.repeat}: FAIL ({fails})")
+                if r.observation.error:
+                    lines.append(f"  - run error: `{r.observation.error}`")
+            lines.append("")
+        return "\n".join(lines)
 
         return "\n".join(lines)

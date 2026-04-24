@@ -2,6 +2,26 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.19.0] — 2026-04-23
+### Added
+- `frok run --repeat N --seed S` — execute each case N times with
+  a deterministic seed (`random.seed(S + repeat_index)` +
+  `FROK_RUN_SEED` env var). Aggregated report surfaces per-case
+  pass rates and flags flaky cases (0 < rate < 1) distinctly from
+  hard failures. `--repeat > 1` with `--capture-baseline` is
+  rejected to prevent JSONL filename collisions.
+- `EvalResult.repeat` / `.repeats` fields (default 0 / 1).
+- `EvalReport.by_case`, `case_pass_rates`, `total_cases`,
+  `passed_cases`, `flaky_cases`, `failed_cases` properties.
+- `EvalReport.to_markdown()` picks an aggregated format with
+  pass-rate column and `FLAKY` verdict when any case has
+  `repeats > 1`; otherwise the existing flat format is preserved
+  (zero change for single-run callers).
+- `EvalRunner.run(cases, *, repeats=1)` +
+  `run_case(case, *, repeat, repeats)`.
+- `frok.cli.run.apply_seed(seed, repeat_index)` helper.
+- Tests: 17 new (library + CLI paths); 352 total.
+
 ## [0.18.0] — 2026-04-23
 ### Added
 - `frok eval summarize <A> --diff-against <B>` — walk two

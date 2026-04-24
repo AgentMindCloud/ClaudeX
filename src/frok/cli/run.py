@@ -22,6 +22,8 @@ import argparse
 import fnmatch
 import importlib.util
 import json
+import os
+import random
 import re
 import sys
 import uuid
@@ -219,6 +221,17 @@ def _wrap_factory_with_extra_sink(
 
 
 # ---------------------------------------------------------------------------
+# --repeat / --seed helpers
+# ---------------------------------------------------------------------------
+def apply_seed(seed: int, repeat_index: int) -> int:
+    """Seed Python's `random` and publish ``FROK_RUN_SEED`` for stubs."""
+    effective = seed + repeat_index
+    random.seed(effective)
+    os.environ["FROK_RUN_SEED"] = str(effective)
+    return effective
+
+
+# ---------------------------------------------------------------------------
 # run command
 # ---------------------------------------------------------------------------
 async def run_cmd(args: argparse.Namespace) -> int:
@@ -259,27 +272,46 @@ async def run_cmd(args: argparse.Namespace) -> int:
             )
         _attach_baselines(loaded.cases, args.use_baseline)
 
+    if args.repeat < 1:
+        raise CliError(f"--repeat must be >= 1, got {args.repeat}")
+
     capture_dir: Path | None = args.capture_baseline
     if capture_dir is not None:
+        if args.repeat > 1:
+            raise CliError(
+                "--capture-baseline is incompatible with --repeat > 1 "
+                "(would overwrite per-case JSONL files); capture once "
+                "with --repeat 1, then --use-baseline on subsequent runs"
+            )
         capture_dir.mkdir(parents=True, exist_ok=True)
         slugs = _check_unique_slugs(loaded.cases)
     else:
         slugs = {}
 
-    # Run per-case so we can attach/close a dedicated JsonlSink per baseline.
+    # Run per-case (and per-repeat) so each iteration gets a fresh client +
+    # sink + optional JsonlSink. The seed is applied before every repeat so
+    # stochastic bits inside the client (retry jitter, stubs that read
+    # FROK_RUN_SEED) are reproducible.
     results: list[EvalResult] = []
     for case in loaded.cases:
-        jsonl: JsonlSink | None = None
-        factory = loaded.client_factory
-        if capture_dir is not None:
-            jsonl = JsonlSink(capture_dir / f"{slugs[case.name]}.jsonl")
-            factory = _wrap_factory_with_extra_sink(factory, jsonl)
-        runner = EvalRunner(client_factory=factory)
-        try:
-            results.append(await runner.run_case(case))
-        finally:
-            if jsonl is not None:
-                jsonl.close()
+        for repeat_idx in range(args.repeat):
+            if args.seed is not None:
+                apply_seed(args.seed, repeat_idx)
+            jsonl: JsonlSink | None = None
+            factory = loaded.client_factory
+            if capture_dir is not None:
+                jsonl = JsonlSink(capture_dir / f"{slugs[case.name]}.jsonl")
+                factory = _wrap_factory_with_extra_sink(factory, jsonl)
+            runner = EvalRunner(client_factory=factory)
+            try:
+                results.append(
+                    await runner.run_case(
+                        case, repeat=repeat_idx, repeats=args.repeat
+                    )
+                )
+            finally:
+                if jsonl is not None:
+                    jsonl.close()
 
     report = EvalReport(results=results)
 
@@ -336,6 +368,27 @@ def register(sub: "argparse._SubParsersAction") -> None:
         "--fail-on-regression",
         action="store_true",
         help="exit non-zero when any case fails; default: always 0",
+    )
+    run.add_argument(
+        "--repeat",
+        type=int,
+        default=1,
+        metavar="N",
+        help=(
+            "run each case N times (default 1). With N>1, the report "
+            "aggregates by case and shows pass rate. Flaky cases (0 < "
+            "rate < 1) are surfaced separately."
+        ),
+    )
+    run.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        metavar="S",
+        help=(
+            "deterministic seed; applied as `random.seed(S + repeat)` and "
+            "published as FROK_RUN_SEED per repeat so stubs can pick it up"
+        ),
     )
     run.add_argument(
         "--list",

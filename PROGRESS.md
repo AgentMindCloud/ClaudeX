@@ -2,6 +2,81 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 3 §10: repeat-runs
+
+**Shipped** ``frok run --repeat N --seed S`` — executes each case
+N times with a deterministic seed so operators can cleanly
+separate "the case regressed" from "the scorer is flaky". The
+``EvalReport`` aggregates by case name with a pass rate; any case
+in (0, 1) is surfaced as `FLAKY` distinctly from `FAIL`.
+
+* **`EvalResult`** grew optional ``repeat`` (0-based index) and
+  ``repeats`` (total) fields. Defaults (0/1) preserve the existing
+  shape; `to_summary()` only surfaces the new fields when
+  ``repeats > 1``.
+* **`EvalReport`** now exposes ``by_case`` / ``case_pass_rates``
+  / ``total_cases`` / ``passed_cases`` / ``flaky_cases`` /
+  ``failed_cases``. The Markdown renderer has two paths:
+  * flat (existing) when every case has ``repeats == 1`` — no
+    downstream test asserting on the current shape had to change.
+  * aggregated when any case has ``repeats > 1`` — one row per
+    case with a pass-rate column, a FLAKY/FAIL/PASS verdict, and
+    the per-repeat failure list below for non-all-passing cases.
+    The failure list uses scorer-name union across repeats.
+* **`EvalRunner.run(cases, *, repeats=1)`** / ``run_case(case, *,
+  repeat, repeats)`` — runner loops repeats internally when
+  invoked via ``run`` and accepts explicit positions via
+  ``run_case`` so the CLI can stamp them.
+* **CLI `--repeat N` / `--seed S`** (`frok/cli/run.py`)
+  * ``--repeat`` validates ``>= 1`` at the CLI layer.
+  * ``apply_seed(seed, repeat_index)`` calls ``random.seed(seed +
+    repeat_index)`` and publishes ``FROK_RUN_SEED`` per repeat
+    before `make_client` runs, so a case file's stub transport
+    can read the env var and react deterministically.
+  * ``--repeat > 1`` + ``--capture-baseline`` raises ``CliError``
+    — the per-case JSONL filenames would collide. Operators are
+    directed to capture once and use ``--use-baseline`` on
+    subsequent repeat runs.
+
+**Verification.** `python3 -m pytest -q` → 352 passed in 0.90s (17
+new). Library tests cover default repeat fields, flat-format
+preservation on single-repeat runs, ``by_case`` grouping,
+``case_pass_rates`` across flaky + all-pass + all-fail cases,
+aggregated-markdown column presence + FLAKY verdict + per-repeat
+detail, summary shape for both single- and multi-repeat runs.
+CLI tests cover the ``apply_seed`` helper (env var + `random`
+determinism + per-repeat shift), end-to-end ``--repeat 3``
+flaky-case production (2/3 pass), aggregated markdown column +
+FLAKY surfacing, ``--fail-on-regression`` flipping exit on any
+failed repeat, ``--seed`` publishing ``FROK_RUN_SEED`` before
+``make_client`` (verified through the aggregated Failed-scorers
+column), and both error paths (``--repeat 0`` and
+``--repeat > 1`` + ``--capture-baseline``).
+
+**Decisions / trade-offs.**
+* Aggregate Markdown only when ``repeats > 1``. The existing flat
+  table is optimized for single-run output; changing it globally
+  would break operator muscle memory and churn test assertions.
+* Seed is ``S + repeat_index``, not ``S``. Two repeats of the
+  same case need distinct stochastic paths, otherwise a flaky
+  case would appear deterministic.
+* ``FROK_RUN_SEED`` env var rather than a constructor argument.
+  Case-file ``make_client`` functions don't have a stable
+  contract for receiving runner-internal state; an env var is
+  the Unix-native escape hatch.
+* ``--repeat > 1`` + ``--capture-baseline`` fails loudly rather
+  than silently overwriting the JSONL. If operators want a
+  repeat-with-capture flow, they can capture the first repeat
+  manually or use ``--use-baseline`` against a one-shot capture.
+
+**Next suggested action:** `Extend Phase 3 with the final CI-
+ergonomics flag \`frok run --jobs N\`: run cases in parallel
+across N workers (respecting --repeat so each case gets its N
+repeats, but different cases can interleave). Default stays
+serial (N=1). Caps at os.cpu_count(). Closes the "my eval suite
+takes forever" complaint without compromising determinism — each
+case's output is still collected in the same EvalReport order.`
+
 ## 2026-04-23 — Phase 3 §9: eval-dirdiff
 
 **Shipped** ``frok eval summarize <a> --diff-against <b>`` — the

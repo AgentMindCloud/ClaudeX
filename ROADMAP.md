@@ -108,5 +108,13 @@ builds on these three.
    pair, and flags slugs that appear in only one side. Markdown or
    JSON; `--fail-on-regression` gates CI on tool-order divergence,
    new errors, or slug drift. *Shipped 2026-04-23.*
-10. *Sketch:* `frok serve` (long-running agent), distributed
+10. **repeat-runs** — `frok run --repeat N --seed S` executes each
+    case N times with a deterministic seed, aggregates the
+    `EvalReport` into per-case pass rates, and flags flaky cases
+    (0 < rate < 1) distinctly from hard failures. Seed is applied
+    as ``random.seed(S + repeat_index)`` and published via the
+    ``FROK_RUN_SEED`` env var so stubs can pick it up. Incompatible
+    with `--capture-baseline` (prevents per-case file collisions).
+    *Shipped 2026-04-23.*
+11. *Sketch:* `frok serve` (long-running agent), distributed
     inference, X-native production agents, alignment red-teaming.
