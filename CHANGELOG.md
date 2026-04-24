@@ -2,6 +2,20 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.28.0] — 2026-04-23
+### Added
+- `GrokClient.chat_stream(messages, …)` — async generator yielding
+  `StreamChunk`s from an SSE stream. Pre-flight safety on
+  messages, live deltas, post-flight safety on the assembled
+  content. Streamed tool-call deltas reassemble as `ToolCall`s
+  on the final chunk. Emits a `grok.chat_stream` telemetry span.
+- `StreamingTransport` protocol + `StreamChunk` dataclass +
+  `urllib_streaming_transport` stdlib implementation
+  (line-by-line via `asyncio.to_thread`).
+- `streaming_transport` field on `GrokClient`.
+- Tests: 19 new (SSE parser, tool-call merger, chat_stream
+  happy-path + safety + error paths + telemetry); 478 total.
+
 ## [0.27.0] — 2026-04-23
 ### Added
 - `frok init --transport {stub,real}` — choose the generated

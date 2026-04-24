@@ -69,6 +69,13 @@ builds on these three.
    live template that reads `FROK_CLIENT_API_KEY` from the
    environment. Next-steps message is conditional on the
    transport. *Shipped 2026-04-23.*
+2. **streaming** — `GrokClient.chat_stream(messages, …)` is an
+   async generator yielding `StreamChunk`s as SSE data arrives.
+   Safety pre-flight runs on messages; deltas are yielded live;
+   a final chunk carries the assembled `GrokResponse` after
+   post-flight safety. Tool-call deltas are reassembled.
+   Telemetry: `grok.chat_stream` span. Ships with a stdlib
+   `urllib_streaming_transport`. *Shipped 2026-04-23.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable

@@ -2,6 +2,98 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 5 §2: streaming
+
+**Shipped** ``GrokClient.chat_stream`` — an async generator that
+yields ``StreamChunk``s as SSE data arrives. Today's ``chat``
+waits for the whole response; streaming unlocks live progress
+indicators in the CLI and cuts apparent latency on long answers.
+
+* **`StreamingTransport` protocol** (`frok/clients/grok.py`) —
+  one-call shape returning ``(status, headers,
+  AsyncIterator[bytes])``. Consistent with the existing
+  `Transport` contract; callers await once, then iterate.
+* **`StreamChunk(delta, tool_calls, finish_reason, is_final,
+  response)`** frozen dataclass. Non-final chunks carry
+  incremental text; the final chunk has ``is_final=True`` +
+  ``response`` = the assembled `GrokResponse` (post-flight
+  safety applied).
+* **`GrokClient.chat_stream(messages, …)`**
+  * Pre-flight safety runs on every inbound message (same shape
+    as `chat`); a blocked prompt raises before any network call.
+  * POST carries ``stream: true`` + an ``Accept: text/event-
+    stream`` header; SSE chunks are parsed line-by-line via a
+    module-level ``_iter_sse_events`` helper that tolerates
+    blank / comment lines and malformed JSON.
+  * Content deltas are yielded live as ``StreamChunk(delta=…)``.
+    Tool-call deltas are accumulated via
+    ``_merge_tool_call_delta`` and materialised as ``ToolCall``s
+    on the final chunk.
+  * After the stream ends (either ``[DONE]`` sentinel or
+    connection close), post-flight safety runs on the
+    accumulated content. If blocked, the generator raises
+    ``GrokError`` instead of yielding the final chunk — the
+    deltas already emitted are the caller's problem to redact;
+    the contract is documented.
+  * Emits a ``grok.chat_stream`` telemetry span with ``model``,
+    ``message_count``, ``chunks``, ``content_chars``,
+    ``tool_calls``, ``finish_reason``, and safety counts.
+  * Shared pre-flight logic extracted into ``_preflight`` so
+    `chat` and `chat_stream` can't drift on safety semantics.
+* **`urllib_streaming_transport`** (`frok/clients/transports.py`)
+  — stdlib streaming transport. Line-by-line read via
+  ``asyncio.to_thread`` so the event loop isn't blocked; swap in
+  httpx/aiohttp when production volume arrives. Handles 4xx/5xx
+  by returning the status + a one-shot body iterator so
+  `chat_stream` can surface a meaningful `HttpError`.
+
+**Verification.** `python3 -m pytest -q` → 478 passed in 1.49s (19
+new). Library tests cover `_iter_sse_events` (happy-path JSON,
+``[DONE]`` sentinel, non-data/blank/comment lines, malformed-JSON
+tolerance), `_merge_tool_call_delta` (fragment assembly, index
+growth), and `chat_stream`: deltas yielded in order + request
+body carries ``stream: true`` + ``Accept: text/event-stream``,
+stream without ``[DONE]`` sentinel still produces a final chunk,
+pre-flight blocks unsafe prompts before any network hit, PII
+rewrites on prompts reach the wire, post-flight blocks unsafe
+accumulated content (deltas already emitted), empty ruleset
+skips safety, missing streaming_transport / empty messages / 4xx
+all error correctly, tool-call deltas reassemble across fragments
+and land as `ToolCall` on the final chunk, telemetry span carries
+the expected attrs + records ``safety_blocked`` on a prompt
+block.
+
+**Decisions / trade-offs.**
+* Post-flight safety runs *after* the stream completes, not
+  chunk-by-chunk. Partial-text regex matching would be
+  unreliable (a rule that fires on ``"guarantee"`` would miss a
+  stream that yields ``"guar"`` + ``"antee"``); waiting for the
+  full content is the honest contract.
+* Live deltas are the caller's responsibility to redact when
+  safety blocks the final. A CLI that renders live tokens
+  should clear its buffer on `GrokError` rather than trust
+  what it already drew — documented in the method docstring.
+* New `StreamingTransport` protocol rather than overloading the
+  existing `Transport`. Different return shape, different
+  consumer pattern; muddling them would cost more than a second
+  protocol type.
+* Shared `_preflight` helper rather than duplicating the safety
+  loop. The stream branch and the non-stream branch can't
+  silently diverge on what counts as a blocked prompt.
+* Ships with a stdlib streaming transport because the lack of
+  one would be the first blocker for any real use. Throughput
+  is modest (thread-hop per line); good-enough for a CLI live-
+  progress display; operators with volume swap in httpx.
+
+**Next suggested action:** `Extend Phase 5 §3 with \`frok run
+--stream\`: flip the runner to use \`chat_stream\` + print each
+delta to stderr as it arrives, so a live \`frok run cases/\*\`
+gives operators a progress indicator. Cases still assemble a
+normal \`EvalReport\` (stream finalises into the same
+\`GrokResponse\`), so scorers and baseline diffs remain
+untouched. Closes the "why does my long answer look hung?" UX
+gap.`
+
 ## 2026-04-23 — Phase 5 §1: init-transport
 
 **Shipped** ``frok init --transport {stub,real}`` — the "how do

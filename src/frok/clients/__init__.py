@@ -4,6 +4,8 @@ from .grok import (
     GrokMessage,
     GrokResponse,
     HttpError,
+    StreamChunk,
+    StreamingTransport,
     ToolCall,
     Transport,
 )
@@ -14,6 +16,8 @@ __all__ = [
     "GrokMessage",
     "GrokResponse",
     "HttpError",
+    "StreamChunk",
+    "StreamingTransport",
     "ToolCall",
     "Transport",
 ]
