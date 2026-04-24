@@ -7,6 +7,7 @@ Keep them pure: no I/O, no mutation of inputs. Compose them in
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from typing import Any
@@ -127,6 +128,58 @@ class ToolArgsSubset:
                 return Score.ok(sname)
         seen = [inv.arguments for inv in hits]
         return Score.fail(sname, f"no call matched {self.expected!r}; seen {seen!r}")
+
+
+@dataclass(frozen=True)
+class ToolArgsMatch:
+    """Passes if at least one call to ``name_`` has arguments matching a regex.
+
+    * ``field=None`` (default) — regex is applied to the JSON-serialised
+      arguments dict (``json.dumps(args, sort_keys=True)``). Use for
+      "something anywhere in the args".
+    * ``field="<key>"`` — regex is applied to ``str(args[field])``.
+      Missing keys don't match. Use for "the ``query`` field contains the
+      user's question", etc.
+
+    Matching uses ``re.search`` so partial matches work. Pass ``flags``
+    (e.g. ``re.IGNORECASE``) through for the usual knobs. An invalid
+    regex fails the scorer cleanly rather than raising from the runner.
+    """
+
+    name_: str
+    regex: str
+    field: str | None = None
+    flags: int = 0
+
+    def __call__(self, case: EvalCase, obs: Observation) -> Score:
+        sname = (
+            f"tool_args_match[{self.name_!r}"
+            + (f":{self.field}" if self.field else "")
+            + "]"
+        )
+        hits = [i for i in obs.invocations if i.name == self.name_]
+        if not hits:
+            return Score.fail(sname, f"tool {self.name_!r} not invoked")
+        try:
+            pattern = re.compile(self.regex, self.flags)
+        except re.error as exc:
+            return Score.fail(sname, f"invalid regex {self.regex!r}: {exc}")
+        seen: list[str] = []
+        for inv in hits:
+            if self.field is None:
+                haystack = json.dumps(inv.arguments, sort_keys=True, default=str)
+            else:
+                if self.field not in inv.arguments:
+                    seen.append("<missing>")
+                    continue
+                haystack = str(inv.arguments[self.field])
+            seen.append(haystack)
+            if pattern.search(haystack):
+                return Score.ok(sname, measure=haystack)
+        return Score.fail(
+            sname,
+            f"no call matched {self.regex!r}; seen {seen!r}",
+        )
 
 
 @dataclass(frozen=True)

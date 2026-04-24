@@ -2,6 +2,19 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.34.0] — 2026-04-23
+### Added
+- `frok.evals.ToolArgsMatch(name, regex, field=None, flags=0)` —
+  regex-based tool-argument scorer. Complements
+  `ToolArgsSubset` (exact equality) with `re.search`-style
+  fuzzy matching. `field=None` matches against the
+  JSON-serialised args; a pinned field matches against
+  `str(args[field])`. Invalid regex fails cleanly; measure
+  carries the matched haystack.
+- Tests: 14 new (field vs whole-args, non-string values,
+  multi-invocation semantics, flags, anchored patterns,
+  invalid regex, scorer name formatting); 548 total.
+
 ## [0.33.0] — 2026-04-23
 ### Added
 - `frok.evals.ResponseModelIs(expected)` scorer — asserts

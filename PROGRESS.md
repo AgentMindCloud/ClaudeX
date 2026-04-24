@@ -2,6 +2,75 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 5 §8: tool-args-regex
+
+**Shipped** ``ToolArgsMatch(name, regex, field=None, flags=0)`` —
+the fuzzy counterpart to ``ToolArgsSubset``'s exact-equality
+check. Operators can now assert "the tool call's query field
+contains the user's question verbatim" without hand-writing a
+scorer per case.
+
+* **`ToolArgsMatch`** (`frok/evals/scorers.py`) — frozen
+  dataclass. Two modes:
+  * ``field=None`` — matches against ``json.dumps(args,
+    sort_keys=True, default=str)``. Useful for "something
+    anywhere in the args" assertions; sorted keys mean a
+    regex can safely anchor on layout.
+  * ``field="<key>"`` — matches against ``str(args[field])``.
+    Missing keys surface as ``<missing>`` in the failure
+    detail rather than silently skipping.
+* **Matching semantics** — ``re.search`` (partial, like the
+  existing ``AnswerMatches``); operators anchor with
+  ``^``/``$`` when they want exact match. ``flags`` passes
+  through so ``re.IGNORECASE`` etc. work.
+* **Error handling** — invalid regex patterns fail the
+  scorer with ``"invalid regex 'pat': <re.error>"`` rather
+  than raising out of the runner. Matches the pattern used
+  everywhere else in the codebase (e.g. `--filter re:...`).
+* **Scorer name** — ``tool_args_match[<tool>:<field>]`` when
+  a field is pinned, ``tool_args_match[<tool>]`` otherwise.
+  Aggregate reports can grep by tool, field, or both.
+* **Measure** — on success, the haystack that matched
+  (JSON string or field value). Useful when post-hoc diffing
+  runs.
+
+**Verification.** `python3 -m pytest -q` → 548 passed in 1.57s
+(14 new). Tests cover every branch: field-specific match /
+fail / missing-field-placeholder, non-string values
+stringified before regex (ints, lists), whole-args matching
+anywhere in the JSON, sort-keys behaviour lets a regex anchor
+on layout, tool-not-invoked fails cleanly, multi-invocation
+semantics (any single match wins, no-match lists everything
+seen), ``re.IGNORECASE`` via flags, anchored regex via
+``re.search`` + ``^/$``, invalid regex degrades to a clean
+fail, and scorer-name formatting covers both field-pinned and
+whole-args modes.
+
+**Decisions / trade-offs.**
+* Field OR whole-args, not both. An operator who needs
+  "any of two fields" can write two scorers; keeping the API
+  one-argument-at-a-time keeps the signature readable.
+* Measure carries the full haystack on pass, not just the
+  matched substring. Easier for aggregated reports to surface
+  "what the model actually sent"; the regex caller already
+  has the pattern.
+* Non-string args (ints, lists, dicts) are ``str()``'d before
+  regex. Catches "the model called this with a numeric id
+  ending in 42" without forcing the operator to JSON-encode
+  the field by hand. The full-args mode JSON-encodes instead,
+  which is the right choice when the shape matters.
+* Invalid regex fails the scorer, doesn't raise. Every other
+  user-facing regex in the codebase (CLI ``--filter re:...``,
+  ``AnswerMatches``) follows this rule; cases shouldn't be
+  able to crash the runner with a typo.
+
+**Next suggested action:** `Extend Phase 5 §9 with a
+\`LatencyWithin(max_ms)\` scorer: assert the case's root-span
+duration_ms stays below a threshold. Complements
+\`TokensWithin\` (cost ceiling) with a wall-clock ceiling for
+CI — cheap way to catch a prompt or tool-use pattern that
+quietly doubled latency on a model swap.`
+
 ## 2026-04-23 — Phase 5 §7: response-model-scorer
 
 **Shipped** ``ResponseModelIs(expected)`` — completes the

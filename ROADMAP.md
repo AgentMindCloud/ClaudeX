@@ -114,6 +114,12 @@ builds on these three.
    pins the *request*) by proving the *response* came from
    the expected model — catches silent mid-flight provider
    swaps. *Shipped 2026-04-23.*
+8. **tool-args-regex** — `ToolArgsMatch(name, regex,
+   field=None, flags=0)` asserts a regex matches either the
+   JSON-serialised full args (field=None) or a specific
+   argument's string form. `re.search` semantics; invalid
+   regex fails cleanly; scorer name includes both tool + field
+   for aggregate reports. *Shipped 2026-04-23.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable
