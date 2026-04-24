@@ -218,6 +218,18 @@ builds on these three.
     error-shape) for a retry to be eligible. Rejects
     `--retry-on-error` without `--retry > 0` and invalid
     regexes. *Shipped 2026-04-24.*
+21. **retry-backoff** — `frok run --retry-backoff MS`
+    sleeps MS milliseconds before each retry (default 0 =
+    no sleep); `--retry-backoff-jitter FRACTION` (in [0,
+    1]) applies symmetric jitter via
+    `random.uniform(1 - F, 1 + F) * MS`. Sleep goes BEFORE
+    each retry, never after the final attempt, and is
+    skipped entirely on early breaks (pass, timeout,
+    error-filter miss). Mainly against rate-limited APIs
+    where immediate retries hit the same limit again.
+    Rejects negative backoff, jitter outside [0, 1],
+    jitter without backoff, and backoff without
+    `--retry > 0`. *Shipped 2026-04-24.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable

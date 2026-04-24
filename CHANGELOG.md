@@ -2,6 +2,28 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.47.0] — 2026-04-24
+### Added
+- `frok run --retry-backoff MS` — sleep MS milliseconds
+  before each retry (default 0 = no sleep). Goes BEFORE
+  each retry, not after the final attempt; skipped
+  entirely on early breaks (pass, timeout,
+  `--retry-on-error` miss).
+- `frok run --retry-backoff-jitter FRACTION` — symmetric
+  jitter in [0, 1] applied as `random.uniform(1 - F, 1 +
+  F) * MS`. Deterministic under `--seed S`.
+- Module-level `_retry_sleep` seam in `frok.cli.run` so
+  tests can monkeypatch without touching `asyncio.sleep`
+  globally.
+- Four new validation guards: negative backoff, jitter
+  outside [0, 1], jitter without backoff, backoff without
+  `--retry > 0`.
+- Tests: 14 new (parser defaults + values, unit sleep
+  conversion, no-op at ms=0, jitter bounds,
+  sleep-between-retries, first-pass-no-sleep,
+  no-sleep-after-final, jitter end-to-end, no-sleep-on-
+  error-filter-miss, all four validations); 709 total.
+
 ## [0.46.0] — 2026-04-24
 ### Added
 - `frok run --retry-on-error REGEX` — narrows `--retry` to

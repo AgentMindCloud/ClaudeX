@@ -235,6 +235,27 @@ def apply_seed(seed: int, repeat_index: int) -> int:
 
 
 # ---------------------------------------------------------------------------
+# --retry-backoff helpers
+# ---------------------------------------------------------------------------
+# Module-level indirection so tests can patch the sleep without touching
+# asyncio globally (which breaks every other async test in the file).
+_retry_sleep: Callable[[float], Any] = asyncio.sleep
+
+
+async def _apply_retry_backoff(ms: int, jitter: float) -> None:
+    """Sleep for ``ms`` milliseconds with optional symmetric jitter.
+
+    ``jitter`` is a fraction in [0, 1]; the actual sleep is
+    ``random.uniform(1 - jitter, 1 + jitter) * ms / 1000.0`` seconds.
+    No-op when ``ms <= 0``.
+    """
+    if ms <= 0:
+        return
+    factor = random.uniform(1 - jitter, 1 + jitter) if jitter > 0 else 1.0
+    await _retry_sleep(ms / 1000.0 * factor)
+
+
+# ---------------------------------------------------------------------------
 # run command
 # ---------------------------------------------------------------------------
 async def run_cmd(args: argparse.Namespace) -> int:
@@ -301,6 +322,25 @@ async def run_cmd(args: argparse.Namespace) -> int:
             "--retry-on-error requires --retry > 0 (no budget to spend on "
             "the matching errors); either drop --retry-on-error or set a "
             "retry budget"
+        )
+    if args.retry_backoff < 0:
+        raise CliError(
+            f"--retry-backoff must be >= 0, got {args.retry_backoff}"
+        )
+    if not 0.0 <= args.retry_backoff_jitter <= 1.0:
+        raise CliError(
+            "--retry-backoff-jitter must be between 0 and 1, got "
+            f"{args.retry_backoff_jitter}"
+        )
+    if args.retry_backoff_jitter > 0.0 and args.retry_backoff <= 0:
+        raise CliError(
+            "--retry-backoff-jitter requires --retry-backoff > 0 (jitter "
+            "has nothing to scale without a base backoff)"
+        )
+    if args.retry_backoff > 0 and args.retry == 0:
+        raise CliError(
+            "--retry-backoff requires --retry > 0 (no retries to sleep "
+            "between); drop --retry-backoff or set a retry budget"
         )
     retry_on_patterns = [_compile_pattern(p) for p in args.retry_on]
     retry_on_error_patterns: list[re.Pattern[str]] = []
@@ -389,7 +429,14 @@ async def run_cmd(args: argparse.Namespace) -> int:
                     budget = args.retry + 1
                 result: EvalResult | None = None
                 attempt_count = 0
-                for _ in range(budget):
+                for i in range(budget):
+                    if i > 0 and args.retry_backoff > 0:
+                        # Sleep BEFORE each retry, never after the final
+                        # attempt (early breaks skip this entirely).
+                        await _apply_retry_backoff(
+                            args.retry_backoff,
+                            args.retry_backoff_jitter,
+                        )
                     attempt_count += 1
                     result = await runner.run_case(
                         case,
@@ -646,6 +693,33 @@ def register(sub: "argparse._SubParsersAction") -> None:
             "regressions. Timeouts still short-circuit as always. "
             "Composes with --retry-on: both gates must match for a retry "
             "to be eligible. Requires --retry > 0."
+        ),
+    )
+    run.add_argument(
+        "--retry-backoff",
+        type=int,
+        default=0,
+        metavar="MS",
+        help=(
+            "sleep for MS milliseconds before each retry (default 0 = "
+            "no sleep). Mainly useful against rate-limited APIs where "
+            "an immediate retry just hits the same limit again. The "
+            "sleep goes BEFORE the next attempt, never after the final "
+            "one, and is skipped entirely on early breaks (pass, "
+            "timeout, error-filter miss). Requires --retry > 0."
+        ),
+    )
+    run.add_argument(
+        "--retry-backoff-jitter",
+        type=float,
+        default=0.0,
+        metavar="FRACTION",
+        help=(
+            "symmetric jitter fraction in [0, 1] applied to --retry-"
+            "backoff. The actual sleep is random.uniform(1 - FRACTION, "
+            "1 + FRACTION) * MS / 1000 seconds. 0 (default) disables "
+            "jitter; 0.5 spreads sleeps across [0.5*MS, 1.5*MS]. "
+            "Requires --retry-backoff > 0."
         ),
     )
     run.set_defaults(fn=run_cmd)

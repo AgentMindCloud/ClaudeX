@@ -2,6 +2,98 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-24 — Phase 5 §21: retry-backoff
+
+**Shipped** ``frok run --retry-backoff MS`` +
+``--retry-backoff-jitter FRACTION`` — a sleep-between-retries
+knob that fires BEFORE each retry (not after the final
+attempt) and is skipped on every early break. Closes the
+last practical gap in `--retry` for rate-limited APIs:
+hammering xAI again 10ms after a 429 just trips the same
+429, so operators need a back-off knob that's cheap to
+reach for.
+
+* **CLI flags** — `--retry-backoff MS` (int, default 0) and
+  `--retry-backoff-jitter FRACTION` (float, default 0.0).
+  Base sleep is `MS / 1000.0` seconds; jitter applies a
+  symmetric multiplier `random.uniform(1 - F, 1 + F)` so
+  `--retry-backoff 1000 --retry-backoff-jitter 0.5` spreads
+  sleeps across `[0.5s, 1.5s]`.
+* **Retry-loop placement** — the sleep sits at the top of
+  iterations 2+ (`if i > 0 and args.retry_backoff > 0`), so:
+  (a) it never fires before the first attempt; (b) every
+  existing `break` path (pass, `TimeoutError`,
+  `--retry-on-error` filter miss) short-circuits the sleep
+  for free; (c) no sleep happens after the final attempt —
+  a trailing sleep adds cost with zero value.
+* **Test seam** — module-level `_retry_sleep = asyncio.sleep`
+  can be monkeypatched by tests to record call durations
+  without actually waiting, mirroring
+  `frok.clients.grok`'s existing `sleep` injection style.
+  Production code still goes through `asyncio.sleep`
+  untouched.
+* **Validation** — four new guards:
+  - `--retry-backoff < 0` → CliError
+  - `--retry-backoff-jitter` outside `[0.0, 1.0]` → CliError
+  - jitter > 0 without `--retry-backoff > 0` → CliError
+    (nothing to scale)
+  - `--retry-backoff > 0` without `--retry > 0` → CliError
+    (no retries to sleep between)
+  The last three mirror §18/§20's "flag requires the
+  budget" guard shape so operators see a consistent set of
+  misuse messages.
+
+**Verification.** `python3 -m pytest -q` → 709 passed in 2.59s
+(14 new). Tests cover: parser defaults (0, 0.0), parser
+accepts int/float, `_apply_retry_backoff` unit sleeps
+`ms/1000`, no-op when ms <= 0, jitter keeps sleeps in
+`[base*(1-F), base*(1+F)]`, N-1 sleeps for N attempts,
+first-pass-no-sleep, no sleep after the final failed
+attempt, jitter uses `random.uniform` end-to-end, no sleep
+when `--retry-on-error` filter stops the loop, all four
+validation paths.
+
+**Decisions / trade-offs.**
+* Linear backoff, not exponential. Exponential is usually
+  overkill for eval regression suites where most retries
+  are single-digit; the jitter fraction adds the
+  randomness that prevents synchronized thundering-herd
+  retries. Exponential can come later if an operator needs
+  it; a linear floor is the 80% case.
+* Millisecond granularity. Operators benchmark rate limits
+  in "seconds per request"; ms lets them dial "retry after
+  500" without typing `0.5`. The seconds-in-sleep
+  conversion is internal.
+* Sleep BEFORE retry, not after the failed attempt. Both
+  positions are semantically equivalent except on the final
+  attempt — and "no sleep after final" is the right
+  behaviour (trailing sleep = pure cost, zero value). The
+  `if i > 0` guard is simpler than a "and i < budget-1"
+  trailing guard.
+* Module-level `_retry_sleep` seam rather than plumbing a
+  sleep fn through every layer. Only one place needs to
+  wait; exposing it as a rebindable module attribute keeps
+  tests ergonomic without polluting `run_cmd`'s signature.
+* Jitter uses the process-wide `random` module (not a
+  dedicated `Random()` instance). The existing `--seed S`
+  flag already bumps `random.seed`, so jitter becomes
+  deterministic under seeded runs — matches the Phase-3
+  §10 contract that "seeded runs are reproducible."
+* Rejecting `--retry-backoff > 0` without `--retry > 0` as
+  a CliError. A silent no-op would be friendlier but also
+  more confusing ("why isn't my backoff firing?"). Hard
+  errors on obvious misuse save an operator debugging hour.
+
+**Next suggested action:** `Extend Phase 5 §22 with a
+\`frok run --retry-report\` flag that writes a sibling JSON
+file (next to --summary-json) listing every case's retry
+timeline — a per-attempt record of [attempt_number,
+passed, error, sleep_before_ms] so CI can diff retry
+behaviour across runs. Catches "Tuesday's suite passed on
+attempt 4, today's is passing on attempt 6 across three
+cases" — a creeping flake signal the current report would
+miss because attempts still fit under the budget.`
+
 ## 2026-04-24 — Phase 5 §20: retry-on-error
 
 **Shipped** ``frok run --retry-on-error REGEX`` — an
