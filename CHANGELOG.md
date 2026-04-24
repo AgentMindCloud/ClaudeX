@@ -2,6 +2,16 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.23.0] — 2026-04-23
+### Added
+- `frok init --list-examples` — print the available `--example`
+  names with their one-line descriptions (parsed from each
+  template's module docstring) and exit without writing anything.
+  Output is alphabetically sorted, two-column, pipe-friendly.
+- `frok.cli.init.format_examples_list()` and
+  `frok.cli.init._example_summary(src)` helpers.
+- Tests: 12 new (parser, helper, CLI, no-I/O guarantees); 405 total.
+
 ## [0.22.0] — 2026-04-23
 ### Added
 - `frok init --example {tools,multimodal,memory}` (repeatable) —

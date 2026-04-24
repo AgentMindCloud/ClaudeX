@@ -75,6 +75,12 @@ builds on these three.
    `MemoryStore`-backed tools. Each example is self-contained, runs
    green under `frok run`, and includes a "production swap" note
    pointing at real transport/store choices. *Shipped 2026-04-23.*
+3. **init-list-examples** — `frok init --list-examples` prints a
+   sorted, two-column roster of available `--example` names +
+   one-line descriptions (parsed from each template's module
+   docstring via `ast.get_docstring`). Early-exits before any I/O;
+   short-circuits every other `init` flag.
+   *Shipped 2026-04-23.*
 
 ## Phase 3 — Wiring + operations
 1. **cli-runner** — `frok run <case-file>` entry point wiring

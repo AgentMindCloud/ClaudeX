@@ -18,6 +18,7 @@ operator can decide case-by-case.
 from __future__ import annotations
 
 import argparse
+import ast
 import sys
 from pathlib import Path
 
@@ -574,7 +575,33 @@ EXAMPLE_TEMPLATES: dict[str, str] = {
 }
 
 
+def _example_summary(source: str) -> str:
+    """Return the first line of the template's module docstring."""
+    try:
+        docstring = ast.get_docstring(ast.parse(source)) or ""
+    except SyntaxError:
+        return ""
+    return docstring.strip().split("\n", 1)[0].strip()
+
+
+def format_examples_list() -> str:
+    entries = sorted(
+        (name, _example_summary(src)) for name, src in EXAMPLE_TEMPLATES.items()
+    )
+    width = max((len(n) for n, _ in entries), default=0) + 2
+    return (
+        "\n".join(f"{name:<{width}}{summary}" for name, summary in entries)
+        + "\n"
+    )
+
+
 async def init_cmd(args: argparse.Namespace) -> int:
+    if args.list_examples:
+        # Preview-only: print available --example names + descriptions
+        # and exit. No files are written; other flags are ignored.
+        sys.stdout.write(format_examples_list())
+        return 0
+
     target: Path = args.path
 
     # Compose base templates + any requested --example flavors.
@@ -643,6 +670,14 @@ def register(sub: "argparse._SubParsersAction") -> None:
             "also scaffold a reference case for one of: "
             f"{sorted(EXAMPLE_TEMPLATES.keys())}. Repeatable. Each "
             "example is self-contained and runs green out of the box."
+        ),
+    )
+    init.add_argument(
+        "--list-examples",
+        action="store_true",
+        help=(
+            "print available --example names and their one-line "
+            "descriptions, then exit; no files are written"
         ),
     )
     init.set_defaults(fn=init_cmd)

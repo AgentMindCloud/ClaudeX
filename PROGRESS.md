@@ -2,6 +2,66 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 4 §3: init-list-examples
+
+**Shipped** ``frok init --list-examples`` — a discoverability flag
+that prints every available ``--example`` name alongside its
+one-line description, so operators can explore the scaffold
+catalog without reading the source. Mirrors the ``frok run
+--list`` pattern that already closes the "what am I about to run?"
+gap; this closes the "what could I scaffold?" gap.
+
+* **`_example_summary(src)`** (``frok/cli/init.py``) — parses a
+  template's module-level docstring via ``ast.get_docstring`` and
+  returns the first non-empty line. Syntax errors / missing
+  docstrings degrade to an empty string rather than raising — a
+  broken template shouldn't prevent `--list-examples` from
+  surfacing the names.
+* **`format_examples_list()`** — sorts the examples alphabetically,
+  computes a shared left-column width based on the longest name,
+  and returns a two-column text block terminated by a trailing
+  newline. Pipe-friendly out of the box (``frok init
+  --list-examples | cut -d' ' -f1`` gives just the names).
+* **CLI short-circuit** — ``--list-examples`` branches off at the
+  top of ``init_cmd`` before any existence check or directory
+  creation. ``--example`` / ``--force`` / ``path`` are ignored
+  when ``--list-examples`` is set; no files are ever written.
+
+**Verification.** `python3 -m pytest -q` → 405 passed in 1.18s (12
+new). Tests cover: argparse shape (default False + flag
+recognition), every example name appears in output, descriptions
+match each template's docstring first line, output is
+alphabetically sorted, `_example_summary` handles a syntax error
+and a docstring-less module gracefully, CLI output matches
+``format_examples_list()``, no files are written under any
+combination of flags, and an existing ``CLAUDE.md`` in the target
+directory is preserved verbatim (proves the short-circuit
+precedes every write path).
+
+**Decisions / trade-offs.**
+* ``ast.get_docstring`` rather than regex splicing. The templates
+  are real Python; parsing them is the right tool and costs
+  nothing at run time (this flag is rare).
+* Two-column text, no table-drawing chars or colors. Fits
+  anywhere (CI logs, terminals without unicode, files), and is
+  trivial to pipe through ``awk``/``cut``.
+* Alphabetical sort rather than insertion order. Stable + obvious
+  from the CLI output; operators don't have to guess the
+  canonical order.
+* ``--list-examples`` ignores the rest of the flags rather than
+  erroring on unknown combinations. A preview flag shouldn't be
+  strict about what else the operator typed — they're discovering
+  the space, not committing to an action.
+
+**Next suggested action:** `Extend Phase 4 with \`frok doctor\`:
+a preflight health check that loads the resolved config, attempts
+a tiny \`client.chat(...)\` through \`urllib_transport\` if
+\`client.api_key\` is set (otherwise skips), verifies
+\`MemoryStore\` can open + write to \`memory.path\` when
+\`memory.enabled\`, and reports a concise pass/fail per subsystem.
+Gives new users a definitive "your setup works" signal before
+their first real run.`
+
 ## 2026-04-23 — Phase 4 §2: init-examples
 
 **Shipped** ``frok init --example {tools,multimodal,memory}`` — a
