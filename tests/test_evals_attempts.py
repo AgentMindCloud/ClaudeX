@@ -33,9 +33,14 @@ def _result(
     *,
     passed: bool = True,
     attempts: int = 1,
+    retry_budget: int | None = None,
     repeats: int = 1,
     repeat: int = 0,
 ) -> EvalResult:
+    # Default budget tracks attempts so the ratio stays sane in direct
+    # construction tests; the CLI sets both explicitly.
+    if retry_budget is None:
+        retry_budget = max(attempts, 1)
     return EvalResult(
         case=name,
         passed=passed,
@@ -44,6 +49,7 @@ def _result(
         repeat=repeat,
         repeats=repeats,
         attempts=attempts,
+        retry_budget=retry_budget,
     )
 
 
@@ -109,18 +115,21 @@ def test_markdown_flat_omits_attempts_column_by_default():
 
 
 def test_markdown_flat_includes_attempts_column_when_retried():
+    # a: budget=3 never used (attempts=1); b: budget=3 exhausted-but-won.
     rep = EvalReport(
-        results=[_result("a", attempts=1), _result("b", attempts=3)]
+        results=[
+            _result("a", attempts=1, retry_budget=3),
+            _result("b", attempts=3, retry_budget=3),
+        ]
     )
     md = rep.to_markdown()
-    assert "Attempts" in md
-    assert "Retried cases: 1 (total attempts 4)" in md
-    # Row has the per-result attempts value.
+    assert "Attempts/Budget" in md
+    assert "Retried cases: 1 (used 4 of 6 attempts)" in md
+    # Row shows attempts/budget ratio per result.
     row_b = next(line for line in md.splitlines() if line.startswith("| b "))
-    # Fields: | b | PASS | 3 | tokens | ms | - |
     cells = [c.strip() for c in row_b.split("|")]
-    # cells[0]=='', cells[1]=='b', cells[2]=='PASS', cells[3]=='3', ...
-    assert cells[3] == "3"
+    # cells[0]=='', cells[1]=='b', cells[2]=='PASS', cells[3]=='3/3', ...
+    assert cells[3] == "3/3"
 
 
 # ---------------------------------------------------------------------------
@@ -141,21 +150,21 @@ def test_markdown_aggregated_omits_attempts_when_clean():
 
 
 def test_markdown_aggregated_includes_attempts_when_retried():
-    # Two repeats, second attempt=4 → aggregated form surfaces attempts.
+    # Two repeats, both with budget=4; first attempts=1, second attempts=4.
     rep = EvalReport(
         results=[
-            _result("a", repeat=0, repeats=2, attempts=1),
-            _result("a", repeat=1, repeats=2, attempts=4),
+            _result("a", repeat=0, repeats=2, attempts=1, retry_budget=4),
+            _result("a", repeat=1, repeats=2, attempts=4, retry_budget=4),
         ]
     )
     md = rep.to_markdown()
-    assert "Attempts" in md
-    assert "Retried cases: 1 (total attempts 5)" in md
-    # Per-case total attempts summed across repeats.
+    assert "Attempts/Budget" in md
+    assert "Retried cases: 1 (used 5 of 8 attempts)" in md
+    # Per-case totals summed across repeats: 5 attempts / 8 budget.
     row = next(line for line in md.splitlines() if line.startswith("| a "))
-    # Cells: | a | 100% | 2/2 | PASS | 5 | tokens | ms | failed |
+    # Cells: | a | 100% | 2/2 | PASS | 5/8 | tokens | ms | failed |
     cells = [c.strip() for c in row.split("|")]
-    assert cells[5] == "5"  # attempts column after verdict
+    assert cells[5] == "5/8"
 
 
 # ---------------------------------------------------------------------------
@@ -248,12 +257,15 @@ def test_cli_no_retry_leaves_attempts_at_one(tmp_path):
 
 
 def test_cli_retry_pass_first_attempts_one(tmp_path):
-    # --retry 3 but case passes on attempt 1 → attempts stays at 1.
+    # --retry 3 but case passes on attempt 1 → attempts stays at 1,
+    # but retry_budget surfaces as 4 (the CLI-allocated allowance).
     path = _flaky(tmp_path, ["ok"])
     data = _run(tmp_path, path, "--retry", "3")
-    # attempts field omitted when == 1.
-    assert data["cases"][0].get("attempts") is None
-    assert "total_attempts" not in data
+    assert data["cases"][0].get("attempts") is None  # omitted when 1
+    assert data["cases"][0]["retry_budget"] == 4
+    assert data["total_attempts"] == 1
+    assert data["total_budget"] == 4
+    assert data["retried_cases"] == 0
 
 
 def test_cli_retry_fail_then_succeed_records_attempts(tmp_path):

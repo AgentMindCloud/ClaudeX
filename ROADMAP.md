@@ -197,6 +197,16 @@ builds on these three.
     handful of cases depend on flaky external services and
     a blanket `--retry` would mask real regressions
     elsewhere. *Shipped 2026-04-24.*
+19. **retry-budget** — `EvalResult.retry_budget` records
+    the attempt allowance allocated to each result; the
+    markdown report's Attempts column becomes
+    `Attempts/Budget` (e.g. "3/5") and the summary line
+    reads "used A of B attempts". Caught-it-late retries
+    still mask into PASS but surface as "used most of the
+    budget" — a softer flakiness signal than the binary
+    retried/not-retried flag. Summary grows `total_budget`
+    alongside `total_attempts` when any case was retry-
+    eligible. *Shipped 2026-04-24.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable

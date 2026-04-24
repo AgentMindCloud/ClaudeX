@@ -389,9 +389,14 @@ async def run_cmd(args: argparse.Namespace) -> int:
                     if err.startswith("TimeoutError"):
                         break
                 assert result is not None  # retry+1 >= 1
-                if attempt_count > 1:
+                # Stamp attempts + retry_budget onto the final result so
+                # the report can surface "used N of M attempts" even when
+                # retries successfully masked a flaky pass.
+                if attempt_count > 1 or budget > 1:
                     result = dataclasses.replace(
-                        result, attempts=attempt_count
+                        result,
+                        attempts=attempt_count,
+                        retry_budget=budget,
                     )
                 if sink is not None:
                     # Newline after the last delta so the report doesn't run

@@ -2,6 +2,95 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-24 — Phase 5 §19: retry-budget
+
+**Shipped** ``EvalResult.retry_budget`` — the attempt
+allowance the CLI allocated to each result, alongside the
+already-surfaced `attempts` count. The markdown Attempts
+column becomes `Attempts/Budget` (e.g. "3/5") and the
+summary line reads "used A of B attempts". Catches the
+scenario where `--retry` masks a caught-late flake into
+PASS: the binary retried/not-retried flag would have missed
+"used 4 of 5 attempts" as a flake signal.
+
+* **`EvalResult.retry_budget: int = 1`** — default keeps
+  existing library-level callers unchanged. `to_summary()`
+  emits the field when > 1, so passing runs without
+  `--retry` still produce the same summary shape.
+* **CLI plumbing** — the retry loop now stamps both
+  `attempts` and `retry_budget` onto the final result via
+  `dataclasses.replace`. Budget is `args.retry + 1` for
+  retry-eligible cases and `1` for cases that
+  `--retry-on PATTERN` excluded. The stamp happens whenever
+  either `attempt_count > 1` or `budget > 1`, so budget-
+  allocated-but-unused cases are captured too.
+* **Report surfacing** — both flat and aggregated markdown
+  trigger the Attempts/Budget column on
+  `_has_retries or _has_retry_budget`. The summary line
+  "Retried cases: K (used A of B attempts)" replaces the
+  old "total attempts N" phrasing. `EvalReport.total_budget`
+  is a new computed property; `to_summary()` gains
+  `total_budget` alongside `total_attempts` and
+  `retried_cases` when any result was retry-eligible.
+* **Aggregated sums** — when `--repeat N --retry M` compose,
+  both fields sum across a case's repeats. A case with
+  `attempts=[1,4]` and `budget=[4,4]` across two repeats
+  shows "5/8" in the aggregated row — used 5 of 8 allocated
+  attempts, making a caught-late pattern visible even
+  without dropping into per-repeat detail.
+
+**Verification.** `python3 -m pytest -q` → 685 passed in 2.38s
+(12 new + 3 existing updated for the new surfacing). Tests
+cover: field default = 1, summary omit/include gating,
+report `_has_retry_budget`/`total_budget` properties,
+summary surfaces budget when allocated-but-unused, flat
+markdown shows `N/M` per row + summary phrasing, aggregated
+markdown sums across repeats, CLI stamps `retry+1` on
+matched cases and `1` on `--retry-on`-excluded cases, end-
+to-end markdown shows "2/3" / "1/3" for retried / untouched
+cases.
+
+**Decisions / trade-offs.**
+* Budget surfaces even when unused. The operator allocated
+  it — showing "used 1 of 5 attempts" surfaces that the
+  retry budget is much larger than needed, which is itself
+  a cost signal. Hiding it would have lost that.
+* Changed the gating from `_has_retries` to
+  `_has_retries or _has_retry_budget`. Three existing tests
+  needed updating (two directly-constructed `EvalResult`
+  tests that set `attempts=3` without matching budget, and
+  one CLI pass-first test that asserted a clean summary
+  under `--retry 3`). The per-test updates make the budget
+  semantic explicit.
+* Column format is `attempts/budget`, not two separate
+  columns. Keeps the aggregated markdown readable on narrow
+  terminals; the slash format is the universal "X of Y"
+  shorthand.
+* Budget stamping happens whenever `attempt_count > 1 or
+  budget > 1`, not just when retries happened. Allocated-
+  but-unused budget still signals operator intent and
+  shouldn't silently collapse to the default.
+* Kept the summary line "Retried cases: K" as the headline
+  number rather than "Budget-allocated cases: K". The
+  former is what operators scan for; the budget is context
+  for the count.
+* No warning when a case consistently uses 0 of N
+  allocated retries. That would cross into advice-giving
+  territory and is better left to the operator (or a
+  follow-up §20 lint pass that scans reports for "budget
+  never used" patterns).
+
+**Next suggested action:** `Extend Phase 5 §20 with a
+\`frok run --retry-on-error REGEX\` flag that narrows the
+retry loop to failures whose observation.error matches
+REGEX — complementing --retry-on (case-name selection) with
+error-shape selection. Useful for "retry only on 429 /
+connection-reset / timeout-on-network-call" without
+retrying AssertionError-style scorer failures, which are
+almost always real regressions. Combines cleanly:
+--retry-on cases AND --retry-on-error REGEX means both
+gates must match for a retry to be eligible.`
+
 ## 2026-04-24 — Phase 5 §18: retry-on-pattern
 
 **Shipped** ``frok run --retry-on PATTERN`` — a case-name

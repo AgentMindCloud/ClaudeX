@@ -130,6 +130,13 @@ class EvalResult:
     # case (see `frok run --retry N`). Surfaced so flaky cases stay
     # visible in the verdict doc even when retries masked the failure.
     attempts: int = 1
+    # Total attempts the retry loop was permitted to spend on this
+    # result, i.e. ``args.retry + 1`` when the case was eligible for
+    # retries, else 1. Combined with ``attempts``, this gives an
+    # "attempts / budget" ratio — a softer flake signal than the
+    # binary retried/not-retried flag ("3/5" means we caught it on
+    # attempt 3 out of 5 allowed).
+    retry_budget: int = 1
 
     @property
     def failed_scores(self) -> list[Score]:
@@ -150,6 +157,8 @@ class EvalResult:
             out["repeats"] = self.repeats
         if self.attempts > 1:
             out["attempts"] = self.attempts
+        if self.retry_budget > 1:
+            out["retry_budget"] = self.retry_budget
         return out
 
 
@@ -214,8 +223,17 @@ class EvalReport:
         return any(r.attempts > 1 for r in self.results)
 
     @property
+    def _has_retry_budget(self) -> bool:
+        """True when any result was allocated a retry budget > 1."""
+        return any(r.retry_budget > 1 for r in self.results)
+
+    @property
     def total_attempts(self) -> int:
         return sum(r.attempts for r in self.results)
+
+    @property
+    def total_budget(self) -> int:
+        return sum(r.retry_budget for r in self.results)
 
     @property
     def retried_cases(self) -> int:
@@ -241,9 +259,10 @@ class EvalReport:
             out["failed_cases"] = self.failed_cases
             out["flaky_cases"] = self.flaky_cases
             out["case_pass_rates"] = self.case_pass_rates
-        if self._has_retries:
+        if self._has_retries or self._has_retry_budget:
             out["total_attempts"] = self.total_attempts
             out["retried_cases"] = self.retried_cases
+            out["total_budget"] = self.total_budget
         return out
 
     def to_markdown(self) -> str:
@@ -252,7 +271,7 @@ class EvalReport:
         return self._to_markdown_aggregated()
 
     def _to_markdown_flat(self) -> str:
-        show_attempts = self._has_retries
+        show_attempts = self._has_retries or self._has_retry_budget
         lines = [
             "# Frok Eval Report",
             "",
@@ -264,15 +283,18 @@ class EvalReport:
         if show_attempts:
             lines.append(
                 f"- Retried cases: {self.retried_cases} "
-                f"(total attempts {self.total_attempts})"
+                f"(used {self.total_attempts} of {self.total_budget} "
+                f"attempts)"
             )
         lines.append("")
         if show_attempts:
             lines.append(
-                "| Case | Result | Attempts | Tokens | ms | Failed scorers |"
+                "| Case | Result | Attempts/Budget | Tokens | ms | "
+                "Failed scorers |"
             )
             lines.append(
-                "|------|--------|---------:|-------:|---:|----------------|"
+                "|------|--------|-----------------|-------:|---:|"
+                "----------------|"
             )
         else:
             lines.append("| Case | Result | Tokens | ms | Failed scorers |")
@@ -282,8 +304,8 @@ class EvalReport:
             failed = ", ".join(s.name for s in r.failed_scores) or "-"
             if show_attempts:
                 lines.append(
-                    f"| {r.case} | {status} | {r.attempts} | "
-                    f"{r.observation.total_tokens} | "
+                    f"| {r.case} | {status} | {r.attempts}/{r.retry_budget} "
+                    f"| {r.observation.total_tokens} | "
                     f"{r.observation.total_latency_ms:.1f} | {failed} |"
                 )
             else:
@@ -308,7 +330,7 @@ class EvalReport:
 
     def _to_markdown_aggregated(self) -> str:
         rates = self.case_pass_rates
-        show_attempts = self._has_retries
+        show_attempts = self._has_retries or self._has_retry_budget
         lines = [
             "# Frok Eval Report",
             "",
@@ -323,17 +345,18 @@ class EvalReport:
         if show_attempts:
             lines.append(
                 f"- Retried cases: {self.retried_cases} "
-                f"(total attempts {self.total_attempts})"
+                f"(used {self.total_attempts} of {self.total_budget} "
+                f"attempts)"
             )
         lines.append("")
         if show_attempts:
             lines.append(
-                "| Case | Pass rate | Passed | Result | Attempts | Tokens | "
-                "ms | Failed scorers |"
+                "| Case | Pass rate | Passed | Result | Attempts/Budget | "
+                "Tokens | ms | Failed scorers |"
             )
             lines.append(
-                "|------|----------:|-------:|--------|---------:|-------:|"
-                "---:|----------------|"
+                "|------|----------:|-------:|--------|-----------------|"
+                "-------:|---:|----------------|"
             )
         else:
             lines.append(
@@ -361,11 +384,12 @@ class EvalReport:
             tokens = sum(r.observation.total_tokens for r in results)
             ms = sum(r.observation.total_latency_ms for r in results)
             attempts_total = sum(r.attempts for r in results)
+            budget_total = sum(r.retry_budget for r in results)
             if show_attempts:
                 lines.append(
                     f"| {name} | {rate * 100:.0f}% | {passed}/{total} | "
-                    f"{verdict} | {attempts_total} | {tokens} | {ms:.1f} | "
-                    f"{failed} |"
+                    f"{verdict} | {attempts_total}/{budget_total} | "
+                    f"{tokens} | {ms:.1f} | {failed} |"
                 )
             else:
                 lines.append(

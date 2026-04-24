@@ -2,6 +2,31 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.45.0] — 2026-04-24
+### Added
+- `EvalResult.retry_budget: int = 1` — the retry allowance
+  the CLI allocated to each result. `to_summary()` emits
+  the field when > 1; CLI retry loop stamps both `attempts`
+  and `retry_budget` via `dataclasses.replace`.
+- `EvalReport.total_budget` computed property; summary
+  grows `total_budget` when any result was retry-eligible.
+- Markdown Attempts column becomes `Attempts/Budget` (e.g.
+  "3/5") on both flat and aggregated forms. Summary line
+  reads "Retried cases: K (used A of B attempts)".
+  Aggregated form sums attempts and budget across a case's
+  repeats.
+- Tests: 12 new (field default, summary gating, report
+  properties, flat + aggregated markdown ratio format, CLI
+  stamps budget=retry+1 on matches and 1 on `--retry-on`-
+  excluded cases, end-to-end markdown); 685 total.
+
+### Changed
+- `EvalReport.to_markdown()` Attempts column trigger widened
+  from `_has_retries` to `_has_retries or
+  _has_retry_budget` so allocated-but-unused budgets still
+  surface. Three existing tests updated to reflect the new
+  surfacing.
+
 ## [0.44.0] — 2026-04-24
 ### Added
 - `frok run --retry-on PATTERN` — narrows `--retry`'s
