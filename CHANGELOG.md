@@ -2,6 +2,22 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.22.0] — 2026-04-23
+### Added
+- `frok init --example {tools,multimodal,memory}` (repeatable) —
+  scaffold a reference case file for each named flavor alongside
+  the basic smoke scaffold. Each example is self-contained, uses
+  a stub transport, and runs green under `frok run`:
+  * `cases/tools.py` — `@tool` + ToolOrchestrator loop
+  * `cases/multimodal.py` — `GrokMessage.parts` with `ImageRef`
+  * `cases/memory.py` — `MemoryStore` exposed as `remember` /
+    `recall` tools
+- `frok.cli.init.EXAMPLE_TEMPLATES` dict; unknown example names
+  rejected by argparse.
+- Tests: 16 new (parser, scaffold composition, each example
+  running green, tool + multimodal + memory behaviour checks);
+  393 total.
+
 ## [0.21.0] — 2026-04-23
 ### Added
 - `frok init [PATH] [--force]` — scaffold a new Frok project.

@@ -69,6 +69,12 @@ builds on these three.
    api_key), and `.github/workflows/frok.yml` demoing the
    capture/diff loop. Aborts if any target exists unless `--force`.
    *Shipped 2026-04-23.*
+2. **init-examples** — `frok init --example {tools,multimodal,memory}`
+   (repeatable) adds dedicated case files demonstrating
+   `ToolOrchestrator`, `MultimodalAdapter` (ImageRef + parts), and
+   `MemoryStore`-backed tools. Each example is self-contained, runs
+   green under `frok run`, and includes a "production swap" note
+   pointing at real transport/store choices. *Shipped 2026-04-23.*
 
 ## Phase 3 — Wiring + operations
 1. **cli-runner** — `frok run <case-file>` entry point wiring

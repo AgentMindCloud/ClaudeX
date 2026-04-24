@@ -228,9 +228,361 @@ TEMPLATES: dict[str, str] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# --example flavors
+# ---------------------------------------------------------------------------
+_TOOLS_CASE = '''"""Example tool-use case.
+
+Shows how to expose a typed Python function as a Grok tool via
+``frok.tools``, let the orchestrator drive the model ->
+tool-call -> result loop, and assert on tool behavior with
+``ToolCalled``. The stub transport emits exactly the two responses
+the loop needs: one tool_call, then the final answer.
+"""
+
+import json
+from dataclasses import dataclass, field
+
+from frok.clients import GrokClient, GrokMessage
+from frok.evals import AnswerContains, EvalCase, NoErrors, ToolCalled
+from frok.telemetry import Tracer
+from frok.tools import tool
+
+
+@dataclass
+class _StubTransport:
+    responses: list
+    calls: list = field(default_factory=list)
+
+    async def __call__(self, *, method, url, headers, body, timeout):
+        self.calls.append(json.loads(body.decode("utf-8")))
+        status, payload = self.responses.pop(0)
+        return status, {}, json.dumps(payload).encode("utf-8")
+
+
+async def _noop_sleep(_s):
+    return None
+
+
+def _tool_call(name, args, *, call_id):
+    return (
+        200,
+        {
+            "model": "grok-4",
+            "choices": [
+                {
+                    "message": {
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [
+                            {
+                                "id": call_id,
+                                "type": "function",
+                                "function": {
+                                    "name": name,
+                                    "arguments": json.dumps(args),
+                                },
+                            }
+                        ],
+                    },
+                    "finish_reason": "tool_calls",
+                }
+            ],
+            "usage": {"prompt_tokens": 5, "completion_tokens": 2},
+        },
+    )
+
+
+def _final(text):
+    return (
+        200,
+        {
+            "model": "grok-4",
+            "choices": [
+                {
+                    "message": {"role": "assistant", "content": text},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 3},
+        },
+    )
+
+
+@tool
+def add(a: int, b: int) -> int:
+    """Return a + b."""
+    return a + b
+
+
+def make_client(config, sink):
+    return GrokClient(
+        api_key="stub",
+        transport=_StubTransport(
+            [
+                _tool_call("add", {"a": 2, "b": 40}, call_id="c1"),
+                _final("The answer is 42."),
+            ]
+        ),
+        sleep=_noop_sleep,
+        tracer=Tracer(sink=sink),
+    )
+
+
+CASES = [
+    EvalCase(
+        name="tools-arithmetic",
+        messages=[GrokMessage("user", "what is 2 + 40?")],
+        tools=[add],
+        scorers=[
+            AnswerContains("42"),
+            ToolCalled("add", times=1),
+            NoErrors(),
+        ],
+    ),
+]
+'''
+
+
+_MULTIMODAL_CASE = '''"""Example multimodal case.
+
+Shows how to send a mixed text + image message via the
+``GrokMessage.parts`` field. Uses ``ImageRef`` to build the
+OpenAI-compatible image content part and a stub transport to return
+a canned description, so the case runs without real vision creds.
+
+Production swap: drop the stub and use
+``frok.clients.transports.urllib_transport`` + ``FROK_CLIENT_API_KEY``.
+"""
+
+import json
+from dataclasses import dataclass, field
+
+from frok.clients import GrokClient, GrokMessage
+from frok.evals import AnswerContains, EvalCase, NoErrors
+from frok.multimodal import ImageRef
+from frok.telemetry import Tracer
+
+
+@dataclass
+class _StubTransport:
+    responses: list
+    calls: list = field(default_factory=list)
+
+    async def __call__(self, *, method, url, headers, body, timeout):
+        self.calls.append(json.loads(body.decode("utf-8")))
+        status, payload = self.responses.pop(0)
+        return status, {}, json.dumps(payload).encode("utf-8")
+
+
+async def _noop_sleep(_s):
+    return None
+
+
+def _final(text):
+    return (
+        200,
+        {
+            "model": "grok-4-vision",
+            "choices": [
+                {
+                    "message": {"role": "assistant", "content": text},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 50, "completion_tokens": 10},
+        },
+    )
+
+
+def make_client(config, sink):
+    return GrokClient(
+        api_key="stub",
+        transport=_StubTransport(
+            [_final("A small PNG image, roughly 4 bytes of sample data.")]
+        ),
+        sleep=_noop_sleep,
+        tracer=Tracer(sink=sink),
+    )
+
+
+# Tiny sample blob standing in for an actual image. In production use
+# `ImageRef.from_path("/real/file.png")` or `ImageRef.from_url("https://...")`.
+_IMAGE = ImageRef.from_bytes(b"\\x89PNG", mime="image/png")
+
+
+CASES = [
+    EvalCase(
+        name="multimodal-describe-image",
+        messages=[
+            GrokMessage(
+                role="user",
+                content="",
+                parts=(
+                    {"type": "text", "text": "Describe this image."},
+                    _IMAGE.to_content_part(),
+                ),
+            ),
+        ],
+        scorers=[AnswerContains("image"), NoErrors()],
+    ),
+]
+'''
+
+
+_MEMORY_CASE = '''"""Example persistent-memory case.
+
+Shows how to expose ``MemoryStore`` read/write as typed tools so
+Grok can stash a fact and recall it later. Uses an in-process
+(``:memory:``) SQLite store so the case is hermetic.
+
+Production swap: point the store at a file path
+(e.g. ``./frok-memory.db``) and share it across runs for durable
+recall.
+"""
+
+import json
+from dataclasses import dataclass, field
+
+from frok.clients import GrokClient, GrokMessage
+from frok.evals import AnswerContains, EvalCase, NoErrors, ToolCalled
+from frok.memory import HashEmbedder, MemoryStore
+from frok.telemetry import Tracer
+from frok.tools import tool
+
+
+@dataclass
+class _StubTransport:
+    responses: list
+    calls: list = field(default_factory=list)
+
+    async def __call__(self, *, method, url, headers, body, timeout):
+        self.calls.append(json.loads(body.decode("utf-8")))
+        status, payload = self.responses.pop(0)
+        return status, {}, json.dumps(payload).encode("utf-8")
+
+
+async def _noop_sleep(_s):
+    return None
+
+
+def _tool_call(name, args, *, call_id):
+    return (
+        200,
+        {
+            "model": "grok-4",
+            "choices": [
+                {
+                    "message": {
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [
+                            {
+                                "id": call_id,
+                                "type": "function",
+                                "function": {
+                                    "name": name,
+                                    "arguments": json.dumps(args),
+                                },
+                            }
+                        ],
+                    },
+                    "finish_reason": "tool_calls",
+                }
+            ],
+            "usage": {"prompt_tokens": 5, "completion_tokens": 2},
+        },
+    )
+
+
+def _final(text):
+    return (
+        200,
+        {
+            "model": "grok-4",
+            "choices": [
+                {
+                    "message": {"role": "assistant", "content": text},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 3},
+        },
+    )
+
+
+# One shared store for the whole case so both tools see the same rows.
+_STORE = MemoryStore(":memory:", HashEmbedder(dim=64))
+
+
+@tool
+async def remember(text: str) -> str:
+    """Store a fact for later recall."""
+    record = await _STORE.remember(text)
+    return f"stored (id={record.id})"
+
+
+@tool
+async def recall(query: str, k: int = 3) -> str:
+    """Retrieve facts similar to the query."""
+    hits = await _STORE.recall(query, k=k)
+    return "; ".join(h.content for h in hits) or "(no recall)"
+
+
+def make_client(config, sink):
+    return GrokClient(
+        api_key="stub",
+        transport=_StubTransport(
+            [
+                _tool_call(
+                    "remember", {"text": "Grok seeks truth"}, call_id="c1"
+                ),
+                _tool_call("recall", {"query": "Grok truth"}, call_id="c2"),
+                _final("Grok seeks truth — recalled from memory."),
+            ]
+        ),
+        sleep=_noop_sleep,
+        tracer=Tracer(sink=sink),
+    )
+
+
+CASES = [
+    EvalCase(
+        name="memory-stash-and-recall",
+        messages=[
+            GrokMessage(
+                "user",
+                "Remember 'Grok seeks truth', then recall it to confirm.",
+            )
+        ],
+        tools=[remember, recall],
+        scorers=[
+            ToolCalled("remember", times=1),
+            ToolCalled("recall", times=1),
+            AnswerContains("truth"),
+            NoErrors(),
+        ],
+    ),
+]
+'''
+
+
+EXAMPLE_TEMPLATES: dict[str, str] = {
+    "tools": _TOOLS_CASE,
+    "multimodal": _MULTIMODAL_CASE,
+    "memory": _MEMORY_CASE,
+}
+
+
 async def init_cmd(args: argparse.Namespace) -> int:
     target: Path = args.path
-    existing = [rel for rel in TEMPLATES if (target / rel).exists()]
+
+    # Compose base templates + any requested --example flavors.
+    templates = dict(TEMPLATES)
+    for name in args.example or ():
+        templates[f"cases/{name}.py"] = EXAMPLE_TEMPLATES[name]
+
+    existing = [rel for rel in templates if (target / rel).exists()]
     if existing and not args.force:
         raise CliError(
             f"{len(existing)} file(s) already exist at {target} "
@@ -239,7 +591,7 @@ async def init_cmd(args: argparse.Namespace) -> int:
 
     target.mkdir(parents=True, exist_ok=True)
     written: list[str] = []
-    for rel, content in TEMPLATES.items():
+    for rel, content in templates.items():
         dest = target / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(content, encoding="utf-8")
@@ -280,5 +632,17 @@ def register(sub: "argparse._SubParsersAction") -> None:
         "--force",
         action="store_true",
         help="overwrite existing files",
+    )
+    init.add_argument(
+        "--example",
+        action="append",
+        choices=sorted(EXAMPLE_TEMPLATES.keys()),
+        default=[],
+        metavar="NAME",
+        help=(
+            "also scaffold a reference case for one of: "
+            f"{sorted(EXAMPLE_TEMPLATES.keys())}. Repeatable. Each "
+            "example is self-contained and runs green out of the box."
+        ),
     )
     init.set_defaults(fn=init_cmd)

@@ -2,6 +2,80 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 4 §2: init-examples
+
+**Shipped** ``frok init --example {tools,multimodal,memory}`` — a
+repeatable flag that adds working reference cases alongside the
+basic smoke scaffold. Each example runs green out of the box,
+demonstrates one major Phase-2 surface, and carries a "production
+swap" docstring pointing at the real transport/store choices.
+
+* **`cases/tools.py`** — `@tool def add(a,b)` + a stub transport
+  scripted for one tool call + one final answer; scorers:
+  `AnswerContains("42")`, `ToolCalled("add", times=1)`,
+  `NoErrors()`. Proves the ToolOrchestrator drives the loop
+  end-to-end.
+* **`cases/multimodal.py`** — a `GrokMessage` with `parts=(text,
+  image_url)` built via `ImageRef.from_bytes(...).to_content_part()`
+  and a stub that returns a canned description. The case runs
+  without vision creds and shows the exact wire shape Grok
+  expects for image messages.
+* **`cases/memory.py`** — shared ``MemoryStore(":memory:",
+  HashEmbedder(dim=64))`` exposed as two typed tools
+  (``remember(text)``, ``recall(query, k)``). Stub scripts a
+  remember → recall → final-answer sequence; ToolCalled + answer
+  scorers confirm the model exercised both paths. Demonstrates
+  the typical "memory as tools" pattern.
+* **CLI wiring** — `--example NAME` is an `action="append"` with
+  `choices=sorted(EXAMPLE_TEMPLATES)`. Unknown values are
+  rejected by argparse before any I/O. `init_cmd` composes
+  `TEMPLATES | {f"cases/{n}.py": EXAMPLE_TEMPLATES[n]}` so every
+  existence check and ``--force`` guarantee from §1 applies to
+  the example files too.
+
+**Verification.** `python3 -m pytest -q` → 393 passed in 1.20s (16
+new). Tests cover: argparse accepting known names and rejecting
+unknown ones, default `--example` list is empty, no-flag scaffold
+matches §1 exactly, each of the three examples scaffolds its
+file, multi-flag composition, existence-abort on a pre-existing
+example file, ``--force`` overwrite, each example running green
+under ``frok run --fail-on-regression`` (parametrized over all
+three), a tools-specific check that `ToolCalled` actually passed
+(proves the orchestrator fired), a multimodal check that the
+content parts hit the wire via direct import + runner, and a
+memory check that both `remember` and `recall` were invoked.
+
+**Decisions / trade-offs.**
+* Examples live as template constants in `frok/cli/init.py`
+  alongside the base templates — same zero-ceremony pattern from
+  §1. Edits are Python commits.
+* Each example uses a stub transport rather than
+  ``urllib_transport``. The docstring calls out the swap; green
+  runs out of the box matter more than "realistic" network
+  behaviour.
+* Memory example uses `:memory:` SQLite + a module-level shared
+  store. The state survives the whole (case, run) and dies when
+  the module is GCed. Production users swap to a file path;
+  that's one line.
+* Multimodal example builds parts directly in the `GrokMessage`
+  rather than spinning up a `MultimodalAdapter`. The adapter is
+  showcased implicitly via `ImageRef.to_content_part()`; going
+  through the adapter would have required its own chat
+  invocation wrapper, which doesn't map cleanly to an
+  `EvalCase`. The example's docstring points at the adapter for
+  production use.
+* ``--example`` uses argparse `choices=` for validation rather
+  than a post-hoc `CliError`. Tightens the bad-input path with
+  less code.
+
+**Next suggested action:** `Extend Phase 4 with \`frok init
+--list-examples\`: print the available \`--example\` names along
+with each one's docstring first line, so operators can
+discover what's available without reading the source. Closes
+the "what examples do I have?" discoverability gap parallel to
+\`frok run --list\` closing the "what cases am I about to run?"
+gap.`
+
 ## 2026-04-23 — Phase 4 §1: init-scaffold
 
 **Shipped** ``frok init [PATH]`` — the onboarding command that
