@@ -250,6 +250,18 @@ builds on these three.
     gates CI; `--json` emits structured output;
     `--a-label` / `--b-label` rename the columns in
     markdown. *Shipped 2026-04-24.*
+24. **retry-summarize** — `frok retry summarize DIR`
+    walks `DIR/*.json` retry-reports (lexicographic
+    filename ordering — `YYYY-MM-DD.json` sorts
+    chronologically for free), matches entries by
+    `(case, repeat)`, and classifies each case's attempt
+    trend: `flat` / `growing` (monotonic non-decreasing
+    with at least one rise) / `shrinking` / `mixed`
+    (real flake). Cases missing from early reports show
+    `None` slots. `--fail-on-growing` gates CI on the
+    creeping-flake pattern; `--json` emits structured
+    output. Complements §23's pairwise diff with a
+    longitudinal view. *Shipped 2026-04-24.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable

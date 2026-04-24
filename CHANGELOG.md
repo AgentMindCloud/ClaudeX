@@ -2,6 +2,27 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.50.0] — 2026-04-24
+### Added
+- `frok retry summarize DIR` — new CLI subcommand that
+  walks `DIR/*.json` retry-reports (lexicographic
+  filename ordering), matches `(case, repeat)` entries
+  across reports, and classifies each case's attempt
+  trend as `flat` / `growing` / `shrinking` / `mixed`.
+  Spotlights `Growing` and `Mixed` cases in dedicated
+  markdown sections. Flags: `-o OUT`, `--json`,
+  `--fail-on-growing`.
+- `frok.evals.summarize_retry_reports(directory)` and
+  `frok.evals.retry_summary_to_markdown(summary)` —
+  new public API.
+- `frok` root parser epilog entry for `retry summarize`.
+- Tests: 29 new (17 module + 12 CLI): trend classifier
+  flat/growing/shrinking/mixed/single-value/nones-ignored,
+  late-arrival None slots, `(case, repeat)` distinct
+  keys, missing / non-dir / empty / malformed /
+  missing-cases errors, `--fail-on-growing` catches
+  growing only not mixed; 765 total.
+
 ## [0.49.0] — 2026-04-24
 ### Added
 - `frok retry diff A B` — new CLI subcommand that diffs

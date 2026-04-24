@@ -2,6 +2,103 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-24 — Phase 5 §24: retry-summarize
+
+**Shipped** ``frok retry summarize DIR`` — a longitudinal
+trend view across a directory of retry-reports. §23's
+pairwise diff catches point-in-time regressions; §24
+catches the slow creep that pairwise diffs miss —
+"attempts went 1 → 1 → 2 → 3 → 4 over two weeks" only
+becomes visible when you look at the whole series.
+
+* **Module** (`src/frok/evals/retry_summary.py`) — two
+  functions: `summarize_retry_reports(directory)` and
+  `retry_summary_to_markdown(summary)`. Directory walk
+  uses lexicographic filename ordering, so the
+  convention `YYYY-MM-DD.json` sorts chronologically for
+  free without operators having to pass `--sort-by`.
+* **Trend classifier** — per case, across the attempt
+  series: `flat` (all equal), `growing` (monotonic non-
+  decreasing with at least one rise), `shrinking`
+  (monotonic non-increasing with at least one drop),
+  `mixed` (some ups, some downs — the real flake signal).
+  `None` entries (case didn't exist in that report) are
+  skipped during classification so late-arriving cases
+  aren't penalised by short histories.
+* **Markdown output** — summary counts, ordered report
+  list, full attempts matrix (case × report), plus
+  spotlight sections for `Growing` and `Mixed` cases
+  only. Flat and shrinking cases aren't broken out
+  separately — operators scanning for regressions want
+  the creep / flake rows front and centre.
+* **CLI** (`src/frok/cli/retry.py`) — new `summarize`
+  sub-subcommand under `retry`:
+  `frok retry summarize DIR [-o OUT] [--json]
+  [--fail-on-growing]`. The gate flag only catches
+  `growing` (not `mixed`) because `mixed` trend is
+  already flagged as a regression by §23's pairwise
+  diff; a CI that gates on both flags gets clean
+  layering: diff flags real-time flake, summarize flags
+  slow creep.
+* **Error handling** — missing directory, non-directory,
+  empty directory, malformed report, or payload
+  missing `cases` all surface as `CliError`. Matches
+  the §23 behaviour so operators see consistent
+  failure messages across the retry subcommand group.
+
+**Verification.** `python3 -m pytest -q` → 765 passed in 2.89s
+(29 new: 17 module + 12 CLI). Module tests cover: trend
+classifier for flat/growing/shrinking/mixed/single-value/
+nones-ignored, three-report growing, flat, mixed, case
+late arrival (None slots), `(case, repeat)` tuple
+matching (repeats tracked independently), missing dir /
+non-dir / empty dir / malformed report / missing-cases
+errors, markdown matrix + spotlight sections. CLI tests
+cover: parser registration, markdown write, `--json`
+structured output, `--fail-on-growing` returns 1 on
+growing and 0 on mixed (correct gating), missing/empty/
+malformed/non-dir CliError paths.
+
+**Decisions / trade-offs.**
+* Lexicographic filename ordering, not modification
+  time. Operators producing retry-reports at predictable
+  cadences (daily CI) get YYYY-MM-DD naming for free;
+  mtime is unreliable under copies/restores. When
+  operators want a different order they can rename; the
+  rule is simple and discoverable.
+* `--fail-on-growing`, not `--fail-on-mixed`. Mixed
+  trends are real flake that §23's pairwise diff
+  already flags (any repeat that regressed is caught).
+  Growing is the creep signal that ONLY the series view
+  catches — hence the dedicated gate. Stacking both
+  flags in CI (`retry diff --fail-on-regression` +
+  `retry summarize --fail-on-growing`) gives full
+  coverage without overlap.
+* Missing entries recorded as `None`, not skipped. The
+  row-per-case layout needs alignment across reports so
+  operators can eyeball "case X was added on Tuesday".
+  Skipping would collapse columns and make the matrix
+  hard to read.
+* Markdown spotlights only `Growing` and `Mixed`. A
+  dedicated "Shrinking" section would celebrate
+  improvements but operators scanning for problems
+  don't need them called out — the trend column already
+  flags them. Less noise, more signal.
+* `.json` glob, not `**/*.json`. Nested retry-report
+  directories are a future concern (§25+: compare
+  CI-run series across branches). For now the flat
+  directory matches every existing operator workflow
+  (one dir per environment, day-stamped files).
+
+**Next suggested action:** `Extend Phase 5 §25 with a
+\`frok retry show PATH\` subcommand that pretty-prints a
+single retry-report JSON as markdown: per-case attempt
+tables with sleep timings, terminal verdicts, and
+retry-budget utilisation. Complements --retry-report
+(produces the JSON), retry diff (compares two), and
+retry summarize (series trend) with a single-report
+triage view — "what did this specific run do?".`
+
 ## 2026-04-24 — Phase 5 §23: retry-diff
 
 **Shipped** ``frok retry diff A B`` — a new CLI subcommand

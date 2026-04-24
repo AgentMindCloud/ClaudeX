@@ -17,6 +17,7 @@ from .case import (
     Scorer,
 )
 from .retry_diff import diff_retry_reports, retry_diff_to_markdown
+from .retry_summary import retry_summary_to_markdown, summarize_retry_reports
 from .runner import ClientFactory, EvalRunner
 from .scorers import (
     AnswerAbsent,
@@ -74,4 +75,6 @@ __all__ = [
     "directory_diff_to_json",
     "directory_diff_to_markdown",
     "retry_diff_to_markdown",
+    "retry_summary_to_markdown",
+    "summarize_retry_reports",
 ]

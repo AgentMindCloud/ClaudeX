@@ -13,7 +13,12 @@ import argparse
 import json
 from pathlib import Path
 
-from ..evals import diff_retry_reports, retry_diff_to_markdown
+from ..evals import (
+    diff_retry_reports,
+    retry_diff_to_markdown,
+    retry_summary_to_markdown,
+    summarize_retry_reports,
+)
 from .common import CliError
 
 
@@ -63,6 +68,30 @@ async def diff_cmd(args: argparse.Namespace) -> int:
         print(out)
 
     if args.fail_on_regression and diff["regressed"]:
+        return 1
+    return 0
+
+
+async def summarize_cmd(args: argparse.Namespace) -> int:
+    try:
+        summary = summarize_retry_reports(args.directory)
+    except FileNotFoundError as exc:
+        raise CliError(str(exc)) from exc
+    except ValueError as exc:
+        raise CliError(str(exc)) from exc
+
+    if args.json:
+        out = json.dumps(summary, indent=2, default=str)
+    else:
+        out = retry_summary_to_markdown(summary)
+
+    if args.output is not None:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(out, encoding="utf-8")
+    else:
+        print(out)
+
+    if args.fail_on_growing and summary["trend_counts"]["growing"] > 0:
         return 1
     return 0
 
@@ -125,3 +154,47 @@ def register(sub: "argparse._SubParsersAction") -> None:
         ),
     )
     diff.set_defaults(fn=diff_cmd)
+
+    summ = retry_sub.add_parser(
+        "summarize",
+        help="Walk a directory of retry-report JSONs and print a trend view.",
+        description=(
+            "Walk DIR/*.json (retry-reports; one per run, typically "
+            "YYYY-MM-DD.json), match (case, repeat) entries across "
+            "every report, and classify each case's attempt trend as "
+            "flat / growing / shrinking / mixed. Catches slow creeping "
+            "flake that pairwise diffs would miss — attempts going 1 "
+            "→ 1 → 2 → 3 → 4 over two weeks is only visible in the "
+            "full series."
+        ),
+    )
+    summ.add_argument(
+        "directory",
+        type=Path,
+        help=(
+            "directory of retry-report JSONs (lexicographic filename "
+            "ordering)"
+        ),
+    )
+    summ.add_argument(
+        "-o",
+        "--output",
+        type=Path,
+        help="write summary to this file instead of stdout",
+    )
+    summ.add_argument(
+        "--json",
+        action="store_true",
+        help="emit machine-readable JSON instead of Markdown",
+    )
+    summ.add_argument(
+        "--fail-on-growing",
+        action="store_true",
+        help=(
+            "exit non-zero when any case's attempt trend is 'growing' "
+            "across the series (monotonic non-decreasing with at least "
+            "one increase). Ignores 'mixed' — those are flake, which "
+            "the pairwise `retry diff` already flags as regressions."
+        ),
+    )
+    summ.set_defaults(fn=summarize_cmd)
