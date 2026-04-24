@@ -89,9 +89,9 @@ async def show_cmd(args: argparse.Namespace) -> int:
 
     if args.json:
         # Passthrough of the primary payload. --compare-to, --limit,
-        # --group-by-error, and --min-attempts are markdown-only
-        # enrichments; operators wanting structured pair diff should
-        # use `frok retry diff`.
+        # --group-by-error, --min-attempts, and --only-errors are
+        # markdown-only enrichments; operators wanting structured
+        # pair diff should use `frok retry diff`.
         out = json.dumps(payload, indent=2, default=str)
     else:
         out = format_retry_report(
@@ -102,6 +102,7 @@ async def show_cmd(args: argparse.Namespace) -> int:
             limit=args.limit,
             group_by_error=args.group_by_error,
             min_attempts=args.min_attempts,
+            only_errors=args.only_errors,
         )
 
     if args.output is not None:
@@ -343,6 +344,18 @@ def register(sub: "argparse._SubParsersAction") -> None:
             "and --limit. 'Only in previous' is not filtered (those "
             "attempt counts come from a different run). N must be "
             ">= 1; N=1 is a no-op. Markdown-only."
+        ),
+    )
+    show.add_argument(
+        "--only-errors",
+        action="store_true",
+        help=(
+            "show only cases that failed in the current run. Drops "
+            "every passing case (both Clean passes and retried-but-"
+            "passed) from the detail surface. Applies BEFORE every "
+            "other display filter (--min-attempts, --group-by-error, "
+            "--limit). 'Only in previous' is left untouched. The "
+            "'what's broken right now' triage view. Markdown-only."
         ),
     )
     show.set_defaults(fn=show_cmd)

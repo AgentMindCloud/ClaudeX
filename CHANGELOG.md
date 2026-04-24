@@ -2,6 +2,24 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.56.0] — 2026-04-24
+### Added
+- `frok retry show --only-errors` — show only cases
+  that failed in the current run. Drops both Clean
+  passes AND retried-but-passed cases. Applies BEFORE
+  every other display filter (`--min-attempts`,
+  `--group-by-error`, `--limit`). "Only in previous"
+  untouched. Indicator `_Showing failing cases only._`
+  always fires when the flag is set. Markdown-only.
+- `format_retry_report(..., only_errors=False)` — new
+  keyword-only param; default preserves §29 behaviour.
+- Tests: 12 new (8 format behaviour + 4 CLI):
+  drops Clean+retried-pass, default byte-identical,
+  indicator on all-pass, composes with
+  group_by_error/limit/min_attempts, Only-in-previous
+  untouched, summary unchanged, parser default,
+  end-to-end, --json passthrough; 847 total.
+
 ## [0.55.0] — 2026-04-24
 ### Added
 - `frok retry show --min-attempts N` — drops cases

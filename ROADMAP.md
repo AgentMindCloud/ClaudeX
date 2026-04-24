@@ -324,6 +324,19 @@ builds on these three.
     Markdown-only. Use case: "we allocated --retry 10
     but 45 of 50 cases passed first try — show me only
     the 5 that needed retries." *Shipped 2026-04-24.*
+30. **retry-show-only-errors** — `frok retry show
+    --only-errors` shows only cases that failed in the
+    current run. Drops both Clean passes AND retried-
+    but-passed cases from the detail surface. Applies
+    BEFORE every other display filter (`--min-attempts`
+    → `--group-by-error` → `--limit`) so downstream
+    clustering / truncation see only the failing
+    subset. "Only in previous" remains untouched —
+    same scope rule as `--min-attempts`. Indicator
+    fires whenever the flag is set, even on all-pass
+    suites where no cases got dropped. The "what's
+    broken right now" triage view. Markdown-only.
+    *Shipped 2026-04-24.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable

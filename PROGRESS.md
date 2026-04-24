@@ -2,6 +2,109 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-24 — Phase 5 §30: retry-show-only-errors
+
+**Shipped** ``frok retry show --only-errors`` — the
+"what's broken right now" triage view. Drops every
+passing case (both Clean passes AND retried-but-passed)
+from the detail surface, leaving only the current run's
+failures. The shortest path from "the suite ran" to
+"here are the cases that need attention".
+
+* **API extension** — `format_retry_report(...,
+  only_errors=False)`. When True, `retried_or_failed` is
+  filtered to `passed=False` cases only and
+  `clean_passes` is forced to empty. Defaults preserve
+  §29 behaviour exactly.
+* **Filter precedence** — `only_errors` runs FIRST in
+  the filter chain, before `min_attempts`, before
+  grouping, before limit truncation. Operators chaining
+  flags get a coherent pipeline: failures → ≥N attempts
+  → cluster → truncate.
+* **Indicator always fires** — `_Showing failing cases
+  only._` appears whenever the flag is set, even on
+  suites with zero failures. Same rationale as §29's
+  `--min-attempts` indicator: filter operators looking
+  at filtered output need to know the filter applied
+  even when the data happens to be all-pass.
+* **Summary unchanged** — top-level totals (Cases,
+  Passed, Failed, Retried cases, Attempts/Budget)
+  still reflect the FULL run. Display filters never
+  rewrite the truth bloc.
+* **"Only in previous" untouched** — same scope rule
+  as `--min-attempts` (§29). Vanished cases' verdicts
+  belong to a different run; filtering them by current-
+  run intent would cross-contaminate the diff signal.
+* **CLI** — single `--only-errors` boolean (no value,
+  no validation). `--json` ignores it (markdown-only,
+  same as the other display flags).
+* **Composition note** — combined with
+  `--group-by-error`, every group contains only
+  failing cases (clean clusters); combined with
+  `--limit`, the N truncation operates over the
+  filtered failure set; combined with
+  `--min-attempts N`, the filter chain is
+  `only_errors → min_attempts`, so "show only failing
+  cases that took ≥ 3 attempts" is one invocation.
+
+**Verification.** `python3 -m pytest -q` → 847 passed in 3.07s
+(12 new). Unit tests cover: only_errors drops Clean
+passes + retried-but-passed (keeps both single-attempt
+fail and retried-fail), default False is byte-identical
+to no-flag, indicator fires even with zero failures,
+composition with group_by_error (clusters only failing),
+composition with limit (truncates failing-only), filter
+chain ordering with min_attempts (only_errors first),
+Only-in-previous untouched under compare_to, summary
+reflects full run. CLI: parser default False, flag sets
+True, end-to-end markdown, --json passthrough.
+
+**Decisions / trade-offs.**
+* Strict interpretation of "only errors" — drops
+  retried-but-passed too, not just Clean passes. The
+  flag name promises "errors only"; keeping retried-
+  passes would have been more like "no-clean-passes".
+  Operators wanting context for cases that retried
+  successfully use `--min-attempts 2` instead.
+* Filter chain order: `only_errors → min_attempts →
+  group → limit`. Each filter narrows the surface;
+  later filters see the already-narrowed view. Running
+  in this order makes "only failing cases that
+  retried, grouped by error, top 3 clusters" a one-
+  liner with predictable behaviour.
+* No special CLI validation. The flag is a boolean —
+  argparse handles parsing. No "requires --retry > 0"
+  check because the filter is meaningful even on
+  zero-retry runs (showing only failing cases is
+  always a valid request).
+* Indicator regardless of whether anything got
+  dropped. Same reasoning as §29's `--min-attempts`:
+  silent no-op behaviour would let filtered views
+  masquerade as unfiltered, confusing operators
+  reading saved markdown reports without context.
+* Doesn't touch summary bloc. The flag's intent is
+  "give me a focused view"; the summary's intent is
+  "tell me the run's truth". Two cleanly-separated
+  contracts that compose without conflict.
+* "Only in previous" stays unfiltered. Vanished cases
+  carry signal regardless of their previous-run
+  verdict (a vanished pass might mean a test was
+  removed; a vanished fail might mean a fix landed).
+  Filtering by "current-run failure" would lose both
+  signals.
+
+**Next suggested action:** `Extend Phase 5 §31 with a
+\`frok retry show --sort-by KEY\` flag that overrides
+the default worst-first sort with operator-chosen
+keys: \`attempts\`, \`ratio\`, \`name\`, \`error\`,
+\`sleep\`. Useful when operators investigating a
+specific signal (e.g. "show me cases sorted by total
+backoff sleep — the ones costing me wall-clock time")
+want a different lens. Composes with --limit (sort
+THEN truncate) and --group-by-error (sort applies
+within groups). Default 'worst' preserves §27.
+Markdown-only.`
+
 ## 2026-04-24 — Phase 5 §29: retry-show-min-attempts
 
 **Shipped** ``frok retry show --min-attempts N`` — an

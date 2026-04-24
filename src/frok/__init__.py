@@ -1,3 +1,3 @@
 """Super AI Frok core primitives."""
 
-__version__ = "0.55.0"
+__version__ = "0.56.0"

@@ -69,6 +69,7 @@ def format_retry_report(
     limit: int | None = None,
     group_by_error: bool = False,
     min_attempts: int | None = None,
+    only_errors: bool = False,
 ) -> str:
     cases = payload.get("cases", [])
     total_attempts = sum(len(c.get("attempts") or []) for c in cases)
@@ -129,6 +130,20 @@ def format_retry_report(
         for c in cases
         if len(c.get("attempts") or []) == 1 and c.get("passed")
     ]
+
+    # `--only-errors` — drops every passing case (both Clean passes
+    # and retried-but-passed) so the detail surface contains only the
+    # current run's failures. Applies BEFORE `--min-attempts`,
+    # `--group-by-error`, and `--limit` so downstream filters /
+    # clustering / truncation see only the failing subset. Same scope
+    # rule as `--min-attempts`: "Only in previous" is untouched.
+    if only_errors:
+        retried_or_failed = [
+            c for c in retried_or_failed if not c.get("passed")
+        ]
+        clean_passes = []
+        lines.append("_Showing failing cases only._")
+        lines.append("")
 
     # `--min-attempts N` filter — drops any case whose attempt count is
     # below N from both detail buckets. Applies BEFORE grouping and
