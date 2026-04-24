@@ -14,7 +14,13 @@ import argparse
 import json
 from pathlib import Path
 
-from ..evals import diff_event_streams, diff_to_markdown
+from ..evals import (
+    diff_directories,
+    diff_event_streams,
+    diff_to_markdown,
+    directory_diff_to_json,
+    directory_diff_to_markdown,
+)
 from ..telemetry import (
     dir_summary_to_json,
     dir_summary_to_markdown,
@@ -64,13 +70,42 @@ async def diff_cmd(args: argparse.Namespace) -> int:
     return 0
 
 
+def _require_dir(path: Path, flag: str = "") -> None:
+    label = flag or "directory"
+    if not path.exists():
+        raise CliError(f"{label} not found: {path}")
+    if not path.is_dir():
+        raise CliError(f"not a directory ({label}): {path}")
+
+
 async def summarize_cmd(args: argparse.Namespace) -> int:
     directory: Path = args.directory
-    if not directory.exists():
-        raise CliError(f"directory not found: {directory}")
-    if not directory.is_dir():
-        raise CliError(f"not a directory: {directory}")
+    _require_dir(directory, "directory")
 
+    # Two-directory diff mode — short-circuits the single-dir path.
+    if args.diff_against is not None:
+        _require_dir(args.diff_against, "--diff-against")
+        try:
+            dd = diff_directories(directory, args.diff_against)
+        except Exception as exc:
+            raise CliError(f"cannot diff directories: {exc}") from exc
+
+        if args.json:
+            out = json.dumps(directory_diff_to_json(dd), indent=2, default=str)
+        else:
+            out = directory_diff_to_markdown(dd)
+
+        if args.output is not None:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(out, encoding="utf-8")
+        else:
+            print(out)
+
+        if args.fail_on_regression and dd.regressed:
+            return 1
+        return 0
+
+    # Single-directory summary path.
     try:
         summary = summarize_directory(directory)
     except Exception as exc:
@@ -175,6 +210,27 @@ def register(sub: "argparse._SubParsersAction") -> None:
     summ.add_argument(
         "--fail-on-errors",
         action="store_true",
-        help="exit non-zero when any capture contains an errored span",
+        help=(
+            "(single-dir mode) exit non-zero when any capture contains "
+            "an errored span"
+        ),
+    )
+    summ.add_argument(
+        "--diff-against",
+        type=Path,
+        metavar="DIR",
+        help=(
+            "switch to directory-diff mode: match `<slug>.jsonl` files "
+            "against DIR and surface per-case diffs + slugs that appear "
+            "in only one side"
+        ),
+    )
+    summ.add_argument(
+        "--fail-on-regression",
+        action="store_true",
+        help=(
+            "(diff mode) exit non-zero when any matched case regressed "
+            "or slug sets diverged"
+        ),
     )
     summ.set_defaults(fn=summarize_cmd)

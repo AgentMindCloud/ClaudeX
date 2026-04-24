@@ -2,6 +2,19 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.18.0] — 2026-04-23
+### Added
+- `frok eval summarize <A> --diff-against <B>` — walk two
+  `<slug>.jsonl` directories, diff each matched pair, flag slugs
+  that appear in only one side. Markdown or `--json`;
+  `--fail-on-regression` gates CI on tool-order divergence, new
+  errors, or slug drift.
+- `frok.evals.CaseDiff` + `DirectoryDiff` dataclasses;
+  `diff_directories(a, b)` walker;
+  `directory_diff_to_markdown` / `directory_diff_to_json`
+  renderers.
+- Tests: 19 new (library + CLI paths); 335 total.
+
 ## [0.17.0] — 2026-04-23
 ### Added
 - `frok eval summarize <DIR>` — walk a baseline directory, roll up

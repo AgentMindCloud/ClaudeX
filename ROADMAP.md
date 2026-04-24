@@ -103,5 +103,10 @@ builds on these three.
    heaviest tokens, most errors, errored tools, top tools).
    Markdown or JSON; `--fail-on-errors` for CI gates.
    *Shipped 2026-04-23.*
-9. *Sketch:* `frok serve` (long-running agent), distributed
-   inference, X-native production agents, alignment red-teaming.
+9. **eval-dirdiff** — `frok eval summarize <a> --diff-against <b>`
+   walks two capture directories, diffs each matched `<slug>.jsonl`
+   pair, and flags slugs that appear in only one side. Markdown or
+   JSON; `--fail-on-regression` gates CI on tool-order divergence,
+   new errors, or slug drift. *Shipped 2026-04-23.*
+10. *Sketch:* `frok serve` (long-running agent), distributed
+    inference, X-native production agents, alignment red-teaming.

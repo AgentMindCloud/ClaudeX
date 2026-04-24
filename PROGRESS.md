@@ -2,6 +2,75 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 3 §9: eval-dirdiff
+
+**Shipped** ``frok eval summarize <a> --diff-against <b>`` — the
+one-shot "did this PR regress any of my captured baselines?"
+command. Two directories of `<slug>.jsonl` captures, one report,
+CI-gateable.
+
+* **Library** (`frok/evals/baseline.py`)
+  * ``CaseDiff`` — one matched pair (name, a_path, b_path, and
+    the ``diff_event_streams`` payload). ``.regressed`` mirrors
+    the payload.
+  * ``DirectoryDiff`` — matched list + ``only_in_a`` /
+    ``only_in_b`` slug sets + ``regressed_cases`` +
+    ``regressed`` rollup. The rollup flips on either a matched-
+    case regression *or* slug divergence — operators opting into
+    ``--diff-against`` probably want to know about both.
+  * ``diff_directories(a, b)`` walks each side via `<dir>/*.jsonl`
+    (sorted, empty captures silently skipped) and diffs each
+    matched pair through the shared ``diff_event_streams`` core.
+  * ``directory_diff_to_markdown`` / ``_to_json`` renderers;
+    Markdown hides Only-in / Regression-details sections when
+    they'd be empty.
+* **CLI** (`frok/cli/eval.py`)
+  * `frok eval summarize <DIR>` gained ``--diff-against <DIR>``
+    that short-circuits the single-dir rollup into directory-
+    diff mode.
+  * Companion ``--fail-on-regression`` flag (distinct from the
+    existing ``--fail-on-errors`` which remains in single-dir
+    mode). Missing / not-a-directory `--diff-against` targets
+    raise ``CliError`` via a shared ``_require_dir`` helper.
+
+**Verification.** `python3 -m pytest -q` → 335 passed in 0.87s (19
+new). Library tests cover identical directories, added /
+removed slugs, tool-order regression, token-only delta not
+regressing, new-error regression, empty-capture skipping, missing-
+directory errors, Markdown section presence + hiding on clean
+diffs, and JSON round-trip. CLI tests cover argparse shape, clean
+exit-0 under ``--fail-on-regression``, tool-order divergence
+flipping exit to 1, slug divergence flagged in both JSON and
+Markdown, token-only delta staying clean, ``-o`` file write,
+missing / not-a-dir ``--diff-against`` errors, and — crucially —
+that the single-dir path still works unchanged when
+``--diff-against`` is absent.
+
+**Decisions / trade-offs.**
+* Reused ``summarize`` as the subcommand verb rather than adding
+  a new one. The flag cleanly toggles modes, help output shows
+  both, and operators don't have to memorise a second command
+  name.
+* Slug divergence is treated as a regression by default. A case
+  silently appearing or disappearing between runs is almost
+  always a bug to investigate; the operator can still post-
+  process the JSON if they disagree.
+* Matching is by exact slug (file stem). Fuzzy matching across
+  renames is out of scope — if a case got renamed, the operator
+  explicitly handles that via the list the CLI surfaces in
+  ``only_in_a`` / ``only_in_b``.
+* Per-case regression details section only renders for the
+  cases that actually regressed. Markdown stays tight when the
+  PR is clean; the info is there when it isn't.
+
+**Next suggested action:** `Extend Phase 3 with \`frok run
+--repeat N\` + \`--seed S\`: execute each case N times with a
+deterministic seed so flaky-scorer investigations can quickly
+separate "the case regressed" from "the case is inherently
+non-deterministic". The repeat aggregate becomes a pass-rate in
+the EvalReport; the seed lets CI re-stage the same run
+identically.`
+
 ## 2026-04-23 — Phase 3 §8: eval-summarize
 
 **Shipped** ``frok eval summarize <dir>`` — a directory-wide

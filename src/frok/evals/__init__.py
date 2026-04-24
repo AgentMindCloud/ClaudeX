@@ -1,4 +1,13 @@
-from .baseline import diff_against_baseline, diff_event_streams, diff_to_markdown
+from .baseline import (
+    CaseDiff,
+    DirectoryDiff,
+    diff_against_baseline,
+    diff_directories,
+    diff_event_streams,
+    diff_to_markdown,
+    directory_diff_to_json,
+    directory_diff_to_markdown,
+)
 from .case import (
     EvalCase,
     EvalReport,
@@ -39,8 +48,13 @@ __all__ = [
     "ToolArgsSubset",
     "ToolCalled",
     "ToolNotCalled",
+    "CaseDiff",
+    "DirectoryDiff",
     "ToolSequence",
     "diff_against_baseline",
+    "diff_directories",
     "diff_event_streams",
     "diff_to_markdown",
+    "directory_diff_to_json",
+    "directory_diff_to_markdown",
 ]

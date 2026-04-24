@@ -21,6 +21,7 @@ fail CI.
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -152,3 +153,170 @@ def diff_to_markdown(
         "",
     ]
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# directory-level diff (`frok eval summarize --diff-against <DIR>`)
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class CaseDiff:
+    """One matched case, with its `diff_event_streams` payload."""
+
+    name: str
+    a_path: str
+    b_path: str
+    diff: dict[str, Any]
+
+    @property
+    def regressed(self) -> bool:
+        return bool(self.diff.get("regressed"))
+
+
+@dataclass
+class DirectoryDiff:
+    a: str
+    b: str
+    matched: list[CaseDiff] = field(default_factory=list)
+    only_in_a: list[str] = field(default_factory=list)
+    only_in_b: list[str] = field(default_factory=list)
+
+    @property
+    def regressed_cases(self) -> int:
+        return sum(1 for m in self.matched if m.regressed)
+
+    @property
+    def regressed(self) -> bool:
+        # A directory diff regresses if any matched case regressed OR slugs
+        # diverged between the two sides. An operator explicitly opting into
+        # --diff-against probably wants to know about both kinds.
+        return (
+            self.regressed_cases > 0
+            or bool(self.only_in_a)
+            or bool(self.only_in_b)
+        )
+
+
+def _load_captures(directory: Path) -> dict[str, tuple[Path, list[Event]]]:
+    if not directory.is_dir():
+        raise NotADirectoryError(f"not a directory: {directory}")
+    out: dict[str, tuple[Path, list[Event]]] = {}
+    for path in sorted(directory.glob("*.jsonl")):
+        events = list(read_jsonl(path))
+        if events:
+            out[path.stem] = (path, events)
+    return out
+
+
+def diff_directories(
+    a_dir: str | Path, b_dir: str | Path
+) -> DirectoryDiff:
+    """Walk two directories of `<slug>.jsonl` captures and diff each
+    matching case pair.
+
+    Slugs present in only one side are returned in ``only_in_a`` /
+    ``only_in_b``. The ``regressed`` roll-up flips when any matched
+    case regresses OR the slug sets diverge.
+    """
+    a_path = Path(a_dir)
+    b_path = Path(b_dir)
+    a_caps = _load_captures(a_path)
+    b_caps = _load_captures(b_path)
+
+    matched_names = sorted(set(a_caps) & set(b_caps))
+    matched = [
+        CaseDiff(
+            name=name,
+            a_path=str(a_caps[name][0]),
+            b_path=str(b_caps[name][0]),
+            diff=diff_event_streams(
+                a_caps[name][1], b_caps[name][1], a_label="a", b_label="b"
+            ),
+        )
+        for name in matched_names
+    ]
+
+    return DirectoryDiff(
+        a=str(a_path),
+        b=str(b_path),
+        matched=matched,
+        only_in_a=sorted(set(a_caps) - set(b_caps)),
+        only_in_b=sorted(set(b_caps) - set(a_caps)),
+    )
+
+
+def directory_diff_to_markdown(dd: DirectoryDiff) -> str:
+    lines = [
+        "# Frok Eval Directory Diff",
+        "",
+        f"- a: `{dd.a}`",
+        f"- b: `{dd.b}`",
+        f"- Matched: {len(dd.matched)} "
+        f"| Only in a: {len(dd.only_in_a)} "
+        f"| Only in b: {len(dd.only_in_b)}",
+        f"- Regressed cases: {dd.regressed_cases}",
+        "",
+    ]
+
+    if dd.matched:
+        lines += [
+            "## Per-case diffs",
+            "",
+            "| Case | Tool order | Δ tokens | New errors | Regressed |",
+            "|------|-----------|---------:|-----------:|:----------|",
+        ]
+        for m in dd.matched:
+            d = m.diff
+            tool_state = "match" if d["tool_order_match"] else "**diverged**"
+            delta = d["token_delta"]
+            delta_str = f"{delta:+d}"
+            lines.append(
+                f"| {m.name} | {tool_state} | {delta_str} "
+                f"| {d['new_errors']} | {'**yes**' if m.regressed else '-'} |"
+            )
+        lines.append("")
+
+    if dd.only_in_a:
+        lines += ["## Only in a", ""] + [f"- `{n}`" for n in dd.only_in_a] + [""]
+    if dd.only_in_b:
+        lines += ["## Only in b", ""] + [f"- `{n}`" for n in dd.only_in_b] + [""]
+
+    regressed = [m for m in dd.matched if m.regressed]
+    if regressed:
+        lines += ["## Regression details", ""]
+        for m in regressed:
+            d = m.diff
+            lines.append(f"### `{m.name}`")
+            lines.append(f"- a tools: {d['a_tools']!r}")
+            lines.append(f"- b tools: {d['b_tools']!r}")
+            lines.append(
+                f"- a errors: {d['a_errors']} → b errors: {d['b_errors']} "
+                f"({d['new_errors']} new)"
+            )
+            lines.append(
+                f"- tokens: {d['a_tokens']} → {d['b_tokens']} "
+                f"(Δ {d['token_delta']:+d})"
+            )
+            lines.append("")
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def directory_diff_to_json(dd: DirectoryDiff) -> dict[str, Any]:
+    return {
+        "a": dd.a,
+        "b": dd.b,
+        "regressed": dd.regressed,
+        "regressed_cases": dd.regressed_cases,
+        "only_in_a": dd.only_in_a,
+        "only_in_b": dd.only_in_b,
+        "matched": [
+            {
+                "name": m.name,
+                "a_path": m.a_path,
+                "b_path": m.b_path,
+                "regressed": m.regressed,
+                "diff": m.diff,
+            }
+            for m in dd.matched
+        ],
+    }
