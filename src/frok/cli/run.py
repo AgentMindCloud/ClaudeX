@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import re
 import sys
 import uuid
 from dataclasses import dataclass
@@ -35,8 +36,15 @@ from ..config import (
     build_telemetry_sink,
     load_default_config,
 )
-from ..evals import EvalCase, EvalReport, EvalRunner
-from ..telemetry import InMemorySink, MultiSink, NullSink, Tracer
+from ..evals import EvalCase, EvalResult, EvalReport, EvalRunner
+from ..telemetry import (
+    InMemorySink,
+    JsonlSink,
+    MultiSink,
+    NullSink,
+    Tracer,
+    with_added_sink,
+)
 from .common import CliError
 
 
@@ -113,6 +121,59 @@ def load_case_file(path: Path, config: FrokConfig) -> LoadedCaseFile:
 
 
 # ---------------------------------------------------------------------------
+# baseline capture / injection helpers
+# ---------------------------------------------------------------------------
+_SLUG_RE = re.compile(r"[^A-Za-z0-9._-]+")
+
+
+def case_slug(name: str) -> str:
+    """Filename-safe slug derived from an EvalCase name."""
+    s = _SLUG_RE.sub("_", name).strip("_")
+    return s or "case"
+
+
+def _check_unique_slugs(cases: list[EvalCase]) -> dict[str, str]:
+    """Return case-name → slug. Raise if two cases would collide."""
+    slugs: dict[str, str] = {}
+    used: dict[str, str] = {}
+    for case in cases:
+        s = case_slug(case.name)
+        if s in used:
+            raise CliError(
+                f"cases {used[s]!r} and {case.name!r} both slug to "
+                f"{s!r}; baseline filenames would collide"
+            )
+        used[s] = case.name
+        slugs[case.name] = s
+    return slugs
+
+
+def _attach_baselines(
+    cases: list[EvalCase], directory: Path
+) -> list[EvalCase]:
+    """Set `case.baseline` on any case whose matching capture file exists."""
+    slugs = _check_unique_slugs(cases)
+    for case in cases:
+        if case.baseline is not None:
+            continue
+        candidate = directory / f"{slugs[case.name]}.jsonl"
+        if candidate.exists():
+            case.baseline = candidate
+    return cases
+
+
+def _wrap_factory_with_extra_sink(
+    factory: ClientFactory, extra: "JsonlSink"
+) -> ClientFactory:
+    def wrapped(sink: InMemorySink) -> GrokClient:
+        client = factory(sink)
+        client.tracer = with_added_sink(client.tracer, extra)
+        return client
+
+    return wrapped
+
+
+# ---------------------------------------------------------------------------
 # run command
 # ---------------------------------------------------------------------------
 async def run_cmd(args: argparse.Namespace) -> int:
@@ -122,8 +183,37 @@ async def run_cmd(args: argparse.Namespace) -> int:
         raise CliError(f"config load failed: {exc}") from exc
 
     loaded = load_case_file(args.case_file, config)
-    runner = EvalRunner(client_factory=loaded.client_factory)
-    report: EvalReport = await runner.run(loaded.cases)
+
+    if args.use_baseline is not None:
+        if not args.use_baseline.is_dir():
+            raise CliError(
+                f"--use-baseline path is not a directory: {args.use_baseline}"
+            )
+        _attach_baselines(loaded.cases, args.use_baseline)
+
+    capture_dir: Path | None = args.capture_baseline
+    if capture_dir is not None:
+        capture_dir.mkdir(parents=True, exist_ok=True)
+        slugs = _check_unique_slugs(loaded.cases)
+    else:
+        slugs = {}
+
+    # Run per-case so we can attach/close a dedicated JsonlSink per baseline.
+    results: list[EvalResult] = []
+    for case in loaded.cases:
+        jsonl: JsonlSink | None = None
+        factory = loaded.client_factory
+        if capture_dir is not None:
+            jsonl = JsonlSink(capture_dir / f"{slugs[case.name]}.jsonl")
+            factory = _wrap_factory_with_extra_sink(factory, jsonl)
+        runner = EvalRunner(client_factory=factory)
+        try:
+            results.append(await runner.run_case(case))
+        finally:
+            if jsonl is not None:
+                jsonl.close()
+
+    report = EvalReport(results=results)
 
     md = report.to_markdown()
     if args.output is not None:
@@ -178,5 +268,23 @@ def register(sub: "argparse._SubParsersAction") -> None:
         "--fail-on-regression",
         action="store_true",
         help="exit non-zero when any case fails; default: always 0",
+    )
+    run.add_argument(
+        "--capture-baseline",
+        type=Path,
+        metavar="DIR",
+        help=(
+            "capture per-case telemetry to DIR/<case-slug>.jsonl; subsequent "
+            "runs can pass --use-baseline DIR to regress against it"
+        ),
+    )
+    run.add_argument(
+        "--use-baseline",
+        type=Path,
+        metavar="DIR",
+        help=(
+            "attach DIR/<case-slug>.jsonl as each case's baseline when the "
+            "file exists; cases with an explicit `baseline=` are untouched"
+        ),
     )
     run.set_defaults(fn=run_cmd)

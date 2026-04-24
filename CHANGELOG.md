@@ -2,6 +2,21 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.13.0] — 2026-04-23
+### Added
+- `frok run --capture-baseline <DIR>` — writes per-case
+  `<slug>.jsonl` telemetry captures by layering a `JsonlSink` onto
+  the client's tracer.
+- `frok run --use-baseline <DIR>` — auto-attaches
+  `DIR/<slug>.jsonl` as each case's `baseline` when the file
+  exists; cases with explicit `baseline=` are untouched.
+- `frok.telemetry.with_added_sink(tracer, extra)` — return a new
+  `Tracer` whose sink fans out to the original plus `extra`
+  (collapses `NullSink`, extends `MultiSink`).
+- `frok.cli.run.case_slug(name)` — filename-safe case-name slug.
+- Tests: 13 new (slug, with_added_sink, capture / use / round-trip);
+  247 total.
+
 ## [0.12.0] — 2026-04-23
 ### Added
 - `frok.config.render` — `to_toml`, `to_json`, `to_env` renderers with

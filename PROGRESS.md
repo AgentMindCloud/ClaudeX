@@ -2,6 +2,70 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 3 §4: baseline-capture
+
+**Shipped** the missing piece of the baseline-regression loop:
+``frok run --capture-baseline <dir>`` records per-case telemetry
+JSONL; ``--use-baseline <dir>`` auto-attaches those files as each
+case's baseline on subsequent runs. The §2 #8 differ then fires
+automatically and a regression (tool-order divergence or new
+errors) turns the exit code red under ``--fail-on-regression``.
+
+* **`Tracer.with_added_sink(tracer, extra)`**
+  (`frok/telemetry/tracer.py`) — returns a new tracer whose sink
+  fans out to the original plus ``extra``. `NullSink` is collapsed
+  away; `MultiSink` is extended; anything else is wrapped. `clock`
+  and `id_gen` are preserved so deterministic-clock tests survive.
+* **`--capture-baseline <DIR>`** (`frok/cli/run.py`)
+  * Slugs each case name (`[^A-Za-z0-9._-]+` → `_`, fallback
+    `"case"`), rejects slug collisions within a single run, and
+    creates `<DIR>/<slug>.jsonl` via a `JsonlSink` layered onto the
+    client's tracer with `with_added_sink`.
+  * Runs cases one at a time (`runner.run_case`) so each capture
+    closes cleanly. Doesn't change the observed report.
+* **`--use-baseline <DIR>`** — iterates cases, and for any case
+  without an explicit `baseline=`, sets `case.baseline =
+  DIR/<slug>.jsonl` when that file exists. Missing captures leave
+  the case alone; non-directory paths are `CliError`.
+* The two flags compose: first-run captures; subsequent run with
+  `--use-baseline <same-dir>` diffs automatically. Regressed
+  cases still propagate through `--fail-on-regression`.
+
+**Verification.** `python3 -m pytest -q` → 247 passed in 0.54s (13
+new). Tests cover `case_slug` across safe / symbol-heavy / empty
+inputs, `with_added_sink` under `NullSink` / plain / `MultiSink`
+bases with `clock`/`id_gen` preservation, per-case file creation
+at nested paths, slug-based collision rejection, normal-report
+output isn't disturbed by capture, `--use-baseline` attachment
+behaviour (match, no-match, non-directory), and the full
+capture-then-use round-trip catching an answer regression via
+`--fail-on-regression`.
+
+**Decisions / trade-offs.**
+* Baseline file per *case*, not per *run*. The §2 #8 differ takes
+  one baseline path per case, so sharding by case name keeps the
+  existing contract.
+* Case slug is the filename; collisions within one run are an
+  error because the second capture would silently overwrite the
+  first. Explicit is better than a confusing partial capture.
+* `--capture-baseline` and `--use-baseline` can point to the same
+  directory simultaneously; the user is explicitly opting into
+  "diff against the baseline I'm recording this run", which is a
+  valid "smoke test the capture itself" use case. We don't block
+  it.
+* The per-case JsonlSink is layered via `with_added_sink` instead
+  of modifying the factory signature — means case-file authors'
+  `make_client(config, sink)` contract is untouched, and any
+  existing MultiSink fan-out from config's `telemetry.sink` is
+  preserved.
+
+**Next suggested action:** `Extend Phase 3 with \`frok run
+--filter=<pattern>\`: filter the case list by glob or regex before
+execution, so CI jobs can re-run only the cases that failed last
+time (e.g. \`frok run cases.py --filter="safety-*"\` or \`--filter
+"^tool-"\`). Keeps local iteration fast without editing case files
+to comment cases out.`
+
 ## 2026-04-23 — Phase 3 §3: config-show
 
 **Shipped** ``frok config show [--format=toml|json|env]`` — renders

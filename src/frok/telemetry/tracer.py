@@ -15,7 +15,7 @@ from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any, AsyncIterator, Callable
 
-from .sink import EVENT, SPAN_END, SPAN_START, Event, NullSink, TelemetrySink
+from .sink import EVENT, SPAN_END, SPAN_START, Event, MultiSink, NullSink, TelemetrySink
 
 _current_trace: ContextVar[str | None] = ContextVar("frok_trace_id", default=None)
 _current_span: ContextVar[str | None] = ContextVar("frok_span_id", default=None)
@@ -142,6 +142,27 @@ class Tracer:
 def null_tracer() -> Tracer:
     """Explicit no-op tracer. Same as `Tracer()` but clearer at call sites."""
     return Tracer(sink=NullSink())
+
+
+def with_added_sink(tracer: Tracer, extra: TelemetrySink) -> Tracer:
+    """Return a new `Tracer` whose sink fans out to ``tracer.sink`` + ``extra``.
+
+    * ``NullSink`` is collapsed away — the result just uses ``extra``.
+    * ``MultiSink`` is extended in-place (append semantics).
+    * Anything else gets wrapped in a 2-element `MultiSink`.
+
+    ``clock`` and ``id_gen`` are preserved so the returned tracer is
+    observationally identical to the original for tests that inject
+    deterministic generators.
+    """
+    current = tracer.sink
+    if isinstance(current, NullSink):
+        new_sink: TelemetrySink = extra
+    elif isinstance(current, MultiSink):
+        new_sink = MultiSink(*current.sinks, extra)
+    else:
+        new_sink = MultiSink(current, extra)
+    return Tracer(sink=new_sink, clock=tracer.clock, id_gen=tracer.id_gen)
 
 
 def current_trace_id() -> str | None:

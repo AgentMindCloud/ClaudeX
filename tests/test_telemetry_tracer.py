@@ -99,3 +99,36 @@ async def test_explicit_trace_id_honoured():
     async with t.span("seeded", trace_id="abc-123"):
         pass
     assert sink.events[0].trace_id == "abc-123"
+
+
+def test_with_added_sink_collapses_null_and_extends_multi():
+    from frok.telemetry import MultiSink, NullSink, Tracer, with_added_sink
+
+    a = InMemorySink()
+    b = InMemorySink()
+    c = InMemorySink()
+
+    # NullSink base → result uses only the extra.
+    t1 = with_added_sink(Tracer(sink=NullSink()), a)
+    assert t1.sink is a
+
+    # Plain sink base → 2-element MultiSink.
+    t2 = with_added_sink(Tracer(sink=a), b)
+    assert isinstance(t2.sink, MultiSink)
+    assert t2.sink.sinks == (a, b)
+
+    # MultiSink base → extended in order.
+    t3 = with_added_sink(Tracer(sink=MultiSink(a, b)), c)
+    assert isinstance(t3.sink, MultiSink)
+    assert t3.sink.sinks == (a, b, c)
+
+
+def test_with_added_sink_preserves_clock_and_id_gen():
+    from frok.telemetry import InMemorySink, Tracer, with_added_sink
+
+    clock = lambda: 42.0
+    id_gen = lambda: "zzz"
+    t = Tracer(sink=InMemorySink(), clock=clock, id_gen=id_gen)
+    t2 = with_added_sink(t, InMemorySink())
+    assert t2.clock is clock
+    assert t2.id_gen is id_gen

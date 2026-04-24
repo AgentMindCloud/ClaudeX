@@ -27,6 +27,7 @@ from .tracer import (
     current_span_id,
     current_trace_id,
     null_tracer,
+    with_added_sink,
 )
 
 __all__ = [
@@ -54,4 +55,5 @@ __all__ = [
     "summarize",
     "summary_to_json",
     "summary_to_markdown",
+    "with_added_sink",
 ]

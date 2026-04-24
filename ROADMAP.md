@@ -77,5 +77,9 @@ builds on these three.
    profile merging) so operators can sanity-check what got applied
    before running anything. `client.api_key` masked by default;
    `--reveal` shows plain. *Shipped 2026-04-23.*
-4. *Sketch:* `frok serve` (long-running agent), distributed
+4. **baseline-capture** — `frok run --capture-baseline <dir>`
+   writes per-case `<slug>.jsonl` captures; `--use-baseline <dir>`
+   auto-attaches them to cases without a baseline so the next
+   run diffs via §2 #8 automatically. *Shipped 2026-04-23.*
+5. *Sketch:* `frok serve` (long-running agent), distributed
    inference, X-native production agents, alignment red-teaming.
