@@ -2,6 +2,23 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.11.0] — 2026-04-23
+### Added
+- `frok.telemetry.analysis` — `build_tree(events)`, `summarize(events)`
+  returning per-name stats + errored spans + top-tool aggregates, plus
+  `summary_to_markdown` / `render_tree` / `summary_to_json` renderers.
+- `frok trace inspect <jsonl>` subcommand — loads a `JsonlSink`
+  capture, summarises it, and prints Markdown (or JSON via `--json`,
+  or Markdown+tree via `--tree`). Flags: `-o/--output`, `--top`.
+- Tests: 23 new (analysis functions + CLI paths); 216 total.
+
+### Changed
+- CLI refactor: top-level parser + `main()` now live in
+  `frok.cli.__init__`; each subcommand module exports a
+  `register(sub)` helper. `CliError` moved to `frok.cli.common`.
+  Public imports (`CliError`, `build_parser`, `main`, `run_cmd`,
+  `load_case_file`) unchanged.
+
 ## [0.10.0] — 2026-04-23
 ### Added
 - `frok.cli` — `frok run <case-file>` entry point. Wires

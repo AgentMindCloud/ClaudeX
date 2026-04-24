@@ -19,7 +19,6 @@ Optional in the case file:
 from __future__ import annotations
 
 import argparse
-import asyncio
 import importlib.util
 import json
 import sys
@@ -31,7 +30,6 @@ from typing import Any, Callable
 from ..clients.grok import GrokClient
 from ..clients.transports import urllib_transport
 from ..config import (
-    ConfigError,
     FrokConfig,
     build_client,
     build_telemetry_sink,
@@ -39,10 +37,7 @@ from ..config import (
 )
 from ..evals import EvalCase, EvalReport, EvalRunner
 from ..telemetry import InMemorySink, MultiSink, NullSink, Tracer
-
-
-class CliError(RuntimeError):
-    """User-facing CLI error; main() prints the message and exits non-zero."""
+from .common import CliError
 
 
 ClientFactory = Callable[[InMemorySink], GrokClient]
@@ -150,12 +145,9 @@ async def run_cmd(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
-# argparse wiring
+# parser registration (called from frok.cli.__init__.build_parser)
 # ---------------------------------------------------------------------------
-def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="frok", description="Super AI Frok CLI")
-    sub = p.add_subparsers(dest="command", required=True)
-
+def register(sub: "argparse._SubParsersAction") -> None:
     run = sub.add_parser(
         "run",
         help="Run an eval case file and print the verdict doc.",
@@ -188,15 +180,3 @@ def build_parser() -> argparse.ArgumentParser:
         help="exit non-zero when any case fails; default: always 0",
     )
     run.set_defaults(fn=run_cmd)
-
-    return p
-
-
-def main(argv: list[str] | None = None) -> int:
-    parser = build_parser()
-    args = parser.parse_args(argv)
-    try:
-        return asyncio.run(args.fn(args))
-    except (CliError, ConfigError) as exc:
-        print(f"frok: error: {exc}", file=sys.stderr)
-        return 2

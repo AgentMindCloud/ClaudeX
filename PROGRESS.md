@@ -2,6 +2,60 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 3 §2: trace-inspect
+
+**Shipped** a library-level trace analysis surface plus the
+``frok trace inspect <jsonl>`` CLI — post-hoc regression triage off
+a `JsonlSink` capture without rebuilding the agent stack.
+
+* **`frok.telemetry.analysis`**
+  * `build_tree(events) -> list[TraceNode]` — reconstructs the
+    parent/child tree from `span.end` events; children sorted by
+    start time; orphaned parents (capture truncation, filtering)
+    surface as roots rather than being dropped.
+  * `summarize(events) -> TraceSummary` — per-name stats
+    (count, total / mean / p50 / p95 / max ms, error_count), errored
+    span list (ordered by start_ts), and top-tool aggregates
+    (`tool.invoke` spans grouped by `data["tool"]`, sorted by count
+    then total-ms, `errors` column). Empty-input safe.
+  * `summary_to_markdown` / `render_tree` / `summary_to_json` for
+    the three output formats the CLI emits.
+* **`frok trace inspect <jsonl>`** (`frok/cli/trace.py`)
+  * Reads a JsonlSink capture via `read_jsonl`, summarises, and
+    prints. Flags: `-o/--output`, `--tree`, `--json`, `--top N`.
+  * Catches malformed JSONL and empty files as `CliError` so the
+    operator sees ``frok: error: ...`` not a stack trace.
+* **CLI refactor.** `frok/cli/__init__.py` now owns the top-level
+  parser and `main()`; `run.py` and `trace.py` each export a
+  `register(sub)` helper. Adding a third subcommand is one more
+  `register` call — no growing God function.
+
+**Verification.** `python3 -m pytest -q` → 216 passed in 0.46s (23
+new). Tests cover tree nesting + orphan handling, per-name stat
+aggregation (mean / percentile / error-count), tool ranking (count
+tiebreak by total_ms), empty-input safety, JSON round-trip, tree +
+markdown rendering, and CLI paths: help shape, md / json / tree /
+output-file output, `--top` capping, missing / empty / malformed
+input errors.
+
+**Decisions / trade-offs.**
+* Token / latency deltas between two trace captures live in
+  `frok.evals.baseline.diff_against_baseline`; the inspect
+  subcommand stays single-capture and focused on "where did the
+  time and errors go in *this* run?".
+* Renderers are pure functions producing strings so operators can
+  pipe the output into mail / Slack / `jq` without a plugin system.
+* JSON output uses the same shape the Python API returns from
+  `summary_to_json`, so downstream scripts and the CLI agree on one
+  schema.
+
+**Next suggested action:** `Extend Phase 3 with \`frok config show
+[--format=toml|json|env]\`: render the resolved FrokConfig (after
+file+env+CLI+profile merging) so operators can sanity-check which
+settings actually got applied before running anything. Closes the
+config <-> runtime loop the same way trace inspect closes the
+telemetry <-> eval loop.`
+
 ## 2026-04-23 — Phase 3 §1: cli-runner
 
 **Shipped** a single-invocation entry point that turns a Python case

@@ -68,6 +68,10 @@ builds on these three.
    `EvalReport.to_markdown()`, with `--fail-on-regression` for CI.
    *Shipped 2026-04-23.* (stdlib-only `urllib_transport` as the
    default production transport.)
-2. *Sketch:* `frok config show`, `frok trace inspect <jsonl>`,
-   `frok serve` (long-running agent), distributed inference,
-   X-native production agents, alignment red-teaming.
+2. **trace-inspect** — `frok trace inspect <jsonl>` loads a
+   `JsonlSink` capture, reconstructs the trace tree, and prints a
+   summary of per-span durations, errors, and top tool invocations.
+   *Shipped 2026-04-23.*
+3. *Sketch:* `frok config show`, `frok serve` (long-running agent),
+   distributed inference, X-native production agents, alignment
+   red-teaming.
