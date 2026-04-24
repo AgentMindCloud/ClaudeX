@@ -46,15 +46,48 @@ __all__ = [
 ]
 
 
+_DESCRIPTION = (
+    "Super AI Frok — LLM eval regressions, telemetry, and agent "
+    "orchestration for the xAI/Grok ecosystem.\n"
+    "\n"
+    "Getting started (the onboarding triple):\n"
+    "  frok init       scaffold a runnable project skeleton\n"
+    "  frok doctor     verify your config, safety, and client setup\n"
+    "  frok run FILE   execute an eval case set, print the verdict"
+)
+
+
+_EPILOG = (
+    "Quick start:\n"
+    "  frok init && frok run cases/smoke.py\n"
+    "\n"
+    "Everyday operations:\n"
+    "  frok config show           inspect the resolved FrokConfig\n"
+    "  frok run --list            preview cases a run would hit\n"
+    "  frok trace inspect FILE    summarize a JsonlSink capture\n"
+    "  frok eval diff A B         diff two captures side-by-side\n"
+    "  frok eval summarize DIR    roll up a baseline directory\n"
+    "\n"
+    "Reporting bugs: include the output of `frok version`."
+)
+
+
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="frok", description="Super AI Frok CLI")
+    p = argparse.ArgumentParser(
+        prog="frok",
+        description=_DESCRIPTION,
+        epilog=_EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     sub = p.add_subparsers(dest="command", required=True)
-    _register_run(sub)
-    _register_trace(sub)
-    _register_config(sub)
-    _register_eval(sub)
+    # Ordered for help-output UX: onboarding triple first, then everyday
+    # operations, then the triage primitive last.
     _register_init(sub)
     _register_doctor(sub)
+    _register_run(sub)
+    _register_config(sub)
+    _register_eval(sub)
+    _register_trace(sub)
     _register_version(sub)
     return p
 

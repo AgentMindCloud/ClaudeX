@@ -92,6 +92,12 @@ builds on these three.
    use; `--json` emits `{frok, python, platform}`. The first
    question on any bug report, answered with one command.
    *Shipped 2026-04-23.*
+6. **help-polish** — root parser description names the
+   "onboarding triple" (init / doctor / run) and lists the
+   everyday operations in the epilog. Subcommands now appear in
+   discovery order (init → doctor → run → config → eval → trace →
+   version) via a `RawDescriptionHelpFormatter`. *Shipped
+   2026-04-23.*
 
 ## Phase 3 — Wiring + operations
 1. **cli-runner** — `frok run <case-file>` entry point wiring

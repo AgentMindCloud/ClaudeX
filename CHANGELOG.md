@@ -2,6 +2,19 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.26.0] — 2026-04-23
+### Changed
+- Root `frok --help` now opens with a mission-statement line and
+  an explicit "onboarding triple" callout (`init`, `doctor`,
+  `run`). Epilog lists every everyday operation as a copy-
+  pasteable one-liner + a `frok version` pointer for bug
+  reports. Multi-line layout preserved via
+  `RawDescriptionHelpFormatter`.
+- Subcommand display order reshuffled for help-output UX: init →
+  doctor → run → config → eval → trace → version.
+- Tests: 9 new (description, epilog, formatter, ordering,
+  regression guards); 448 total.
+
 ## [0.25.0] — 2026-04-23
 ### Added
 - `frok version` — print frok + Python + platform versions.

@@ -2,6 +2,69 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 4 §6: help-polish
+
+**Shipped** the root `frok --help` rewrite. First-time operators
+who type `frok --help` now see what to do, not just a list of
+subcommand names.
+
+* **Description** names the "onboarding triple" (`init`,
+  `doctor`, `run`) alongside a one-line mission statement. This
+  block prints BEFORE the subcommand table so readers don't have
+  to guess which three verbs to try first.
+* **Epilog** lists the everyday operations (`config show`, `run
+  --list`, `trace inspect`, `eval diff`, `eval summarize`) as
+  copy-pasteable one-liners plus a "Reporting bugs: include the
+  output of `frok version`" pointer.
+* **Subcommand order** reshuffled for help-output UX: init →
+  doctor → run → config → eval → trace → version. Argparse
+  displays subparsers in registration order; the previous order
+  was chronological by feature development, which is exactly
+  backwards from what an operator wants to read.
+* **`RawDescriptionHelpFormatter`** preserves the multi-line
+  description + epilog layout. Default `HelpFormatter` collapses
+  newlines, which would have reduced the block to one paragraph.
+* **No external URLs** in the epilog. `CLAUDE.md` guidance says
+  never to emit URLs we're not certain of, so the help points at
+  local commands and files rather than a README link.
+
+**Verification.** `python3 -m pytest -q` → 448 passed in 1.40s (9
+new). Tests lock in: description names the ecosystem + onboarding
+triple, epilog includes the quick-start and everyday-ops blocks
+and the bug-report pointer, the raw formatter is the one actually
+wired (preventing a silent regression to collapsed whitespace),
+subcommand listing starts with the onboarding triple and ends
+with `version`, and the parser still requires a subcommand when
+none is passed.
+
+**Decisions / trade-offs.**
+* Onboarding triple before alphabetical. Operators read the
+  listing top-down; the first three names should be the ones
+  they should type first.
+* Epilog is text, not a table. A table reads well in tabular
+  data but not as "here are some useful commands"; a plain
+  two-column text block composes with every terminal and pipe.
+* Pointer at `frok version` for bug reports rather than an
+  issue-tracker URL. We don't publish that URL from this tree,
+  and the command is the thing triage actually needs.
+* Formatter choice is tested. Defaulting back to
+  `HelpFormatter` silently would undo the layout without any
+  functional breakage — exactly the kind of regression that
+  asymptotically costs you users.
+
+Phase 4 is now closed at the onboarding layer. Next up is Phase
+5-ish work: real-integration scaffolding (`urllib_transport` swap
+recipes, end-to-end live smoke harness, multi-repo release
+plumbing).
+
+**Next suggested action:** `Begin Phase 5 with \`frok init
+--transport real\`: when set, the generated cases/smoke.py swaps
+the stub transport for \`urllib_transport\` + a config-driven
+api_key check, so operators graduating past the stub get a
+ready-to-run live template instead of hand-editing the file.
+Closes the "how do I flip from stub to real?" gap surfaced by
+every example's docstring.`
+
 ## 2026-04-23 — Phase 4 §5: version
 
 **Shipped** ``frok version`` — the triage primitive. Prints the
