@@ -100,6 +100,14 @@ builds on these three.
    cases can assert forced / forbidden / specific-function
    selection. Render layer handles dict-shaped values via TOML
    inline tables and JSON-in-env. *Shipped 2026-04-23.*
+6. **model-override** — `GrokClient.chat(..., model=)` +
+   `chat_stream(..., model=)` accept a per-call override.
+   Precedence: explicit > `client.model` (never omit — a model
+   must be sent). `ToolOrchestrator.model` passes through on
+   every turn; `EvalCase.model` flows through the runner on
+   both no-tools and tools paths; `grok.chat` /
+   `grok.chat_stream` spans report the effective model.
+   *Shipped 2026-04-23.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable

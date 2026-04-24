@@ -108,6 +108,7 @@ async def _execute(
                 tool_choice=(
                     case.tool_choice if case.tool_choice is not None else "auto"
                 ),
+                model=case.model,
             )
             # The orchestrator honours stream_sink when the client has a
             # streaming_transport; otherwise it silently falls back to the
@@ -133,7 +134,7 @@ async def _execute(
 
         if stream_sink is not None:
             final: GrokResponse | None = None
-            async for chunk in client.chat_stream(msgs):
+            async for chunk in client.chat_stream(msgs, model=case.model):
                 if chunk.delta:
                     stream_sink(chunk.delta)
                 if chunk.is_final:
@@ -149,7 +150,7 @@ async def _execute(
                 events=list(sink.events),
             )
 
-        resp = await client.chat(msgs)
+        resp = await client.chat(msgs, model=case.model)
         return Observation(
             final_response=resp,
             messages=msgs,

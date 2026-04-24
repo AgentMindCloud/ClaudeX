@@ -196,6 +196,7 @@ class GrokClient:
         *,
         tools: list[dict[str, Any]] | None = None,
         tool_choice: "str | dict[str, Any] | None" = None,
+        model: str | None = None,
         temperature: float | None = None,
         max_tokens: int | None = None,
         extra: dict[str, Any] | None = None,
@@ -203,9 +204,10 @@ class GrokClient:
         if not messages:
             raise GrokError("messages must not be empty")
 
+        effective_model = model or self.model
         async with self.tracer.span(
             "grok.chat",
-            model=self.model,
+            model=effective_model,
             message_count=len(messages),
             has_tools=tools is not None,
         ) as span:
@@ -266,7 +268,7 @@ class GrokClient:
                 )
 
             payload: dict[str, Any] = {
-                "model": self.model,
+                "model": effective_model,
                 "messages": [m.to_payload() for m in guarded],
             }
             if tools is not None:
@@ -312,7 +314,7 @@ class GrokClient:
             )
 
             return GrokResponse(
-                model=raw.get("model", self.model),
+                model=raw.get("model", effective_model),
                 content=post.text,
                 raw=raw,
                 prompt_tokens=prompt_tokens,
@@ -328,6 +330,7 @@ class GrokClient:
         *,
         tools: list[dict[str, Any]] | None = None,
         tool_choice: "str | dict[str, Any] | None" = None,
+        model: str | None = None,
         temperature: float | None = None,
         max_tokens: int | None = None,
         extra: dict[str, Any] | None = None,
@@ -350,16 +353,17 @@ class GrokClient:
                 "streaming_transport=... or use a production adapter"
             )
 
+        effective_model = model or self.model
         async with self.tracer.span(
             "grok.chat_stream",
-            model=self.model,
+            model=effective_model,
             message_count=len(messages),
             has_tools=tools is not None,
         ) as span:
             guarded, pre_findings = self._preflight(messages, span)
 
             payload: dict[str, Any] = {
-                "model": self.model,
+                "model": effective_model,
                 "messages": [m.to_payload() for m in guarded],
                 "stream": True,
             }
@@ -449,7 +453,7 @@ class GrokClient:
                 )
 
             response = GrokResponse(
-                model=self.model,
+                model=effective_model,
                 content=post.text,
                 raw={},
                 prompt_tokens=0,

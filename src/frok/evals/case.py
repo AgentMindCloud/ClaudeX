@@ -50,6 +50,11 @@ class EvalCase:
     # ("auto"); ``"none"`` / ``"required"`` / a specific function dict
     # force the model. Ignored on cases with no tools.
     tool_choice: str | dict[str, Any] | None = None
+    # Per-case model override. ``None`` defers to ``client.model``
+    # (set via FROK_CLIENT_MODEL or ClientConfig.model). Useful for
+    # comparing a case across model versions without scaffolding two
+    # whole clients.
+    model: str | None = None
     system: str | None = None
     scorers: list[Scorer] = field(default_factory=list)
     max_steps: int = 8

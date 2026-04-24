@@ -2,6 +2,19 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.32.0] — 2026-04-23
+### Added
+- `GrokClient.chat(..., model=)` and
+  `chat_stream(..., model=)` — per-call model override.
+  Precedence: explicit kwarg > `client.model`.
+- `ToolOrchestrator.model` field passes through on every turn.
+- `EvalCase.model` — flows through the runner on both
+  no-tools and tools paths (streaming and non-stream).
+- `grok.chat` / `grok.chat_stream` telemetry spans report the
+  effective model (kwarg-override or client default).
+- Tests: 13 new (chat + chat_stream + orchestrator + EvalCase
+  + span attrs + response-fallback); 527 total.
+
 ## [0.31.0] — 2026-04-23
 ### Added
 - `GrokClient.chat(..., tool_choice=)` and

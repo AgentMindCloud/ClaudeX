@@ -46,6 +46,8 @@ class ToolOrchestrator:
     max_steps: int = 8
     dry_run: bool = False
     tool_choice: str | dict[str, Any] = "auto"
+    # Per-run model override. ``None`` defers to ``client.model``.
+    model: str | None = None
     temperature: float | None = None
     max_tokens: int | None = None
 
@@ -96,6 +98,7 @@ class ToolOrchestrator:
                         convo,
                         tools=tools_spec,
                         tool_choice=self.tool_choice,
+                        model=self.model,
                         temperature=self.temperature,
                         max_tokens=self.max_tokens,
                     )
@@ -153,6 +156,7 @@ class ToolOrchestrator:
             list(convo),
             tools=tools_spec,
             tool_choice=self.tool_choice,
+            model=self.model,
             temperature=self.temperature,
             max_tokens=self.max_tokens,
         ):

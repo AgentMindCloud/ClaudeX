@@ -2,6 +2,75 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 5 §6: model-override
+
+**Shipped** per-call model overrides. Case authors can now pin a
+specific model per `EvalCase` without scaffolding a second client
+— the thing you need when regression-testing a model-version
+upgrade (grok-4 → grok-4-fast, etc.).
+
+* **`GrokClient`**
+  * ``chat(..., model=...)`` and ``chat_stream(..., model=...)``
+    accept an explicit override. Precedence:
+    ``model kwarg > self.model``. Unlike ``tool_choice`` there
+    is no "omit" path — a model is always on the wire.
+  * ``effective_model = model or self.model`` computed once per
+    call and used for the payload, the ``grok.chat`` /
+    ``grok.chat_stream`` span attr, and the fallback used when
+    the server's response omits the ``model`` field.
+* **`ToolOrchestrator.model`** — new field, defaults to
+  ``None`` (defer to ``client.model``). Passed to both
+  ``chat()`` (non-stream path) and ``_streamed_turn``'s
+  ``chat_stream()`` call, so every turn of a multi-turn tool
+  run uses the same model.
+* **`EvalCase.model`** — new optional field. The runner wires
+  ``case.model`` into the orchestrator (tools path) and into
+  both ``chat()`` / ``chat_stream()`` calls (no-tools path,
+  streaming or not). ``None`` defers to the client default.
+
+**Verification.** `python3 -m pytest -q` → 527 passed in 1.55s (13
+new). Tests cover: ``chat`` without kwarg uses ``client.model``,
+kwarg overrides, server response with no ``model`` field falls
+back to ``effective_model`` (not ``client.model``), same three
+paths for ``chat_stream``, ``grok.chat`` and ``grok.chat_stream``
+span attrs report the effective model, orchestrator's ``model``
+flows through *every* turn of a multi-turn run, orchestrator
+defaults to ``client.model`` without override, ``EvalCase.model``
+reaches the wire on no-tools / tools / streaming paths, and
+``EvalCase.model=None`` correctly defers to ``client.model``.
+
+**Decisions / trade-offs.**
+* Two-level precedence (explicit > client), not three like
+  ``tool_choice``. A model must always be on the wire, so there
+  is no "omit the key" tier; the client default is the floor.
+* ``EvalCase.model = None`` defers to the client default. We
+  could have defaulted to ``"grok-4"`` and let ``None`` mean
+  "use newest", but that couples the schema to a specific
+  model name. Deferring to ``client.model`` keeps the case
+  portable across client configurations.
+* Span attr reflects the *effective* model, not the request or
+  response. If a case overrides to ``grok-4-fast`` the span
+  says ``grok-4-fast`` even if the server returns something
+  odd. Post-hoc trace inspection needs the effective
+  declaration, not the server echo.
+* ``ToolOrchestrator.model`` is a field rather than a per-run
+  argument. The orchestrator is already constructed per-case
+  in the runner; adding one more constructor kwarg is lower-
+  ceremony than threading it through ``run()``.
+* ``EvalCase.model`` is a plain ``str | None``; the case-file
+  API stays simple. When richer model-routing is needed (per-
+  turn swaps, fallback chains), it can layer on via a custom
+  ``make_client`` or a future ``frok.models`` module without
+  breaking this surface.
+
+**Next suggested action:** `Extend Phase 5 §7 with
+\`AnswerMatchesModel(expected)\` scorer: asserts the
+assembled GrokResponse.model equals the expected string.
+Complements \`EvalCase.model=...\` by proving the right model
+actually served the request (guards against silent mid-flight
+model swaps on the provider side). Small but exactly the kind
+of assertion a model-upgrade regression test needs.`
+
 ## 2026-04-23 — Phase 5 §5: tool-choice
 
 **Shipped** a first-class ``tool_choice`` surface so cases can
