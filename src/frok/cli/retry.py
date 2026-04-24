@@ -89,9 +89,9 @@ async def show_cmd(args: argparse.Namespace) -> int:
 
     if args.json:
         # Passthrough of the primary payload. --compare-to, --limit,
-        # --group-by-error, --min-attempts, and --only-errors are
-        # markdown-only enrichments; operators wanting structured
-        # pair diff should use `frok retry diff`.
+        # --group-by-error, --min-attempts, --only-errors, and
+        # --sort-by are markdown-only enrichments; operators wanting
+        # structured pair diff should use `frok retry diff`.
         out = json.dumps(payload, indent=2, default=str)
     else:
         out = format_retry_report(
@@ -103,6 +103,7 @@ async def show_cmd(args: argparse.Namespace) -> int:
             group_by_error=args.group_by_error,
             min_attempts=args.min_attempts,
             only_errors=args.only_errors,
+            sort_by=args.sort_by,
         )
 
     if args.output is not None:
@@ -356,6 +357,24 @@ def register(sub: "argparse._SubParsersAction") -> None:
             "other display filter (--min-attempts, --group-by-error, "
             "--limit). 'Only in previous' is left untouched. The "
             "'what's broken right now' triage view. Markdown-only."
+        ),
+    )
+    show.add_argument(
+        "--sort-by",
+        choices=["worst", "attempts", "ratio", "name", "error", "sleep"],
+        default="worst",
+        metavar="KEY",
+        help=(
+            "sort key for retried/failing cases (default: worst). "
+            "Choices: 'worst' (failing→ratio→attempts→name; preserves "
+            "default behaviour), 'attempts' (most raw attempts first), "
+            "'ratio' (highest attempts/budget ratio first), 'name' "
+            "(alphabetical), 'error' (alpha by last-attempt error; "
+            "no-error cases last), 'sleep' (highest total backoff ms "
+            "first — the 'cases costing me wall-clock' lens). Applies "
+            "within --group-by-error groups. With 'worst' (default), "
+            "cases are unsorted unless --limit forces truncation; with "
+            "any other key, sort is unconditional. Markdown-only."
         ),
     )
     show.set_defaults(fn=show_cmd)

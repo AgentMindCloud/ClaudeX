@@ -2,6 +2,120 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-24 — Phase 5 §31: retry-show-sort-by
+
+**Shipped** ``frok retry show --sort-by KEY`` — five
+new sort keys alongside the default `worst`, letting
+operators investigate retry behaviour through whichever
+lens fits the question they're asking. The default
+preserves §27's worst-first ordering exactly; any other
+key triggers an unconditional sort.
+
+* **Sort keys** (`SORT_KEYS` registry in
+  `retry_show.py`):
+  * `worst` — default; existing `_worst_first_key`
+    (failing → ratio → attempts → name).
+  * `attempts` — most raw attempts first; "what
+    retried hardest".
+  * `ratio` — highest attempts/budget ratio first;
+    "who's against the wall budget-wise".
+  * `name` — alphabetical; predictable scan / diff-
+    friendly listing.
+  * `error` — alpha by last-attempt error string,
+    no-error cases collected at the end; "show me
+    similar failure modes adjacent".
+  * `sleep` — highest total `sleep_before_ms` first;
+    "which cases are eating my wall-clock budget on
+    backoff alone".
+* **API extension** — `format_retry_report(...,
+  sort_by="worst")`. Default preserves §27 (sort only
+  when `--limit` truncates); non-default triggers
+  unconditional sort in plain mode AND inside
+  `--group-by-error` groups. Unknown keys raise
+  `ValueError` so library callers see the bad-input
+  early.
+* **CLI flag** — `--sort-by KEY` with `argparse.
+  choices` validation. Unknown keys produce the
+  standard argparse error (exit 2) — no custom
+  CliError needed because the choices list is
+  authoritative.
+* **Composition** —
+  * With `--limit N`: sort then truncate (the chosen
+    sort decides which cases survive).
+  * With `--group-by-error`: chosen sort applies
+    INSIDE each group; the GROUPS themselves still
+    order by size desc (group order is a different
+    dimension).
+  * With `--only-errors` / `--min-attempts`: filters
+    run first, sort applies to the surviving cases.
+* **Backward compatibility** — every existing test
+  passed without modification. The "default `worst`
+  preserves §27" invariant is locked in by an
+  explicit byte-identical comparison test.
+
+**Verification.** `python3 -m pytest -q` → 862 passed in 3.04s
+(15 new). Unit tests cover: default `worst` byte-
+identical to no-flag, `worst` + `--limit` picks worst-
+first, `name` alphabetical, `attempts` most-first,
+`ratio` highest-first, `error` alpha with no-error
+last, `sleep` highest-total-first, sort-then-truncate
+under `--limit`, sort-within-group under `--group-by-
+error`, unknown key raises ValueError. CLI: parser
+default `worst`, accepts each valid choice, rejects
+unknown via argparse SystemExit, end-to-end alpha
+sort, --json passthrough preserves submission order.
+
+**Decisions / trade-offs.**
+* Default `worst` is conditional sort (only under
+  `--limit`); non-default keys are unconditional. The
+  asymmetry serves backward compatibility: §27's
+  behaviour was "no sort unless truncating", and
+  changing that for `--sort-by=worst` callers would
+  surprise. Operators who want unconditional worst-
+  first ordering can still pass `--sort-by worst
+  --limit 999999` to force the sort without
+  truncating.
+* `argparse choices` rather than runtime CliError
+  validation. The choices list is the spec; argparse
+  surfaces the available options in the error message
+  for free, which is better UX than a custom
+  "invalid sort key" message.
+* `error` sort puts no-error cases LAST, not first.
+  Operators sorting by error are looking for patterns
+  in errored cases; scorer-only failures (no
+  observation error) are the "weird" bucket and
+  cluster more naturally at the end of the list.
+* `sleep` uses TOTAL across attempts, not max. The
+  question operators ask is "which case cost me the
+  most cumulative backoff"; max sleep would surface
+  the case with the longest single sleep, which is a
+  different (and less common) signal.
+* All sort keys end with `(case_name, repeat)` as
+  the deterministic tiebreak. Two runs with identical
+  data produce byte-identical markdown — text-diff
+  / snapshot-test friendly across every sort key.
+* `name` sort breaks the case-name → repeat
+  hierarchy: same-name cases with different repeats
+  end up adjacent. That's the desired behaviour
+  ("show me everything for case X together").
+* Sort applies WITHIN groups under `--group-by-
+  error`, not BETWEEN them. Group order (size desc)
+  is a different signal than within-group order
+  (operator's chosen lens); collapsing them would
+  reduce flexibility. Operators wanting size-sorted
+  groups + named-sorted within use
+  `--group-by-error --sort-by name`.
+
+**Next suggested action:** `Extend Phase 5 §32 with a
+\`frok retry show --reverse\` flag that flips the
+chosen sort order. Useful when operators want "the
+cases with the LEAST attempts" or "least sleep" —
+debugging "why isn't this case getting any retry
+budget?" Composes with --sort-by (reverses any chosen
+key) and --limit (truncates after reverse). Default
+unset preserves the natural sort order from §31.
+Markdown-only.`
+
 ## 2026-04-24 — Phase 5 §30: retry-show-only-errors
 
 **Shipped** ``frok retry show --only-errors`` — the

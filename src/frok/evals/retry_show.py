@@ -54,6 +54,58 @@ def _last_attempt_error(case: dict[str, Any]) -> str | None:
     return attempts[-1].get("error")
 
 
+# ---------------------------------------------------------------------------
+# `--sort-by KEY` sort functions. Each returns a tuple suitable for
+# `sorted(..., key=fn)` — the smallest tuple sorts first, matching the
+# default Python sort. Negation (`-attempts`, `-ratio`, `-sleep`) yields
+# descending order on those numeric fields. Case name + repeat anchor
+# the deterministic tail tiebreak so two runs with identical data
+# produce byte-identical markdown.
+# ---------------------------------------------------------------------------
+def _sort_by_attempts(case: dict[str, Any]) -> tuple[int, str, int]:
+    attempts = len(case.get("attempts") or [])
+    return (-attempts, case.get("case", ""), int(case.get("repeat", 0)))
+
+
+def _sort_by_ratio(case: dict[str, Any]) -> tuple[float, str, int]:
+    attempts = len(case.get("attempts") or [])
+    budget = max(int(case.get("retry_budget", 1) or 1), 1)
+    ratio = attempts / budget
+    return (-ratio, case.get("case", ""), int(case.get("repeat", 0)))
+
+
+def _sort_by_name(case: dict[str, Any]) -> tuple[str, int]:
+    return (case.get("case", ""), int(case.get("repeat", 0)))
+
+
+def _sort_by_error(case: dict[str, Any]) -> tuple[bool, str, str, int]:
+    err = _last_attempt_error(case)
+    # Group None/empty-error cases together at the END (is_none=True
+    # sorts after False); within each subgroup, alpha by error string.
+    return (
+        err in (None, ""),
+        err or "",
+        case.get("case", ""),
+        int(case.get("repeat", 0)),
+    )
+
+
+def _sort_by_sleep(case: dict[str, Any]) -> tuple[float, str, int]:
+    attempts = case.get("attempts") or []
+    total_sleep = sum(float(a.get("sleep_before_ms") or 0) for a in attempts)
+    return (-total_sleep, case.get("case", ""), int(case.get("repeat", 0)))
+
+
+SORT_KEYS = {
+    "worst": _worst_first_key,
+    "attempts": _sort_by_attempts,
+    "ratio": _sort_by_ratio,
+    "name": _sort_by_name,
+    "error": _sort_by_error,
+    "sleep": _sort_by_sleep,
+}
+
+
 # Sentinel label for cases whose last attempt had no observation error
 # (typically scorer-only failures). Kept explicit rather than `None` in
 # the markdown so operators see the bucket at a glance.
@@ -70,7 +122,14 @@ def format_retry_report(
     group_by_error: bool = False,
     min_attempts: int | None = None,
     only_errors: bool = False,
+    sort_by: str = "worst",
 ) -> str:
+    sort_fn = SORT_KEYS.get(sort_by)
+    if sort_fn is None:
+        raise ValueError(
+            f"unknown sort_by key: {sort_by!r}; "
+            f"valid: {', '.join(sorted(SORT_KEYS))}"
+        )
     cases = payload.get("cases", [])
     total_attempts = sum(len(c.get("attempts") or []) for c in cases)
     total_budget = sum(int(c.get("retry_budget", 1) or 1) for c in cases)
@@ -200,7 +259,9 @@ def format_retry_report(
             )
             lines.append("")
         for err_label, group_cases in ordered_groups:
-            sorted_cases = sorted(group_cases, key=_worst_first_key)
+            # Within a group, intra-group order follows --sort-by (default
+            # 'worst' preserves the §28 behaviour).
+            sorted_cases = sorted(group_cases, key=sort_fn)
             lines.append(
                 f"## Error: `{err_label}` — {len(group_cases)} case(s)"
             )
@@ -225,10 +286,18 @@ def format_retry_report(
     else:
         total_detailed = len(retried_or_failed)
         truncated = False
+        # Sort whenever the operator chose a non-default key (they want
+        # an order) OR when --limit forces truncation (we need to pick
+        # the top N consistently). With sort_by='worst' (default) and
+        # no --limit, payload order is preserved — matches §27.
+        if sort_by != "worst":
+            retried_or_failed = sorted(retried_or_failed, key=sort_fn)
         if limit is not None and limit < total_detailed:
-            retried_or_failed = sorted(retried_or_failed, key=_worst_first_key)[
-                : max(limit, 0)
-            ]
+            if sort_by == "worst":
+                retried_or_failed = sorted(
+                    retried_or_failed, key=sort_fn
+                )
+            retried_or_failed = retried_or_failed[: max(limit, 0)]
             truncated = True
 
         if truncated:

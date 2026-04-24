@@ -2,6 +2,30 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.57.0] — 2026-04-24
+### Added
+- `frok retry show --sort-by KEY` — five new sort
+  keys alongside the default `worst`: `attempts`
+  (most raw attempts first), `ratio` (highest
+  attempts/budget first), `name` (alphabetical),
+  `error` (alpha; no-error last), `sleep` (highest
+  total backoff ms first). Default `worst` preserves
+  §27 behaviour (sort only under `--limit`); any
+  other key triggers unconditional sort. Applies
+  within `--group-by-error` groups. argparse `choices`
+  rejects unknown keys. Markdown-only.
+- `frok.evals.format_retry_report(..., sort_by="worst")`
+  — new keyword-only param; default preserves §30.
+- `SORT_KEYS` registry in `frok.evals.retry_show` maps
+  key names to sort functions.
+- Tests: 15 new (10 format behaviour + 5 CLI): each
+  sort key produces the expected order, default byte-
+  identical to no-flag, sort-then-truncate under
+  `--limit`, sort-within-group under `--group-by-
+  error`, unknown key raises, parser choices, invalid
+  key rejection, end-to-end, `--json` passthrough;
+  862 total.
+
 ## [0.56.0] — 2026-04-24
 ### Added
 - `frok retry show --only-errors` — show only cases

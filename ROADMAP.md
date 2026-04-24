@@ -337,6 +337,20 @@ builds on these three.
     suites where no cases got dropped. The "what's
     broken right now" triage view. Markdown-only.
     *Shipped 2026-04-24.*
+31. **retry-show-sort-by** — `frok retry show
+    --sort-by KEY` overrides the default worst-first
+    sort with operator-chosen keys: `worst` (default,
+    preserves §27), `attempts` (most raw attempts
+    first), `ratio` (highest attempts/budget ratio
+    first), `name` (alphabetical), `error` (alpha by
+    last-attempt error; no-error cases last),
+    `sleep` (highest total backoff ms first — the
+    "wall-clock cost" lens). With `worst` (default),
+    sort is conditional (only fires under `--limit`);
+    with any other key, sort is unconditional. Applies
+    within `--group-by-error` groups too. argparse
+    `choices` rejects unknown keys.
+    *Shipped 2026-04-24.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable
