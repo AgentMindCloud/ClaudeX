@@ -2,6 +2,52 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 4 §5: version
+
+**Shipped** ``frok version`` — the triage primitive. Prints the
+installed frok version, the Python it's running on, and the
+platform string. Small but load-bearing: every bug report starts
+with "what version?", and this answers it with one command.
+
+* **`VersionInfo`** dataclass + `collect_version_info()` helper in
+  `frok/cli/version.py`. Pulls `frok.__version__`,
+  `platform.python_version()`, `platform.platform(aliased=True)`.
+* **Output modes**:
+  * default — ``frok 0.24.0 (Python 3.11.15, Linux-6.18.5-x86_64-with-glibc2.39)``
+    on one line, pipe-friendly and eye-friendly.
+  * ``--short`` — just the frok version
+    (``$(frok version --short)`` is shell-usable).
+  * ``--json`` — ``{"frok": …, "python": …, "platform": …}``.
+* **Flag precedence**: ``--short`` wins over ``--json`` when both
+  are passed. ``--short`` is the most specific ask and scripting
+  users pass it for a reason.
+
+**Verification.** `python3 -m pytest -q` → 439 passed in 1.33s (8
+new). Tests cover: argparse defaults + flag recognition,
+`VersionInfo` matches `frok.__version__` / runtime values, default
+one-line shape + regex-verified Python version, ``--short`` emits
+only the version string, ``--json`` is parseable + complete,
+``--short`` + ``--json`` both set → short wins (not JSON), exit
+code 0 across all three modes.
+
+**Decisions / trade-offs.**
+* ``--short`` wins over ``--json`` silently. Erroring on the
+  combination would be strictly-correct but unhelpful; the
+  interpretation is obvious.
+* ``platform(aliased=True)`` rather than `system()` alone. Bug
+  triage wants the glibc / kernel / arch string, not just
+  "Linux".
+* No ``--verbose`` mode that dumps site-packages, interpreter
+  path, etc. YAGNI — operators who need that run the one-liner
+  directly.
+
+**Next suggested action:** `Wrap Phase 4 with a \`frok --help\`
+polish pass: a root-level description line pointing operators at
+\`frok init\` / \`frok doctor\` / \`frok run\` as the onboarding
+triple, plus a short epilog linking the README. Small but makes
+the first \`frok\` invocation self-explanatory instead of just
+listing subcommands.`
+
 ## 2026-04-23 — Phase 4 §4: doctor
 
 **Shipped** ``frok doctor`` — the "does my setup actually work?"

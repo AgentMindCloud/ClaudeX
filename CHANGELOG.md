@@ -2,6 +2,17 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.25.0] — 2026-04-23
+### Added
+- `frok version` — print frok + Python + platform versions.
+  Default: `frok X.Y.Z (Python A.B.C, <platform>)`. Flags:
+  `--short` (just the frok version), `--json` (all three fields).
+  `--short` wins over `--json`.
+- `frok.cli.version.VersionInfo` dataclass +
+  `collect_version_info()` helper.
+- Tests: 8 new (parser, helper, each output mode, flag
+  precedence); 439 total.
+
 ## [0.24.0] — 2026-04-23
 ### Added
 - `frok doctor` preflight health check. Loads the resolved config

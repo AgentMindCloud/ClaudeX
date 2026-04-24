@@ -16,6 +16,8 @@ from .eval import diff_cmd, summarize_cmd
 from .eval import register as _register_eval
 from .init import init_cmd
 from .init import register as _register_init
+from .version import version_cmd
+from .version import register as _register_version
 from .run import (
     ClientFactory,
     LoadedCaseFile,
@@ -40,6 +42,7 @@ __all__ = [
     "run_cmd",
     "show_cmd",
     "summarize_cmd",
+    "version_cmd",
 ]
 
 
@@ -52,6 +55,7 @@ def build_parser() -> argparse.ArgumentParser:
     _register_eval(sub)
     _register_init(sub)
     _register_doctor(sub)
+    _register_version(sub)
     return p
 
 

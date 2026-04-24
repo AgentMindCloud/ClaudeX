@@ -87,6 +87,11 @@ builds on these three.
    SKIP. Live chat ping honours `client.api_key` + `--no-live`.
    Flags: `-c`, `-p`, `-o`, `--json`, `--no-live`, `--fail-on-skip`.
    *Shipped 2026-04-23.*
+5. **version** — `frok version` prints `frok X.Y.Z (Python A.B.C,
+   <platform>)`. `--short` emits only the frok version for shell
+   use; `--json` emits `{frok, python, platform}`. The first
+   question on any bug report, answered with one command.
+   *Shipped 2026-04-23.*
 
 ## Phase 3 — Wiring + operations
 1. **cli-runner** — `frok run <case-file>` entry point wiring
