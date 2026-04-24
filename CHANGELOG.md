@@ -52,3 +52,903 @@ All notable changes to this repository are logged here. Format follows [Keep a C
 - Phase 1B seventh-pass draft (§2 #19 — 1 file) shipped 2026-04-23. **Phase 1B §2 drafting is COMPLETE: 22 drafts across 20 of 20 §2 recs** await upstream filing. (Two §2 rows — #14, #15 — ship sibling `a/b` pairs targeting two repos each; hence 22 files for 20 recs.)
 - Session-2 + fourth-pass + fifth-pass drafts carry the mandatory speculative-draft metadata header. Sixth-pass §2 #2 and seventh-pass §2 #19 are **non-speculative** (no in-repo prerequisite).
 - Filing-packets updated across all 11 packets; every upstream AgentMindCloud repo now has at least one primary or cross-ref entry. Next Phase-1B decision: file the 22 drafts (Path A widen MCP scope; Path B manual UI), open a §3-deferrals drafting pass, move to Phase 2 implementation work, or pause. See `PROGRESS.md` Phase-1B seventh-pass "Next suggested action".
+## [0.58.0] — 2026-04-24
+### Added
+- `frok retry show --reverse` — flips the chosen sort
+  order. With default `worst`, forces the sort
+  (normally conditional) and reverses → "least-worst
+  first". With `--limit N`, truncation applies AFTER
+  reverse so `--reverse --limit 5` surfaces the 5
+  least-attention-worthy cases. Reverses WITHIN
+  `--group-by-error` groups; group order (size desc)
+  untouched. Markdown-only.
+- `frok.evals.format_retry_report(..., reverse=False)`
+  — new keyword-only param; default preserves §31.
+- Tests: 11 new (8 format behaviour + 3 CLI): default
+  byte-identical, flips name/attempts sorts, default-
+  worst sorts-then-flips, --limit-after-reverse,
+  within-group reverse preserves group order, composes
+  with --only-errors, parser default/set, end-to-end,
+  --json passthrough; 873 total.
+
+## [0.57.0] — 2026-04-24
+### Added
+- `frok retry show --sort-by KEY` — five new sort
+  keys alongside the default `worst`: `attempts`
+  (most raw attempts first), `ratio` (highest
+  attempts/budget first), `name` (alphabetical),
+  `error` (alpha; no-error last), `sleep` (highest
+  total backoff ms first). Default `worst` preserves
+  §27 behaviour (sort only under `--limit`); any
+  other key triggers unconditional sort. Applies
+  within `--group-by-error` groups. argparse `choices`
+  rejects unknown keys. Markdown-only.
+- `frok.evals.format_retry_report(..., sort_by="worst")`
+  — new keyword-only param; default preserves §30.
+- `SORT_KEYS` registry in `frok.evals.retry_show` maps
+  key names to sort functions.
+- Tests: 15 new (10 format behaviour + 5 CLI): each
+  sort key produces the expected order, default byte-
+  identical to no-flag, sort-then-truncate under
+  `--limit`, sort-within-group under `--group-by-
+  error`, unknown key raises, parser choices, invalid
+  key rejection, end-to-end, `--json` passthrough;
+  862 total.
+
+## [0.56.0] — 2026-04-24
+### Added
+- `frok retry show --only-errors` — show only cases
+  that failed in the current run. Drops both Clean
+  passes AND retried-but-passed cases. Applies BEFORE
+  every other display filter (`--min-attempts`,
+  `--group-by-error`, `--limit`). "Only in previous"
+  untouched. Indicator `_Showing failing cases only._`
+  always fires when the flag is set. Markdown-only.
+- `format_retry_report(..., only_errors=False)` — new
+  keyword-only param; default preserves §29 behaviour.
+- Tests: 12 new (8 format behaviour + 4 CLI):
+  drops Clean+retried-pass, default byte-identical,
+  indicator on all-pass, composes with
+  group_by_error/limit/min_attempts, Only-in-previous
+  untouched, summary unchanged, parser default,
+  end-to-end, --json passthrough; 847 total.
+
+## [0.55.0] — 2026-04-24
+### Added
+- `frok retry show --min-attempts N` — drops cases
+  whose attempt count is below N from both the detail
+  sections and the Clean passes list. Applies BEFORE
+  `--group-by-error` and `--limit`; "Only in previous"
+  is left untouched (different-run attempt counts).
+  Indicator line "_Filtered to cases with >= N
+  attempts._" always fires when the filter is active.
+  N=1 is a no-op; N < 1 is CliError. Markdown-only.
+- `format_retry_report(..., min_attempts=N)` — new
+  keyword-only param; default `None` preserves §28
+  behaviour.
+- Tests: 11 new (6 format behaviour + 5 CLI): N=2
+  drops 1-attempt from both buckets, N=1 byte-
+  identical to default, high-threshold empties detail,
+  filter-before-group + filter-before-limit ordering,
+  Only-in-previous untouched, parser default, end-to-
+  end, N=0 rejected, --json passthrough; 835 total.
+
+## [0.54.0] — 2026-04-24
+### Added
+- `frok retry show --group-by-error` — collapse
+  retried/failing cases sharing the same last-attempt
+  error into "## Error: `<err>` — N case(s)"
+  sections. Scorer-only failures (no observation
+  error) land in a dedicated "(no error)" bucket.
+  Groups sorted by size desc (alpha tiebreak for
+  determinism); cases within each group use the
+  worst-first sort key from §27.
+- `format_retry_report(..., group_by_error=False)` —
+  new keyword-only param; defaults preserve §27
+  behaviour.
+- Under `--group-by-error`, `--limit N` truncates the
+  group count (not case count), indicator switches to
+  "`N of M error groups (largest-first)`". Cases
+  within groups stay whole.
+- Tests: 17 new (13 format behaviour + 4 CLI): same-
+  error grouping, distinct errors split, scorer-only
+  bucket, size desc + alpha tiebreak, intra-group
+  worst-first, Clean passes still surfaced, Only-in-
+  previous still surfaced, no-flag preserves §27
+  behaviour, `--limit` group truncation, CLI flag +
+  composition with `--limit` / `--json`; 824 total.
+
+## [0.53.0] — 2026-04-24
+### Added
+- `frok retry show --limit N` — truncate per-case
+  detail sections to the N most-attention-worthy
+  retried/failing cases. Sort key: failing first →
+  highest attempts/budget ratio → most raw attempts
+  → case name (deterministic). A
+  `_Showing N of M retried/failing cases (worst-first)._`
+  indicator marks the truncation. `--limit 0` suppresses
+  all detail but keeps the summary + clean passes.
+  Clean passes and "Only in previous" sections are
+  NOT truncated. Rejects negative values as CliError.
+- `format_retry_report(..., limit=N)` — new keyword-
+  only param. Defaults `None` (no truncation); §26
+  callers unchanged.
+- Tests: 16 new (4 sort-key unit, 8 format behaviour,
+  4 CLI end-to-end / validation / --json passthrough
+  / --compare-to composition); 807 total.
+
+## [0.52.0] — 2026-04-24
+### Added
+- `frok retry show --compare-to PATH2` — inline pairwise
+  comparison on top of the single-report triage view:
+  per-case headers gain `(was N/M, PASS/FAIL)` or
+  `(NEW — not in previous)` suffixes, a new
+  `## Comparison` summary block surfaces grew/shrank/
+  newly-failing/newly-passing counts plus the
+  regression boolean, and a `## Only in previous`
+  section lists vanished cases.
+- `format_retry_report` gains keyword-only params
+  `compare_to` (second payload) and `compare_to_path`
+  (surfaces in the summary). Defaults `None` — §25
+  callers unchanged.
+- Reuses `diff_retry_reports` internally; no logic
+  duplication.
+- Markdown-only enrichment: `--json` still passes
+  through the primary payload verbatim (structured
+  diff data is `frok retry diff`'s job).
+- Tests: 10 new (6 unit + 4 CLI): header suffix with
+  prev matched / NEW, comparison summary counts, Only-
+  in-previous section, source + compared-to path lines,
+  no-compare byte-identical to §25, CLI end-to-end,
+  missing comparison file is CliError, `--json` +
+  `--compare-to` primary passthrough, `--fail-on-
+  failure` gates on primary not regression; 791 total.
+
+## [0.51.0] — 2026-04-24
+### Added
+- `frok retry show PATH` — new CLI subcommand that
+  pretty-prints a single retry-report JSON as markdown:
+  summary bloc, per-case attempt tables for retried OR
+  failing cases, "Clean passes" bulleted list for
+  single-attempt passes. Flags: `-o OUT`, `--json`
+  (passthrough), `--fail-on-failure` (exit 1 on any
+  failed case).
+- `frok.evals.format_retry_report(payload, *, path=None)`
+  — new public API returning markdown.
+- `frok` root parser epilog now includes `retry show`
+  alongside `retry diff` / `retry summarize`.
+- Tests: 16 new (7 module + 9 CLI): summary bloc with
+  / without source path, clean-passes bucketing,
+  retried-case table, failing-case header, empty
+  report, mixed report, parser, JSON passthrough,
+  --fail-on-failure gate both directions, missing /
+  malformed / missing-cases errors; 781 total.
+
+## [0.50.0] — 2026-04-24
+### Added
+- `frok retry summarize DIR` — new CLI subcommand that
+  walks `DIR/*.json` retry-reports (lexicographic
+  filename ordering), matches `(case, repeat)` entries
+  across reports, and classifies each case's attempt
+  trend as `flat` / `growing` / `shrinking` / `mixed`.
+  Spotlights `Growing` and `Mixed` cases in dedicated
+  markdown sections. Flags: `-o OUT`, `--json`,
+  `--fail-on-growing`.
+- `frok.evals.summarize_retry_reports(directory)` and
+  `frok.evals.retry_summary_to_markdown(summary)` —
+  new public API.
+- `frok` root parser epilog entry for `retry summarize`.
+- Tests: 29 new (17 module + 12 CLI): trend classifier
+  flat/growing/shrinking/mixed/single-value/nones-ignored,
+  late-arrival None slots, `(case, repeat)` distinct
+  keys, missing / non-dir / empty / malformed /
+  missing-cases errors, `--fail-on-growing` catches
+  growing only not mixed; 765 total.
+
+## [0.49.0] — 2026-04-24
+### Added
+- `frok retry diff A B` — new CLI subcommand that diffs
+  two retry-report JSONs and surfaces attempts drift,
+  error-shape changes, newly-failing / newly-passing
+  cases, and slugs only in one side. Flags: `-o OUT`,
+  `--json`, `--a-label LABEL`, `--b-label LABEL`,
+  `--fail-on-regression`.
+- `frok.evals.diff_retry_reports(a, b)` and
+  `frok.evals.retry_diff_to_markdown(diff)` — new public
+  API. Matches entries by `(case, repeat)` tuple.
+- `frok` root parser epilog now lists the new command
+  alongside `eval diff` / `eval summarize` / `trace
+  inspect`.
+- Tests: 19 new (10 differ unit + 9 CLI end-to-end); 736
+  total.
+
+## [0.48.0] — 2026-04-24
+### Added
+- `frok run --retry-report PATH` — writes a per-case per-
+  attempt timeline JSON: `{"cases": [{"case", "repeat",
+  "attempts": [{"attempt", "passed", "error",
+  "sleep_before_ms"}], "retry_budget", "passed"}]}`.
+  Always writes when the flag is set (even without
+  `--retry`). Parent directory created if missing.
+- `_apply_retry_backoff` now returns the actual ms slept
+  (was `None`) so the timeline records jitter-adjusted
+  sleeps faithfully.
+- `_run_unit` now returns `(EvalResult, attempts_log)`
+  instead of just `EvalResult`; gather splits them back
+  apart for the report writer.
+- Tests: 8 new (parser default + Path, single-attempt
+  pass shape, multi-attempt with specific errors +
+  sleeps, exhausted retries logs every attempt, no-flag
+  writes nothing, parent-dir creation, `--repeat` +
+  multi-case submission-order entries); 717 total.
+
+### Changed
+- `_apply_retry_backoff(ms, jitter)` return type:
+  `None` → `float` (ms actually slept). Existing backoff
+  tests updated implicitly (they only observed the sleep
+  call, not the return).
+
+## [0.47.0] — 2026-04-24
+### Added
+- `frok run --retry-backoff MS` — sleep MS milliseconds
+  before each retry (default 0 = no sleep). Goes BEFORE
+  each retry, not after the final attempt; skipped
+  entirely on early breaks (pass, timeout,
+  `--retry-on-error` miss).
+- `frok run --retry-backoff-jitter FRACTION` — symmetric
+  jitter in [0, 1] applied as `random.uniform(1 - F, 1 +
+  F) * MS`. Deterministic under `--seed S`.
+- Module-level `_retry_sleep` seam in `frok.cli.run` so
+  tests can monkeypatch without touching `asyncio.sleep`
+  globally.
+- Four new validation guards: negative backoff, jitter
+  outside [0, 1], jitter without backoff, backoff without
+  `--retry > 0`.
+- Tests: 14 new (parser defaults + values, unit sleep
+  conversion, no-op at ms=0, jitter bounds,
+  sleep-between-retries, first-pass-no-sleep,
+  no-sleep-after-final, jitter end-to-end, no-sleep-on-
+  error-filter-miss, all four validations); 709 total.
+
+## [0.46.0] — 2026-04-24
+### Added
+- `frok run --retry-on-error REGEX` — narrows `--retry` to
+  failures whose `observation.error` matches REGEX (Python
+  `re.search`; repeatable, any match wins). Scorer-only
+  failures (no observation error) never retry under the
+  flag — explicit safeguard against `.*` silently matching
+  empty-string errors.
+- Composes with `--retry-on` via AND semantics: case must
+  match the name selector AND the error must match the
+  error selector for a retry. Timeouts still short-circuit
+  as always.
+- Rejects `--retry-on-error` without `--retry > 0` and
+  surfaces invalid regexes inline.
+- Tests: 10 new (parser default + append, matching error
+  retries, non-match runs once, scorer-only failure runs
+  once under `.*`, multiple patterns, timeout short-
+  circuits, --retry-on+--retry-on-error AND composition,
+  --retry=0 rejected, invalid regex rejected); 695 total.
+
+## [0.45.0] — 2026-04-24
+### Added
+- `EvalResult.retry_budget: int = 1` — the retry allowance
+  the CLI allocated to each result. `to_summary()` emits
+  the field when > 1; CLI retry loop stamps both `attempts`
+  and `retry_budget` via `dataclasses.replace`.
+- `EvalReport.total_budget` computed property; summary
+  grows `total_budget` when any result was retry-eligible.
+- Markdown Attempts column becomes `Attempts/Budget` (e.g.
+  "3/5") on both flat and aggregated forms. Summary line
+  reads "Retried cases: K (used A of B attempts)".
+  Aggregated form sums attempts and budget across a case's
+  repeats.
+- Tests: 12 new (field default, summary gating, report
+  properties, flat + aggregated markdown ratio format, CLI
+  stamps budget=retry+1 on matches and 1 on `--retry-on`-
+  excluded cases, end-to-end markdown); 685 total.
+
+### Changed
+- `EvalReport.to_markdown()` Attempts column trigger widened
+  from `_has_retries` to `_has_retries or
+  _has_retry_budget` so allocated-but-unused budgets still
+  surface. Three existing tests updated to reflect the new
+  surfacing.
+
+## [0.44.0] — 2026-04-24
+### Added
+- `frok run --retry-on PATTERN` — narrows `--retry`'s
+  budget to cases whose names match PATTERN (glob by default;
+  `re:` prefix for regex; repeatable — any match wins).
+  Non-matches always run exactly once, even under `--retry
+  > 0`. Rejects `--retry-on` without `--retry > 0` as a
+  CliError (no budget to spend); invalid regexes surface
+  inline via the existing `_compile_pattern` path.
+- Composes cleanly with `--filter` (case selection) and
+  `--fail-on-regression` (exhausted retries on matched cases
+  still flip the exit code).
+- Tests: 12 new (parser default empty + append-able, match
+  narrows attempts to matching case, no-match runs all once,
+  regex prefix, repeatable wins, pass-first no-retry,
+  without-retry rejected, with-retry-0 rejected, invalid
+  regex, fail-on-regression interop, composes with
+  --filter); 673 total.
+
+## [0.43.0] — 2026-04-24
+### Added
+- `EvalResult.attempts: int = 1` — how many runner
+  invocations produced the result. Set by the CLI retry
+  loop via `dataclasses.replace` on exit; default 1 keeps
+  the library-level contract unchanged. `to_summary()` emits
+  `attempts` only when > 1.
+- `EvalReport._has_retries`, `total_attempts`,
+  `retried_cases` — computed rollups. `to_summary()` emits
+  `total_attempts` + `retried_cases` when any result was
+  retried; flat and aggregated markdown both grow an
+  Attempts column and a "Retried cases: K (total attempts
+  N)" summary line. Runs without `--retry` produce the same
+  summary / markdown shape as before.
+- Tests: 16 new (field default, summary gating, report
+  properties, flat markdown column, aggregated markdown
+  column, CLI: no-retry / pass-first / fail-then-succeed /
+  exhausted / timeout short-circuit); 661 total.
+
+## [0.42.0] — 2026-04-24
+### Added
+- `frok run --retry N` — per-case retry loop. Re-runs a
+  failing case up to N times and marks it PASS if any attempt
+  succeeds. Default 0 (no retry). Timeouts short-circuit the
+  loop — a `TimeoutError` observation.error is respected as an
+  operator-set cap, not flakiness.
+- Rejects `--retry < 0` and `--retry > 0 + --capture-baseline`
+  (retries would overwrite the captured JSONL; mirrors the
+  existing `--repeat > 1` guard). Composes with `--repeat`,
+  `--jobs`, `--fail-on-regression`, and `--timeout-s`.
+- Tests: 12 new (parser default 0, accepts int, default runs
+  once, pass-first no-retry, fail-then-succeed flips, always-
+  fail exhausts retry+1 attempts, timeout not retried,
+  fail-on-regression interop both directions, negative
+  rejected, capture-baseline + retry>0 rejected, capture-
+  baseline + retry=0 fine); 645 total.
+
+## [0.41.0] — 2026-04-23
+### Added
+- `frok run --timeout-s SECONDS` — suite-wide default for
+  `EvalCase.timeout_s`. Fills every case whose own value is
+  `None`; per-case overrides always win. Negative rejected
+  as `CliError`; zero short-circuits unconfigured cases.
+- Tests: 9 new (parser shape, fill behaviour, per-case
+  override wins, zero short-circuit, fail-on-regression
+  interop, negative rejection); 633 total.
+
+## [0.40.0] — 2026-04-23
+### Added
+- `EvalCase.timeout_s` — hard wall-clock cap per case. When
+  set, `EvalRunner.run_case` wraps execution in
+  `asyncio.wait_for`; on timeout the case fails with a clean
+  `TimeoutError` observation.error. Partial events captured
+  on the InMemorySink during cancellation unwinding are
+  preserved so `trace inspect` / scorers still have a
+  record. Default `None` preserves existing behaviour.
+- Tests: 8 new (no-timeout default, generous, tiny +
+  slow transport, scorers under timeout, partial event
+  preservation, per-repeat composition, zero-timeout);
+  624 total.
+
+## [0.39.0] — 2026-04-23
+### Added
+- `frok.evals.LatencyDeltaWithin(max_ms)` — second baseline-
+  aware scorer, mirroring `TokenDeltaWithin` but on root-span
+  `duration_ms`. Symmetric; construction rejects negative
+  `max_ms`; `max_ms=0` is exact-parity.
+- `diff_event_streams` output gained three keys:
+  `{a_label}_latency_ms`, `{b_label}_latency_ms`,
+  `latency_delta_ms`. Backwards-compatible — existing key
+  assertions unchanged.
+- Shared private `_load_baseline_diff` helper keeps the two
+  baseline-aware scorers in lockstep on error paths.
+- Tests: 21 new (5 diff-field + 16 scorer); 616 total.
+
+## [0.38.0] — 2026-04-23
+### Added
+- `frok.evals.TokenDeltaWithin(max_delta)` — first baseline-
+  aware scorer. Loads `case.baseline` via `read_jsonl`, reuses
+  `diff_event_streams` from `frok.evals.baseline`, fails when
+  `abs(observed_tokens - baseline_tokens) > max_delta`.
+  Symmetric (catches runaway-long and bail-early answers);
+  failure detail surfaces baseline + observed + signed delta;
+  measure carries the signed delta for trend-scanning.
+- Construction rejects negative `max_delta`; `max_delta=0`
+  is allowed as exact-parity.
+- Tests: 16 new (construction, no-baseline, missing-file,
+  under / at / over threshold both directions, runner
+  integration); 595 total.
+
+## [0.37.0] — 2026-04-23
+### Added
+- `frok.evals.AnswerLength(min_chars=None, max_chars=None)`
+  scorer — shape gate complementing content-based scorers.
+  At least one bound required; construction validates
+  non-negative bounds and `min <= max`. Scorer name reflects
+  the active bounds (`>=N`, `<=M`, or `>=N,<=M`); measure
+  carries the observed length.
+- Tests: 17 new (4 construction errors + all three bound
+  modes + bounds edges + no-final-response + name formatting
+  + measure); 579 total.
+
+## [0.36.0] — 2026-04-23
+### Added
+- `frok.evals.InvocationsWithin(max_count)` scorer — asserts
+  the total number of tool invocations on a case stays at or
+  below the threshold. Aggregate "don't loop forever" cap
+  complementing `ToolCalled(..., times=N)`'s per-tool exact
+  count. Inclusive at-limit; zero-invocations edge passes any
+  non-negative threshold.
+- Tests: 7 new (pass / fail / edge / name format); 562 total.
+
+## [0.35.0] — 2026-04-23
+### Added
+- `frok.evals.LatencyWithin(max_ms)` scorer — asserts the
+  case's root-span `duration_ms` stays within a threshold.
+  Complements `TokensWithin` (cost ceiling) with a wall-clock
+  ceiling. Inclusive at-limit comparison; zero-latency fallback
+  when a run errors before a root span closes.
+- Tests: 7 new (pass / fail / edge paths + scorer-name format);
+  555 total.
+
+## [0.34.0] — 2026-04-23
+### Added
+- `frok.evals.ToolArgsMatch(name, regex, field=None, flags=0)` —
+  regex-based tool-argument scorer. Complements
+  `ToolArgsSubset` (exact equality) with `re.search`-style
+  fuzzy matching. `field=None` matches against the
+  JSON-serialised args; a pinned field matches against
+  `str(args[field])`. Invalid regex fails cleanly; measure
+  carries the matched haystack.
+- Tests: 14 new (field vs whole-args, non-string values,
+  multi-invocation semantics, flags, anchored patterns,
+  invalid regex, scorer name formatting); 548 total.
+
+## [0.33.0] — 2026-04-23
+### Added
+- `frok.evals.ResponseModelIs(expected)` scorer — asserts
+  `GrokResponse.model == expected`. Complements
+  `EvalCase.model=…` (which pins the request) by pinning the
+  response, catching silent provider-side model swaps. Missing
+  final response / empty-string model / mismatch all fail with
+  a triage-friendly detail; measure carries the actual model
+  string.
+- Tests: 7 new (unit + runner-integration); 534 total.
+
+## [0.32.0] — 2026-04-23
+### Added
+- `GrokClient.chat(..., model=)` and
+  `chat_stream(..., model=)` — per-call model override.
+  Precedence: explicit kwarg > `client.model`.
+- `ToolOrchestrator.model` field passes through on every turn.
+- `EvalCase.model` — flows through the runner on both
+  no-tools and tools paths (streaming and non-stream).
+- `grok.chat` / `grok.chat_stream` telemetry spans report the
+  effective model (kwarg-override or client default).
+- Tests: 13 new (chat + chat_stream + orchestrator + EvalCase
+  + span attrs + response-fallback); 527 total.
+
+## [0.31.0] — 2026-04-23
+### Added
+- `GrokClient.chat(..., tool_choice=)` and
+  `chat_stream(..., tool_choice=)` — first-class kwargs for
+  the OpenAI/xAI tool-choice field. Accepts strings
+  (`"auto"` / `"none"` / `"required"`) or a dict
+  (`{"type": "function", "function": {"name": "X"}}`).
+- `GrokClient.tool_choice` — client-level default. Precedence:
+  explicit kwarg > client default > omit.
+- `ClientConfig.tool_choice` config knob, env
+  `FROK_CLIENT_TOOL_CHOICE`; flows through `build_client`.
+- `EvalCase.tool_choice` — runner forwards into
+  `ToolOrchestrator(tool_choice=…)`.
+- Render layer handles dict-shaped `tool_choice`: TOML inline
+  tables (round-trips through `tomllib`) and JSON-encoded env
+  values.
+- Tests: 21 new (GrokClient + chat_stream + orchestrator +
+  EvalCase + config + render); 514 total.
+
+### Changed
+- `ToolOrchestrator` now passes `tool_choice` via the explicit
+  `chat()` / `chat_stream()` kwarg instead of folding it into
+  `extra`. Request body shape unchanged.
+
+## [0.30.0] — 2026-04-23
+### Added
+- `ToolOrchestrator.run(stream_sink=callable)` — streams chat
+  turns via `chat_stream` when the client has a
+  `streaming_transport`, forwarding content deltas to the sink
+  and emitting a `>>> turn N` marker per iteration. Falls back
+  to non-stream `chat` when no streaming_transport is set.
+- `tool.run` telemetry span gained a `streamed` attr
+  (True / False).
+- `EvalRunner._execute` now forwards `stream_sink` to the tool
+  orchestrator instead of dropping it silently — `frok run
+  --stream` on a tools-enabled case now gives live feedback.
+- Tests: 7 new (orchestrator-level library tests + an end-to-end
+  CLI test proving the tools path streams); 493 total.
+
+## [0.29.0] — 2026-04-23
+### Added
+- `frok run --stream` — forward content deltas to stderr live
+  (per-case `>>> <name>` header + raw tokens). The final
+  `GrokResponse` still flows to scorers / report / baseline
+  diff. Cases with tools silently fall back to the non-stream
+  path. Incompatible with `--jobs > 1`.
+- `EvalRunner.run_case(..., stream_sink=callable)` threads a
+  per-delta callback; no-tools path uses `client.chat_stream`,
+  tools path ignores it (for now).
+- `build_client(..., streaming_transport=)` kwarg; default
+  factory now wires `urllib_streaming_transport` so
+  `--transport real` + `--stream` works out-of-the-box.
+- Tests: 8 new (parser, deltas + header to stderr, scorers see
+  final, tools fallback, `--jobs` guard, missing-streaming-
+  transport as case error); 486 total.
+
+## [0.28.0] — 2026-04-23
+### Added
+- `GrokClient.chat_stream(messages, …)` — async generator yielding
+  `StreamChunk`s from an SSE stream. Pre-flight safety on
+  messages, live deltas, post-flight safety on the assembled
+  content. Streamed tool-call deltas reassemble as `ToolCall`s
+  on the final chunk. Emits a `grok.chat_stream` telemetry span.
+- `StreamingTransport` protocol + `StreamChunk` dataclass +
+  `urllib_streaming_transport` stdlib implementation
+  (line-by-line via `asyncio.to_thread`).
+- `streaming_transport` field on `GrokClient`.
+- Tests: 19 new (SSE parser, tool-call merger, chat_stream
+  happy-path + safety + error paths + telemetry); 478 total.
+
+## [0.27.0] — 2026-04-23
+### Added
+- `frok init --transport {stub,real}` — choose the generated
+  `cases/smoke.py` transport. `stub` (default) runs with no
+  credentials; `real` wires `urllib_transport` + reads
+  `FROK_CLIENT_API_KEY` from the environment. Next-steps block
+  prints the right on-ramp for each.
+- `frok.cli.init._TRANSPORT_TEMPLATES` map + `_SMOKE_CASE_REAL`
+  template.
+- Tests: 11 new (parser, template contents, next-steps
+  switching, run-without-api_key error, stubbed-urllib live
+  green-path, example composition); 459 total.
+
+## [0.26.0] — 2026-04-23
+### Changed
+- Root `frok --help` now opens with a mission-statement line and
+  an explicit "onboarding triple" callout (`init`, `doctor`,
+  `run`). Epilog lists every everyday operation as a copy-
+  pasteable one-liner + a `frok version` pointer for bug
+  reports. Multi-line layout preserved via
+  `RawDescriptionHelpFormatter`.
+- Subcommand display order reshuffled for help-output UX: init →
+  doctor → run → config → eval → trace → version.
+- Tests: 9 new (description, epilog, formatter, ordering,
+  regression guards); 448 total.
+
+## [0.25.0] — 2026-04-23
+### Added
+- `frok version` — print frok + Python + platform versions.
+  Default: `frok X.Y.Z (Python A.B.C, <platform>)`. Flags:
+  `--short` (just the frok version), `--json` (all three fields).
+  `--short` wins over `--json`.
+- `frok.cli.version.VersionInfo` dataclass +
+  `collect_version_info()` helper.
+- Tests: 8 new (parser, helper, each output mode, flag
+  precedence); 439 total.
+
+## [0.24.0] — 2026-04-23
+### Added
+- `frok doctor` preflight health check. Loads the resolved config
+  and runs one Check per Phase-2 subsystem (config, safety,
+  telemetry, memory, multimodal, live client.chat). Flags:
+  `-c/--config`, `-p/--profile`, `-o/--output`, `--json`,
+  `--no-live`, `--fail-on-skip`. Exit 1 on any FAIL (or any SKIP
+  under `--fail-on-skip`).
+- `frok.cli.doctor.Check` dataclass, `PASS`/`FAIL`/`SKIP`
+  constants, library-level `check_*` helpers, `render_markdown` /
+  `render_json` renderers.
+- Tests: 26 new (library + CLI paths); 431 total.
+
+## [0.23.0] — 2026-04-23
+### Added
+- `frok init --list-examples` — print the available `--example`
+  names with their one-line descriptions (parsed from each
+  template's module docstring) and exit without writing anything.
+  Output is alphabetically sorted, two-column, pipe-friendly.
+- `frok.cli.init.format_examples_list()` and
+  `frok.cli.init._example_summary(src)` helpers.
+- Tests: 12 new (parser, helper, CLI, no-I/O guarantees); 405 total.
+
+## [0.22.0] — 2026-04-23
+### Added
+- `frok init --example {tools,multimodal,memory}` (repeatable) —
+  scaffold a reference case file for each named flavor alongside
+  the basic smoke scaffold. Each example is self-contained, uses
+  a stub transport, and runs green under `frok run`:
+  * `cases/tools.py` — `@tool` + ToolOrchestrator loop
+  * `cases/multimodal.py` — `GrokMessage.parts` with `ImageRef`
+  * `cases/memory.py` — `MemoryStore` exposed as `remember` /
+    `recall` tools
+- `frok.cli.init.EXAMPLE_TEMPLATES` dict; unknown example names
+  rejected by argparse.
+- Tests: 16 new (parser, scaffold composition, each example
+  running green, tool + multimodal + memory behaviour checks);
+  393 total.
+
+## [0.21.0] — 2026-04-23
+### Added
+- `frok init [PATH] [--force]` — scaffold a new Frok project.
+  Writes `CLAUDE.md`, `frok.toml` (with prod profile),
+  `cases/smoke.py` (stub transport so it runs out of the box),
+  and `.github/workflows/frok.yml`. Aborts if any target exists
+  unless `--force`; prints a Next-steps block.
+- Tests: 14 new (scaffold + --force + validity of generated
+  files); 377 total.
+
+## [0.20.0] — 2026-04-23
+### Added
+- `frok run --jobs N` — run up to N (case, repeat) units
+  concurrently under an `asyncio.Semaphore`. Default 1 (serial).
+  Silently clamped to `os.cpu_count()`. Incompatible with
+  `--seed` because Python's `random` state is process-global.
+- Result order in the `EvalReport` mirrors case-file order
+  regardless of completion order.
+- Tests: 11 new (defaults, order preservation, capture interop,
+  clamping, error paths); 363 total.
+
+## [0.19.0] — 2026-04-23
+### Added
+- `frok run --repeat N --seed S` — execute each case N times with
+  a deterministic seed (`random.seed(S + repeat_index)` +
+  `FROK_RUN_SEED` env var). Aggregated report surfaces per-case
+  pass rates and flags flaky cases (0 < rate < 1) distinctly from
+  hard failures. `--repeat > 1` with `--capture-baseline` is
+  rejected to prevent JSONL filename collisions.
+- `EvalResult.repeat` / `.repeats` fields (default 0 / 1).
+- `EvalReport.by_case`, `case_pass_rates`, `total_cases`,
+  `passed_cases`, `flaky_cases`, `failed_cases` properties.
+- `EvalReport.to_markdown()` picks an aggregated format with
+  pass-rate column and `FLAKY` verdict when any case has
+  `repeats > 1`; otherwise the existing flat format is preserved
+  (zero change for single-run callers).
+- `EvalRunner.run(cases, *, repeats=1)` +
+  `run_case(case, *, repeat, repeats)`.
+- `frok.cli.run.apply_seed(seed, repeat_index)` helper.
+- Tests: 17 new (library + CLI paths); 352 total.
+
+## [0.18.0] — 2026-04-23
+### Added
+- `frok eval summarize <A> --diff-against <B>` — walk two
+  `<slug>.jsonl` directories, diff each matched pair, flag slugs
+  that appear in only one side. Markdown or `--json`;
+  `--fail-on-regression` gates CI on tool-order divergence, new
+  errors, or slug drift.
+- `frok.evals.CaseDiff` + `DirectoryDiff` dataclasses;
+  `diff_directories(a, b)` walker;
+  `directory_diff_to_markdown` / `directory_diff_to_json`
+  renderers.
+- Tests: 19 new (library + CLI paths); 335 total.
+
+## [0.17.0] — 2026-04-23
+### Added
+- `frok eval summarize <DIR>` — walk a baseline directory, roll up
+  per-case spans / tokens / errors / duration, surface cross-case
+  leaders (slowest, heaviest tokens, most errors, errored tools,
+  top tools). Markdown or `--json`; `--top N` caps leader rows;
+  `--fail-on-errors` for CI gates.
+- `frok.telemetry.CaseSummary` + `DirectorySummary` dataclasses
+  with aggregate properties and `slowest` / `heaviest_tokens` /
+  `most_errors` leader methods.
+- `frok.telemetry.summarize_directory(dir)`,
+  `dir_summary_to_markdown`, `dir_summary_to_json`.
+- Tests: 24 new (library walker + aggregates + renderers; CLI
+  paths + interop with `run --capture-baseline`); 316 total.
+
+## [0.16.0] — 2026-04-23
+### Added
+- `frok eval diff <a.jsonl> <b.jsonl>` — diff two JsonlSink
+  captures. Markdown or JSON output; `--fail-on-regression` flips
+  exit code on tool-order divergence or new errors in `b`.
+- `frok.evals.diff_event_streams(a, b, *, a_label, b_label)` —
+  the shared comparison core (now also powers
+  `diff_against_baseline`).
+- `frok.evals.diff_to_markdown(diff, …)` — compact verdict render.
+- Both helpers report `span_delta` alongside existing fields.
+- Tests: 19 new (library + CLI paths); 292 total.
+
+### Changed
+- `diff_against_baseline` now delegates to
+  `diff_event_streams`. Dict shape preserved (legacy keys
+  `baseline_tools`, `observed_tools`, `token_delta`, etc.) plus
+  two new: `baseline_spans`, `observed_spans`, `span_delta`.
+
+## [0.15.0] — 2026-04-23
+### Added
+- `frok run --list` — preview-only mode. Prints resolved case names
+  (after `--filter`/`--exclude`) one per line and exits without
+  constructing a client or running any case. Honours `-o/--output`.
+  No `client.api_key` required; no `--capture-baseline` files written.
+- Tests: 10 new (basic output, filter interop, output flag,
+  no-run contract, no-api-key path, capture interop); 273 total.
+
+## [0.14.0] — 2026-04-23
+### Added
+- `frok run --filter <PATTERN>` / `--exclude <PATTERN>` — keep/drop
+  cases by name. Fnmatch glob by default; `re:` prefix for regex;
+  both flags repeatable. Zero matches is a `CliError` that lists
+  every available case. Composes with `--capture-baseline` (only
+  filtered cases produce capture files) and `--use-baseline`.
+- `frok.cli.run.filter_cases(cases, *, includes, excludes)` —
+  library-level helper exposing the same matcher.
+- Tests: 16 new (matcher unit tests + CLI end-to-end + capture
+  interop); 263 total.
+
+## [0.13.0] — 2026-04-23
+### Added
+- `frok run --capture-baseline <DIR>` — writes per-case
+  `<slug>.jsonl` telemetry captures by layering a `JsonlSink` onto
+  the client's tracer.
+- `frok run --use-baseline <DIR>` — auto-attaches
+  `DIR/<slug>.jsonl` as each case's `baseline` when the file
+  exists; cases with explicit `baseline=` are untouched.
+- `frok.telemetry.with_added_sink(tracer, extra)` — return a new
+  `Tracer` whose sink fans out to the original plus `extra`
+  (collapses `NullSink`, extends `MultiSink`).
+- `frok.cli.run.case_slug(name)` — filename-safe case-name slug.
+- Tests: 13 new (slug, with_added_sink, capture / use / round-trip);
+  247 total.
+
+## [0.12.0] — 2026-04-23
+### Added
+- `frok.config.render` — `to_toml`, `to_json`, `to_env` renderers with
+  sensitive-field masking (default) + `reveal=True` escape hatch.
+- `frok config show [--format=toml|json|env] [-c FILE] [-p PROFILE]
+  [-o PATH] [--reveal]` subcommand. Prints the resolved `FrokConfig`
+  after file + env + CLI + profile merging.
+- Tests: 18 new (renderers across all three formats + CLI paths);
+  234 total.
+
+## [0.11.0] — 2026-04-23
+### Added
+- `frok.telemetry.analysis` — `build_tree(events)`, `summarize(events)`
+  returning per-name stats + errored spans + top-tool aggregates, plus
+  `summary_to_markdown` / `render_tree` / `summary_to_json` renderers.
+- `frok trace inspect <jsonl>` subcommand — loads a `JsonlSink`
+  capture, summarises it, and prints Markdown (or JSON via `--json`,
+  or Markdown+tree via `--tree`). Flags: `-o/--output`, `--top`.
+- Tests: 23 new (analysis functions + CLI paths); 216 total.
+
+### Changed
+- CLI refactor: top-level parser + `main()` now live in
+  `frok.cli.__init__`; each subcommand module exports a
+  `register(sub)` helper. `CliError` moved to `frok.cli.common`.
+  Public imports (`CliError`, `build_parser`, `main`, `run_cmd`,
+  `load_case_file`) unchanged.
+
+## [0.10.0] — 2026-04-23
+### Added
+- `frok.cli` — `frok run <case-file>` entry point. Wires
+  `load_default_config` → full-stack build → `EvalRunner` → prints
+  `EvalReport.to_markdown()`. Flags: `-c/--config`, `-p/--profile`,
+  `-o/--output`, `--summary-json`, `--fail-on-regression`.
+- Case-file conventions: `CASES: list[EvalCase]` or
+  `build_cases(config) -> list[EvalCase]`, plus optional
+  `make_client(config, sink) -> GrokClient`.
+- `frok.clients.transports.urllib_transport` — stdlib-only default
+  `Transport` (urllib + asyncio.to_thread).
+- Console script (`frok`) and `python -m frok` entry points.
+- Tests: 12 new (CLI loader, exit codes, output paths, parser).
+  193 total.
+
+## [0.9.0] — 2026-04-23
+### Added
+- `frok.config` — typed `FrokConfig` with client / safety / telemetry
+  / memory / multimodal sections; `load_config(file=, env=, cli=,
+  profile=)` with deterministic layered precedence; JSON + TOML file
+  support; `FROK_<SECTION>_<FIELD>` env mapping; nested + flat-dotted
+  CLI overrides; profile-section merging; `load_default_config()`
+  ergonomic wrapper. (§2 #9)
+- Builders: `build_safety_ruleset`, `build_telemetry_sink`,
+  `build_tracer`, `build_client`, `build_memory_store`,
+  `build_multimodal_adapter` — one per component, each keyed off the
+  single `FrokConfig`.
+- Tests: 33 new (loader + builders); 181 total.
+
+## [0.8.0] — 2026-04-23
+### Added
+- `frok.team` — `TeamRuntime` multi-agent scheduler with `Role` +
+  `Router` primitives, three built-in routers (`pipeline_router`,
+  `callback_router`, `loop_until`), and a `chat_role_from_client`
+  helper that wraps any `GrokClient` as a role. Emits nested
+  `team.run` / `team.hop` telemetry spans. (§2 #6)
+- Tests: 12 new (routing, telemetry nesting, max-hops, role
+  filtering, `GrokClient` composition); 148 total.
+
+## [0.7.0] — 2026-04-23
+### Added
+- `frok.multimodal` — `ImageRef` + `AudioRef` with `from_path` /
+  `from_bytes` / `from_url` factories, MIME & format detection,
+  `to_content_part()` and `to_transcribe_payload()`, plus a
+  `MultimodalAdapter` that wraps `GrokClient` and routes images
+  through chat + audio through a configurable transcribe endpoint.
+  `AdapterConfig` controls vision / voice toggles and fallback
+  descriptors. (§2 #5)
+- `GrokMessage.parts` — optional OpenAI-compatible multimodal content
+  parts. Safety pre-flight rewrites only `type: text` parts; image /
+  audio parts pass through. Block-before-network behaviour preserved.
+- `GrokClient.request_json(path, payload)` — public POST helper for
+  non-chat endpoints (emits its own `grok.request` telemetry span).
+- Tests: 25 new (encoding, refs, adapter vision + voice paths, safety
+  interaction, fallbacks); 136 total.
+
+## [0.6.0] — 2026-04-23
+### Added
+- `frok.evals` — declarative `EvalCase`s, 10 built-in scorers
+  (`AnswerContains`, `AnswerMatches`, `AnswerAbsent`, `NoSafetyBlocks`,
+  `ToolCalled`, `ToolNotCalled`, `ToolArgsSubset`, `ToolSequence`,
+  `TokensWithin`, `NoErrors`), an `EvalRunner` with a per-case
+  `(sink) -> GrokClient` factory, and `EvalReport.to_markdown()` /
+  `.to_summary()` verdict rendering. (§2 #8)
+- `frok.evals.diff_against_baseline` — reads a captured `JsonlSink`
+  trace and diffs tool-call order, token deltas, and error counts
+  against a live `Observation`. (§2 #8)
+- `SpanHandle.fail(reason)` on `frok.telemetry.Tracer` so caught-but-
+  regressed work (e.g. a tool handler that raised) still shows up on
+  the end span's `error` field.
+- Tests: 21 new (scorers, runner, baseline diff); 111 total.
+
+## [0.5.0] — 2026-04-23
+### Added
+- `frok.telemetry` — `Event` dataclass + four pluggable sinks
+  (`NullSink`, `InMemorySink`, `JsonlSink`, `MultiSink`) and a
+  contextvar-scoped `Tracer` with async `span()` context manager.
+  `read_jsonl()` replay helper. (§2 #7)
+- `GrokClient`, `MemoryStore`, and `ToolOrchestrator` now accept an
+  optional `tracer` and emit structured spans:
+  * `grok.chat` with token / safety / finish-reason attrs
+  * `memory.remember` / `memory.recall` / `memory.forget`
+  * `tool.run` wrapping nested `tool.invoke` spans; all share a
+    trace_id so a full run reconstructs as one tree.
+- Tests: 18 new (sinks, tracer semantics, cross-component integration);
+  90 total.
+
+## [0.4.0] — 2026-04-23
+### Added
+- `frok.tools` — JSON Schema validator + signature inference, `@tool`
+  decorator, `ToolRegistry` with `.spec()` / `.dispatch()`, and
+  `ToolOrchestrator` driving the full model → tool-call → result loop
+  through `GrokClient`. Dry-run mode per-tool. (§2 #4)
+- `GrokClient` now handles the tool-use wire format: `ToolCall`
+  dataclass, `tool_calls` / `tool_call_id` on `GrokMessage`,
+  `tool_calls` / `finish_reason` on `GrokResponse`.
+- Tests: 30 new (schema, registry, orchestrator); 72 total.
+
+### Fixed
+- Safety pre-flight rebuild in `GrokClient.chat` no longer drops
+  `tool_calls` / `tool_call_id` off messages mid-loop.
+
+## [0.3.0] — 2026-04-23
+### Added
+- `frok.memory` — SQLite-backed `MemoryStore` with pluggable `Embedder`
+  protocol and a zero-dep `HashEmbedder` fallback. (§2 #3)
+- `frok.memory.MemoryAgent` wrapping `GrokClient`: sanitised recall,
+  injected-context chat, automatic exchange storage. (§2 #3)
+- Tests: embedder determinism + ranking, store recall / filters /
+  persistence, agent recall-injection and PII-sanitisation. 42 total.
+
+## [0.2.0] — 2026-04-23
+### Added
+- ROADMAP.md documenting Phase 2 (#1–#10).
+- `frok.safety` — declarative alignment-rule engine with built-ins for
+  anti-sycophancy, overclaim blocking, PII redaction, and prompt-injection
+  detection. (§2 #1)
+- `frok.clients.GrokClient` — async xAI `/chat/completions` client with
+  injected transport, exponential-backoff retries, usage accounting, and
+  pre/post-flight safety guarding. (§2 #2)
+- `frok.content` — X-platform post normaliser (`normalize_post`) and
+  thread reconstructor (`thread_from_posts`). (§2 #10)
+- `pyproject.toml`, src/ layout, and a pytest suite (24 tests).
