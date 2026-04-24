@@ -76,10 +76,22 @@ async def diff_cmd(args: argparse.Namespace) -> int:
 async def show_cmd(args: argparse.Namespace) -> int:
     payload = _load_report(args.path)
 
+    compare_payload = None
+    if args.compare_to is not None:
+        compare_payload = _load_report(args.compare_to)
+
     if args.json:
+        # Passthrough of the primary payload. --compare-to is a
+        # markdown-only enrichment; operators wanting structured pair
+        # diff should use `frok retry diff` instead.
         out = json.dumps(payload, indent=2, default=str)
     else:
-        out = format_retry_report(payload, path=args.path)
+        out = format_retry_report(
+            payload,
+            path=args.path,
+            compare_to=compare_payload,
+            compare_to_path=args.compare_to,
+        )
 
     if args.output is not None:
         args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -260,6 +272,21 @@ def register(sub: "argparse._SubParsersAction") -> None:
             "exit non-zero when any case's terminal verdict is failed. "
             "Useful when the retry-report is the only CI artifact "
             "and the producer didn't pass --fail-on-regression."
+        ),
+    )
+    show.add_argument(
+        "--compare-to",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help=(
+            "path to a second retry-report JSON (typically the "
+            "previous run's report). When set, per-case headers gain "
+            "a '(was N/M, PASS/FAIL)' suffix, the summary grows "
+            "pairwise diff counters, and a 'Only in previous' "
+            "section lists cases that vanished. Markdown-only — "
+            "`--json` still passes through the primary payload "
+            "verbatim; use `frok retry diff` for structured diff data."
         ),
     )
     show.set_defaults(fn=show_cmd)

@@ -2,6 +2,113 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-24 — Phase 5 §26: retry-show-compare
+
+**Shipped** ``frok retry show --compare-to PATH2`` — the
+single-report triage view (§25) enriched with inline
+pairwise comparison. Operators investigating a regression
+used to need two commands (`retry show` for the detailed
+view + `retry diff` for the regression signal); now one
+command carries both.
+
+* **API extension** — `format_retry_report` grows two
+  keyword-only params: `compare_to` (second retry-report
+  payload) and `compare_to_path` (surfacing in the
+  summary bloc). Defaults `None` keep every existing
+  call site byte-compatible; the §25 `retry show`
+  behaviour is preserved when the flag isn't passed.
+* **Header suffix** — per-case sections gain a
+  "(was N/M, PASS/FAIL)" suffix when the case existed
+  in the previous report (matched by `(case, repeat)`),
+  or "(NEW — not in previous)" when it's brand new.
+  Readers see both current and historical state on one
+  line without scrolling to a separate diff.
+* **Comparison summary section** — between the top-
+  level summary bloc and the per-case detail, a
+  `## Comparison` block summarises the pair diff:
+  attempts grew/shrank counts, newly failing/passing,
+  error-changed, only-in-previous/current, and the
+  `regressed` boolean. Reuses §23's `diff_retry_reports`
+  verbatim — no logic duplication.
+* **"Only in previous" section** — cases present in the
+  previous report but missing from the current one get
+  a dedicated bulleted list at the bottom, with each
+  entry's verdict + attempt ratio so operators can tell
+  whether the vanished case was important (an
+  operationally-critical failure) or benign (a removed
+  passing test).
+* **CLI flag** (`src/frok/cli/retry.py`) —
+  `--compare-to PATH` on the `show` subcommand. Reuses
+  the `_load_report` helper for the second file so
+  error messages stay uniform across the retry
+  subcommand group.
+* **`--json` passthrough preserved** — when both
+  `--json` and `--compare-to` are set, the output is
+  still just the primary payload verbatim. The
+  comparison is a markdown enrichment; operators
+  needing structured diff data should use
+  `frok retry diff`. This keeps the two subcommands'
+  contracts cleanly separated.
+* **`--fail-on-failure` unchanged** — still gates on
+  the PRIMARY report's failures. Attempts growing vs
+  previous with the current run still passing shouldn't
+  fail CI; that's `retry diff --fail-on-regression`'s
+  job if the operator wants it.
+
+**Verification.** `python3 -m pytest -q` → 791 passed in 2.94s
+(10 new). Unit tests cover: header suffix shows previous
+attempts + verdict, new case marked "(NEW — not in
+previous)" when previous is empty, comparison summary
+counts grew/only-in-previous, "Only in previous" lists
+vanished cases with verdict + ratio, source + compared-
+to paths both appear in summary, no-compare leaves
+output byte-identical to §25. CLI tests cover: end-to-
+end suffix rendering, missing comparison file is
+CliError, `--json` + `--compare-to` still passes through
+primary verbatim (no `diff` or `compare_to_path` keys
+added), `--fail-on-failure` gates on primary not on
+regression.
+
+**Decisions / trade-offs.**
+* Reuse `diff_retry_reports` rather than re-implementing
+  the pair diff. Keeps the two commands' semantics in
+  lockstep; any future change to what "regressed"
+  means flows to both through one code path.
+* Header-suffix format `(was N/M, PASS/FAIL)` matches
+  the header's own `N/M attempts PASS/FAIL` shape.
+  Readers parse "new ratio, old ratio" left-to-right
+  without context switching.
+* "NEW — not in previous" for unmatched-in-previous
+  cases. Leaving no suffix would look like an omission;
+  explicit marking makes "this case is brand new" a
+  positive signal rather than a missing-data question.
+* `--json` + `--compare-to` doesn't merge the diff into
+  the output. Two cleanly-separated contracts
+  (`retry show --json` = raw payload; `retry diff
+  --json` = structured diff) compose better than one
+  fused contract with conditional fields.
+* Reused `_load_report` on `args.compare_to` instead of
+  adding a new loader. Error messages stay consistent —
+  "`retry report not found`" reads the same whether the
+  missing file is the primary or the comparison.
+* Keep "Only in current" cases inline in the regular
+  per-case sections (tagged "NEW") rather than a
+  dedicated section. Operators scanning the report want
+  new cases interleaved with the rest; vanished cases
+  need a dedicated section because they CAN'T be
+  interleaved (no current entry to slot them near).
+
+**Next suggested action:** `Extend Phase 5 §27 with a
+\`frok retry show --limit N\` flag that truncates the
+per-case detail sections to the N worst cases (highest
+attempts/budget ratio, or failing cases first). For
+large suites where most failures share the same
+transient error, the current output can sprawl; a
+truncation flag lets operators scan the top-N worst
+without piping through head/grep. Pairs with --compare-
+to: "show me the 5 cases that got worst since
+yesterday."`
+
 ## 2026-04-24 — Phase 5 §25: retry-show
 
 **Shipped** ``frok retry show PATH`` — the single-report

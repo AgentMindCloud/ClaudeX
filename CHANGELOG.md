@@ -2,6 +2,33 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.52.0] — 2026-04-24
+### Added
+- `frok retry show --compare-to PATH2` — inline pairwise
+  comparison on top of the single-report triage view:
+  per-case headers gain `(was N/M, PASS/FAIL)` or
+  `(NEW — not in previous)` suffixes, a new
+  `## Comparison` summary block surfaces grew/shrank/
+  newly-failing/newly-passing counts plus the
+  regression boolean, and a `## Only in previous`
+  section lists vanished cases.
+- `format_retry_report` gains keyword-only params
+  `compare_to` (second payload) and `compare_to_path`
+  (surfaces in the summary). Defaults `None` — §25
+  callers unchanged.
+- Reuses `diff_retry_reports` internally; no logic
+  duplication.
+- Markdown-only enrichment: `--json` still passes
+  through the primary payload verbatim (structured
+  diff data is `frok retry diff`'s job).
+- Tests: 10 new (6 unit + 4 CLI): header suffix with
+  prev matched / NEW, comparison summary counts, Only-
+  in-previous section, source + compared-to path lines,
+  no-compare byte-identical to §25, CLI end-to-end,
+  missing comparison file is CliError, `--json` +
+  `--compare-to` primary passthrough, `--fail-on-
+  failure` gates on primary not regression; 791 total.
+
 ## [0.51.0] — 2026-04-24
 ### Added
 - `frok retry show PATH` — new CLI subcommand that

@@ -273,6 +273,18 @@ builds on these three.
     Completes the retry-report toolkit: produces (§22),
     diff (§23), summarize (§24), show (§25).
     *Shipped 2026-04-24.*
+26. **retry-show-compare** — `frok retry show PATH
+    --compare-to PATH2` enriches the single-report
+    triage view with inline pairwise comparison: per-
+    case headers gain "(was N/M, PASS/FAIL)" suffixes
+    (or "(NEW — not in previous)"), the summary bloc
+    grows a Comparison section with grew/shrank/newly-
+    failing/newly-passing counts, and an "Only in
+    previous" section lists vanished cases. Reuses
+    §23's `diff_retry_reports` internally. Markdown-
+    only — `--json` passes through the primary verbatim
+    (structured diff data is `retry diff`'s job).
+    *Shipped 2026-04-24.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable
