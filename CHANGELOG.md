@@ -2,6 +2,20 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.40.0] — 2026-04-23
+### Added
+- `EvalCase.timeout_s` — hard wall-clock cap per case. When
+  set, `EvalRunner.run_case` wraps execution in
+  `asyncio.wait_for`; on timeout the case fails with a clean
+  `TimeoutError` observation.error. Partial events captured
+  on the InMemorySink during cancellation unwinding are
+  preserved so `trace inspect` / scorers still have a
+  record. Default `None` preserves existing behaviour.
+- Tests: 8 new (no-timeout default, generous, tiny +
+  slow transport, scorers under timeout, partial event
+  preservation, per-repeat composition, zero-timeout);
+  624 total.
+
 ## [0.39.0] — 2026-04-23
 ### Added
 - `frok.evals.LatencyDeltaWithin(max_ms)` — second baseline-

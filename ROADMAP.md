@@ -153,6 +153,13 @@ builds on these three.
     now both assertable in one scorer stack. Shared
     `_load_baseline_diff` helper keeps the two scorers in
     lockstep. *Shipped 2026-04-23.*
+14. **case-timeout** — `EvalCase.timeout_s` wraps each case in
+    `asyncio.wait_for`. On timeout the case fails with a
+    clean `TimeoutError` observation.error; partial events
+    captured up to the cancellation point are preserved on
+    the sink. Catches truly-stuck cases that `LatencyWithin`
+    can only gate on AFTER the run completes.
+    *Shipped 2026-04-23.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable

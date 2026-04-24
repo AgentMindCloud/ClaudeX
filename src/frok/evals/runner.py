@@ -14,6 +14,7 @@ callers can pass ``stream_sink`` unconditionally.
 
 from __future__ import annotations
 
+import asyncio
 import inspect
 from dataclasses import dataclass, field
 from typing import Callable, Sequence
@@ -61,7 +62,27 @@ class EvalRunner:
     ) -> EvalResult:
         sink = InMemorySink()
         client = self.client_factory(sink)
-        obs = await _execute(case, client, sink, stream_sink=stream_sink)
+
+        exec_coro = _execute(case, client, sink, stream_sink=stream_sink)
+        if case.timeout_s is not None:
+            try:
+                obs = await asyncio.wait_for(exec_coro, timeout=case.timeout_s)
+            except TimeoutError:
+                # The coroutine has been cancelled; any spans it opened
+                # were closed through their `async with` unwinding, so
+                # sink.events carries a faithful partial record.
+                obs = Observation(
+                    final_response=None,
+                    messages=list(case.messages),
+                    invocations=[],
+                    events=list(sink.events),
+                    error=(
+                        f"TimeoutError: case exceeded "
+                        f"timeout_s={case.timeout_s}"
+                    ),
+                )
+        else:
+            obs = await exec_coro
 
         scores: list[Score] = []
         for scorer in case.scorers:

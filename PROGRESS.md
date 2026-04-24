@@ -2,6 +2,82 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 5 §14: case-timeout
+
+**Shipped** ``EvalCase.timeout_s`` — a hard wall-clock cap per
+case, enforced by the runner via ``asyncio.wait_for``. Closes a
+real operational gap: ``LatencyWithin`` / ``LatencyDeltaWithin``
+only assert after the case completes; a case that's *actually*
+stuck hangs the suite until the operator ctrl-C's. Setting
+``timeout_s`` turns that into a clean case-level failure.
+
+* **`EvalCase.timeout_s: float | None = None`** — default
+  None preserves existing behaviour (no wait_for wrapping);
+  any positive value caps the case's runtime.
+* **Runner enforcement** — `EvalRunner.run_case` wraps the
+  `_execute` coroutine in `asyncio.wait_for(..., timeout_s)`
+  when set. On timeout, Python cancels the underlying task;
+  cancellation unwinds through every open `async with` span
+  (so spans close with errors marked), `asyncio.wait_for`
+  translates to a `TimeoutError`, and the runner builds a
+  clean Observation with `error="TimeoutError: case
+  exceeded timeout_s=N.N"`.
+* **Partial events preserved** — the InMemorySink the
+  runner passes into the factory catches span events as they
+  close during unwinding. The timeout-produced Observation
+  carries those partial events, so trace-inspect / scorer
+  post-mortems aren't left empty.
+* **Composition** — timeout applies per case per repeat, not
+  per suite. `--repeat 5 timeout_s=10.0` gives each of the
+  five runs its own 10s budget; a slow repeat doesn't eat
+  budget from the others.
+
+**Verification.** `python3 -m pytest -q` → 624 passed in 2.43s
+(8 new). Tests cover: default `timeout_s=None` preserves the
+no-wait behaviour, generous timeout + fast transport still
+passes, tiny timeout (50ms) + slow transport (2s) surfaces
+`TimeoutError` + the configured value in `observation.error`,
+`NoErrors` scorer fires on the timeout error (with
+`TimeoutError` in its detail), content scorers see an empty
+answer when `final_response is None`, partial `grok.chat`
+span events survive on the sink with their `error` field
+populated from cancellation unwinding, per-repeat budget
+composes correctly with `--repeat`, and `timeout_s=0.0` fires
+immediately (correct contract — "don't run at all").
+
+**Decisions / trade-offs.**
+* Wrap `_execute`, not scorers. Scorers are assertion
+  machinery; timing them would tangle "the model took
+  forever" with "my Python scorer is slow". The timeout
+  gates the chat/tool work; scorers run post-hoc on
+  whatever partial observation the runner salvaged.
+* Partial events preserved rather than emptied. A
+  cancelled run is often the most interesting one to
+  inspect (which span hung?); keeping the sink's events
+  means `trace inspect` works on timeout failures too.
+* `asyncio.TimeoutError` not `asyncio.CancelledError`.
+  `wait_for` already translates the cancel to a TimeoutError
+  under the hood; the runner just catches the translated
+  form, keeping the `Observation.error` message
+  operator-readable.
+* `timeout_s=0.0` fires immediately by design. Python's
+  `wait_for(..., 0)` raises before scheduling the
+  coroutine, so the case never runs. An operator explicitly
+  passing 0 is saying "short-circuit this case" — that's a
+  feature, not a bug. Documented.
+* Timeout wraps a single coroutine per repeat, not the
+  whole suite. `--repeat 5 timeout_s=10.0` → 50s max across
+  the five; gating the whole suite at once would punish
+  slower repeats that are still within budget individually.
+
+**Next suggested action:** `Extend Phase 5 §15 with a
+\`frok run --timeout-s N\` CLI flag: set a default
+\`timeout_s\` on every loaded case whose own \`timeout_s\` is
+None. Mirrors how \`--use-baseline\` fills in
+\`case.baseline\` — operators get a suite-wide default
+without editing every case file, while per-case
+overrides still win.`
+
 ## 2026-04-23 — Phase 5 §13: latency-delta
 
 **Shipped** ``LatencyDeltaWithin(max_ms)`` — the wall-clock

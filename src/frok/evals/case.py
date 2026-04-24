@@ -55,6 +55,13 @@ class EvalCase:
     # comparing a case across model versions without scaffolding two
     # whole clients.
     model: str | None = None
+    # Hard wall-clock cap per case. ``None`` means "no timeout". When
+    # set, the runner wraps case execution in ``asyncio.wait_for``; on
+    # timeout the case fails with a `TimeoutError` Observation.error
+    # rather than hanging the whole suite. Catches truly-stuck runs
+    # that `LatencyWithin` / `LatencyDeltaWithin` can only assert on
+    # AFTER completion.
+    timeout_s: float | None = None
     system: str | None = None
     scorers: list[Scorer] = field(default_factory=list)
     max_steps: int = 8
