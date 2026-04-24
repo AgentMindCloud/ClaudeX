@@ -2,6 +2,25 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.44.0] — 2026-04-24
+### Added
+- `frok run --retry-on PATTERN` — narrows `--retry`'s
+  budget to cases whose names match PATTERN (glob by default;
+  `re:` prefix for regex; repeatable — any match wins).
+  Non-matches always run exactly once, even under `--retry
+  > 0`. Rejects `--retry-on` without `--retry > 0` as a
+  CliError (no budget to spend); invalid regexes surface
+  inline via the existing `_compile_pattern` path.
+- Composes cleanly with `--filter` (case selection) and
+  `--fail-on-regression` (exhausted retries on matched cases
+  still flip the exit code).
+- Tests: 12 new (parser default empty + append-able, match
+  narrows attempts to matching case, no-match runs all once,
+  regex prefix, repeatable wins, pass-first no-retry,
+  without-retry rejected, with-retry-0 rejected, invalid
+  regex, fail-on-regression interop, composes with
+  --filter); 673 total.
+
 ## [0.43.0] — 2026-04-24
 ### Added
 - `EvalResult.attempts: int = 1` — how many runner

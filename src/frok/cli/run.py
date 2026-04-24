@@ -291,6 +291,12 @@ async def run_cmd(args: argparse.Namespace) -> int:
         raise CliError(f"--jobs must be >= 1, got {args.jobs}")
     if args.retry < 0:
         raise CliError(f"--retry must be >= 0, got {args.retry}")
+    if args.retry_on and args.retry == 0:
+        raise CliError(
+            "--retry-on requires --retry > 0 (no budget to spend on the "
+            "matched cases); either drop --retry-on or set a retry budget"
+        )
+    retry_on_patterns = [_compile_pattern(p) for p in args.retry_on]
     if args.seed is not None and args.jobs > 1:
         raise CliError(
             "--seed cannot be combined with --jobs > 1 "
@@ -359,10 +365,17 @@ async def run_cmd(args: argparse.Namespace) -> int:
                 # Retry loop: stop at the first pass. Timeouts are by
                 # design (a hard case-level cap), so don't retry them —
                 # flaky cases are what we're shaking out here, not
-                # intentional aborts.
+                # intentional aborts. --retry-on PATTERN narrows the
+                # budget to matching cases; non-matches always run once.
+                if retry_on_patterns and not any(
+                    _pattern_matches(p, case.name) for p in retry_on_patterns
+                ):
+                    budget = 1
+                else:
+                    budget = args.retry + 1
                 result: EvalResult | None = None
                 attempt_count = 0
-                for _ in range(args.retry + 1):
+                for _ in range(budget):
                     attempt_count += 1
                     result = await runner.run_case(
                         case,
@@ -572,6 +585,21 @@ def register(sub: "argparse._SubParsersAction") -> None:
             "--repeat, which runs every attempt and reports each outcome. "
             "Incompatible with --capture-baseline (retries would overwrite "
             "the previous attempt's captured JSONL)."
+        ),
+    )
+    run.add_argument(
+        "--retry-on",
+        action="append",
+        default=[],
+        metavar="PATTERN",
+        help=(
+            "narrow --retry to cases whose name matches PATTERN (glob by "
+            "default; prefix with 're:' for a regex — same syntax as "
+            "--filter / --exclude). Repeatable; any match wins. Non-"
+            "matches always run exactly once, even under --retry > 0. "
+            "Useful when a handful of cases depend on flaky external "
+            "services and a blanket --retry would mask genuine "
+            "regressions elsewhere. Requires --retry > 0."
         ),
     )
     run.set_defaults(fn=run_cmd)

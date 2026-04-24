@@ -2,6 +2,86 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-24 — Phase 5 §18: retry-on-pattern
+
+**Shipped** ``frok run --retry-on PATTERN`` — a case-name
+selector that narrows `--retry`'s budget to matching cases,
+keeping strict single-attempt discipline on the rest of the
+suite. Closes a real operational gap: one suite had two flaky
+external-API cases buried among 40 deterministic ones, and
+the blanket `--retry 3` was masking every deterministic
+failure into a PASS.
+
+* **CLI flag** (`frok/cli/run.py`) — `action="append"` with
+  `default=[]`, `metavar="PATTERN"`. Same syntax as
+  `--filter` / `--exclude` (glob default; `re:` prefix for
+  regex). Repeatable — any match wins.
+* **Validation** — `args.retry_on and args.retry == 0` →
+  `CliError` ("`--retry-on requires --retry > 0`"). Without
+  a budget the flag is a no-op with a misleading name; hard-
+  erroring surfaces the mistake. Invalid regexes bubble up
+  through the existing `_compile_pattern` path with the
+  regex error message inline.
+* **Budget plumbing** — patterns compile once before the
+  case loop. Inside `_run_unit`, a per-case `budget`
+  computation decides between `args.retry + 1` (case
+  matches) and `1` (case doesn't match, run once). Rest of
+  the retry loop is unchanged — still breaks on pass, still
+  short-circuits on `TimeoutError`.
+* **Composes cleanly** with `--filter` (which decides which
+  cases to run at all), `--fail-on-regression` (exhausted
+  retries on matched cases still flip the exit code), and
+  `--repeat` (each repeat of a matched case gets its own
+  retry budget).
+
+**Verification.** `python3 -m pytest -q` → 673 passed in 2.57s
+(12 new). Tests cover: parser default empty, parser
+`append`-ability, match with `flaky-*` glob gives attempts=3,
+no-match runs all cases once (attempts omitted from
+summary), `re:^net-` matches only names starting with
+"net-", repeatable flag with two distinct patterns, matched
+case passes first attempt stays at 1, `--retry-on` without
+`--retry` is a CliError, explicit `--retry 0 + --retry-on`
+is a CliError, invalid regex surfaces inline,
+`--fail-on-regression` returns 1 on exhausted matched case,
+composes with `--filter`.
+
+**Decisions / trade-offs.**
+* `--retry-on` narrows retry *budget*, not case *selection*.
+  `--filter` already does case selection; stacking another
+  filter with subtly different semantics would have made the
+  mental model opaque. Now each flag has one job: `--filter`
+  decides what runs; `--retry-on` decides what retries.
+* Reject `--retry-on` without `--retry`. A silent no-op is
+  worse than a hard error here — operators specifying
+  `--retry-on` without `--retry` almost always meant
+  `--retry 3 --retry-on X` and dropped the budget by
+  accident. Failing loudly catches that.
+* Compile patterns once, outside the retry loop. Matches
+  `filter_cases` style; keeps per-case cost down under
+  `--jobs > 1` where the retry loop runs concurrently.
+* Reused `_compile_pattern` / `_pattern_matches` verbatim.
+  Operators already know the glob+`re:` syntax from
+  `--filter`; introducing a different pattern grammar for
+  `--retry-on` would have been gratuitous.
+* No warning when `--retry-on PATTERN` matches zero cases.
+  `--filter` raises in that situation because "nothing to
+  run" is always an operator bug; `--retry-on` matching
+  nothing just means "no case got a retry budget", which
+  mirrors the default `--retry` behaviour exactly and can
+  be legitimate (e.g. suite with no flaky cases anymore —
+  keep the flag in CI for future flakes). A warning would
+  create noise.
+
+**Next suggested action:** `Extend Phase 5 §19 with
+\`EvalReport\` markdown surfacing the retry budget *spent*
+vs *available*: show each retried case's "attempts / budget"
+ratio in the aggregated row (e.g. "3/5" for a case that
+passed on attempt 3 out of a 5-retry allowance). Caught-it-
+late retries still mask into PASS but show up as "used most
+of the budget" — a softer flakiness signal than the binary
+retried/not-retried flag.`
+
 ## 2026-04-24 — Phase 5 §17: attempts-field
 
 **Shipped** ``EvalResult.attempts`` — a count of how many

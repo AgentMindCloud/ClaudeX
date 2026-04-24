@@ -186,6 +186,17 @@ builds on these three.
     passes in CI but only on attempt 3/3" before retries
     silently mask it into a full failure.
     *Shipped 2026-04-24.*
+18. **retry-on-pattern** — `frok run --retry-on PATTERN`
+    narrows `--retry`'s budget to cases whose names match
+    any pattern (glob by default; `re:` prefix for regex;
+    repeatable — any match wins). Non-matches always run
+    exactly once, even under `--retry > 0`. Rejects
+    `--retry-on` without `--retry > 0` (no budget to spend)
+    and invalid regexes. Composes with `--filter`,
+    `--fail-on-regression`, and `--timeout-s`. Useful when a
+    handful of cases depend on flaky external services and
+    a blanket `--retry` would mask real regressions
+    elsewhere. *Shipped 2026-04-24.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable
