@@ -139,6 +139,13 @@ builds on these three.
     bound required; inclusive comparisons; construction
     validates `min <= max` and non-negative bounds.
     *Shipped 2026-04-23.*
+12. **token-delta** — `TokenDeltaWithin(max_delta)` reads
+    `case.baseline`, diffs baseline vs observed token totals,
+    and fails when `abs(delta) > max_delta`. Symmetric
+    (catches both runaway-long and bail-early answers);
+    failure detail surfaces baseline + observed + signed
+    delta; measure carries the signed delta for trend-
+    scanning. *Shipped 2026-04-23.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable

@@ -2,6 +2,21 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.38.0] — 2026-04-23
+### Added
+- `frok.evals.TokenDeltaWithin(max_delta)` — first baseline-
+  aware scorer. Loads `case.baseline` via `read_jsonl`, reuses
+  `diff_event_streams` from `frok.evals.baseline`, fails when
+  `abs(observed_tokens - baseline_tokens) > max_delta`.
+  Symmetric (catches runaway-long and bail-early answers);
+  failure detail surfaces baseline + observed + signed delta;
+  measure carries the signed delta for trend-scanning.
+- Construction rejects negative `max_delta`; `max_delta=0`
+  is allowed as exact-parity.
+- Tests: 16 new (construction, no-baseline, missing-file,
+  under / at / over threshold both directions, runner
+  integration); 595 total.
+
 ## [0.37.0] — 2026-04-23
 ### Added
 - `frok.evals.AnswerLength(min_chars=None, max_chars=None)`

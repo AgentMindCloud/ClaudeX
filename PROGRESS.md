@@ -2,6 +2,81 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 5 §12: token-delta
+
+**Shipped** ``TokenDeltaWithin(max_delta)`` — the first
+baseline-aware scorer. Reads ``case.baseline``, diffs baseline
+vs observed token totals, fails when ``abs(delta) > max_delta``.
+The existing baseline differ already reports the delta but never
+gated CI on it; this scorer closes that loop for operators who
+want "token cost shouldn't move by more than N between captured
+baselines".
+
+* **`TokenDeltaWithin`** (`frok/evals/scorers.py`) — frozen
+  dataclass. `__post_init__` rejects negative `max_delta`;
+  zero is allowed as "tokens must match baseline exactly".
+* **Baseline loading** — when `case.baseline` is None, fails
+  cleanly with a message pointing at how to attach one
+  (``case.baseline=`` or CLI ``--use-baseline``). When the
+  file is missing, fails with the exact path. Both error
+  paths are test-covered.
+* **Symmetric by design** — ``abs(delta)`` comparison catches
+  prompt changes that doubled tokens (positive delta) *and*
+  changes that collapsed the answer to a one-liner (negative
+  delta, often signalling the model bailed). Operators who
+  only care about one direction can layer a future
+  one-sided variant.
+* **Delta diff reuses the existing core** — ``diff_event_streams``
+  from `frok.evals.baseline` is imported at module top; no
+  duplication between this scorer and the single-observation
+  baseline differ already powering `EvalCase.baseline_diff`.
+* **Failure detail** surfaces baseline tokens, observed
+  tokens, and the signed delta — triage can tell at a glance
+  which direction drifted. ``measure`` carries the signed
+  delta (positive = observed used more) for aggregated
+  trend-scanning.
+
+**Verification.** `python3 -m pytest -q` → 595 passed in 1.54s
+(16 new). Tests cover: construction rejects negative
+`max_delta`, zero `max_delta` is allowed, no-baseline case
+fails cleanly with guidance, missing-baseline-file fails with
+the exact path, zero delta passes, small positive + small
+negative deltas pass under threshold, inclusive at-threshold
+in both directions, over-threshold positive + negative both
+fail with baseline + observed + signed delta in detail,
+``max_delta=0`` enforces exact parity, scorer name includes
+the configured cap, and `measure` carries the signed delta
+direction. Two integration tests wire the scorer through
+`EvalRunner` end-to-end: the parity case passes, the drift
+case (10 token baseline vs 100 token observed) fails with
+``+90`` in the detail.
+
+**Decisions / trade-offs.**
+* Symmetric ``abs(delta)`` gate, not asymmetric `max_increase`
+  / `max_decrease`. A one-liner bail is a real regression signal;
+  treating positive and negative drift as equally suspect
+  reflects that. YAGNI for the asymmetric form.
+* Scorer loads the baseline file itself rather than relying on
+  the runner's `baseline_diff`. `baseline_diff` is populated
+  *after* scorers run (it's an `EvalResult` field), so a scorer
+  that wanted to read it would need a runner refactor. Loading
+  via `read_jsonl` keeps the scorer self-contained.
+* `max_delta=0` is allowed as "exact parity". A case that's
+  genuinely deterministic (`--seed` + stub transport) should
+  trip on *any* token drift; forcing a positive minimum would
+  rule that out.
+* No separate "tokens drifted" telemetry event emitted. The
+  eval report already surfaces the scorer's failure; adding
+  a telemetry fire-and-forget would be double-reporting.
+
+**Next suggested action:** `Extend Phase 5 §13 with
+\`LatencyDeltaWithin(max_ms)\`: mirrors TokenDeltaWithin but
+on root-span duration. Closes the second half of the
+baseline-drift gate — operators regression-testing a prompt
+change care about wall-clock impact as much as token cost,
+and today there's no one-shot "tokens + latency both within
+5% of baseline" assertion pair.`
+
 ## 2026-04-23 — Phase 5 §11: answer-length
 
 **Shipped** ``AnswerLength(min_chars=None, max_chars=None)`` —

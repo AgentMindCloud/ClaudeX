@@ -12,6 +12,8 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from ..telemetry import read_jsonl
+from .baseline import diff_event_streams
 from .case import EvalCase, Observation, Score
 
 
@@ -320,6 +322,62 @@ class InvocationsWithin:
             sname,
             f"{count} tool invocations > max {self.max_count}",
             measure=count,
+        )
+
+
+@dataclass(frozen=True)
+class TokenDeltaWithin:
+    """Baseline-aware token-drift gate.
+
+    Requires ``case.baseline`` to be set (via ``--use-baseline`` or
+    explicit ``EvalCase(baseline=Path(...))``). Loads the baseline
+    JSONL, computes ``observed_tokens - baseline_tokens``, and passes
+    iff ``abs(delta) <= max_delta``.
+
+    Symmetric by design: catches prompt changes that quietly doubled
+    tokens (positive delta) *and* prompt changes that collapsed the
+    answer to a one-liner (negative delta, which often signals a
+    regression the model is bailing on). The existing baseline differ
+    reports the delta but never gates CI on it; this scorer does.
+    """
+
+    max_delta: int
+
+    def __post_init__(self) -> None:
+        if self.max_delta < 0:
+            raise ValueError(
+                f"max_delta must be >= 0, got {self.max_delta}"
+            )
+
+    def __call__(self, case: EvalCase, obs: Observation) -> Score:
+        sname = f"token_delta_within[{self.max_delta}]"
+        if case.baseline is None:
+            return Score.fail(
+                sname,
+                "no baseline attached to case; set case.baseline (or pass "
+                "--use-baseline on the CLI) to use this scorer",
+            )
+        try:
+            baseline_events = list(read_jsonl(case.baseline))
+        except FileNotFoundError:
+            return Score.fail(sname, f"baseline file not found: {case.baseline}")
+        except Exception as exc:  # pragma: no cover — defensive
+            return Score.fail(sname, f"cannot load baseline {case.baseline}: {exc}")
+
+        diff = diff_event_streams(
+            baseline_events,
+            obs.events,
+            a_label="baseline",
+            b_label="observed",
+        )
+        delta = int(diff["token_delta"])
+        if abs(delta) <= self.max_delta:
+            return Score.ok(sname, measure=delta)
+        return Score.fail(
+            sname,
+            f"token delta {delta:+d} exceeds max ±{self.max_delta} "
+            f"(baseline={diff['baseline_tokens']}, observed={diff['observed_tokens']})",
+            measure=delta,
         )
 
 
