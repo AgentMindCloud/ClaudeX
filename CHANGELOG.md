@@ -2,6 +2,31 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.54.0] — 2026-04-24
+### Added
+- `frok retry show --group-by-error` — collapse
+  retried/failing cases sharing the same last-attempt
+  error into "## Error: `<err>` — N case(s)"
+  sections. Scorer-only failures (no observation
+  error) land in a dedicated "(no error)" bucket.
+  Groups sorted by size desc (alpha tiebreak for
+  determinism); cases within each group use the
+  worst-first sort key from §27.
+- `format_retry_report(..., group_by_error=False)` —
+  new keyword-only param; defaults preserve §27
+  behaviour.
+- Under `--group-by-error`, `--limit N` truncates the
+  group count (not case count), indicator switches to
+  "`N of M error groups (largest-first)`". Cases
+  within groups stay whole.
+- Tests: 17 new (13 format behaviour + 4 CLI): same-
+  error grouping, distinct errors split, scorer-only
+  bucket, size desc + alpha tiebreak, intra-group
+  worst-first, Clean passes still surfaced, Only-in-
+  previous still surfaced, no-flag preserves §27
+  behaviour, `--limit` group truncation, CLI flag +
+  composition with `--limit` / `--json`; 824 total.
+
 ## [0.53.0] — 2026-04-24
 ### Added
 - `frok retry show --limit N` — truncate per-case

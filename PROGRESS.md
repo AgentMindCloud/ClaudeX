@@ -2,6 +2,108 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-24 — Phase 5 §28: retry-show-group-by-error
+
+**Shipped** ``frok retry show --group-by-error`` — a
+clustering knob that collapses retried/failing cases
+sharing the same last-attempt error into a single
+section. Closes the "40 identical tables" problem that
+§27's `--limit` only partially solved: on large-suite
+outages, operators want to see "`RuntimeError: 429`
+affected 40 cases" as one section, not scroll through
+40 single-row tables.
+
+* **API extension** — `format_retry_report(...,
+  group_by_error=False)`. When True, retried-or-failed
+  cases are bucketed by `_last_attempt_error(case)`.
+  Scorer-only failures (no observation.error on the
+  last attempt) land in a dedicated bucket labelled
+  `(no error — scorer failure or passing retry)` — the
+  explicit label keeps "why is this case here?"
+  answered at a glance.
+* **Group sort** — largest group first, alpha tiebreak
+  on the error string for determinism. Within each
+  group, cases use §27's `_worst_first_key` so the
+  intra-group ordering matches the plain-mode ordering.
+* **Per-group table** — four columns: Case, Repeat,
+  Attempts/Budget, Verdict. Narrower than the per-
+  attempt table because the interesting signal is
+  "which cases are in this cluster", not the specific
+  sleep / attempt-by-attempt timeline (which is still
+  in the raw JSON for operators who need it).
+* **`--limit` semantic pivots under grouped mode** —
+  plain mode truncates cases; grouped mode truncates
+  groups. The indicator changes to "`N of M error
+  groups (largest-first)`" so operators always know
+  what dimension got cut. Cases within a group stay
+  whole — truncating both would hide the clustering
+  signal the flag exists to surface.
+* **Clean passes + Only-in-previous unchanged** — both
+  sections still surface independent of
+  `--group-by-error`. Clean passes aren't "cases with
+  errors" (there's no error to group by); Only-in-
+  previous is a diff-derived section that doesn't
+  interact with current-run error shapes.
+
+**Verification.** `python3 -m pytest -q` → 824 passed in 3.09s
+(17 new). Unit tests cover: same-error cases group
+together, different errors split, scorer-only failures
+in dedicated bucket, groups sorted by size desc, alpha
+tiebreak for equal-size groups, worst-first ordering
+within group, Clean passes still bucketed, Only-in-
+previous still surfaces, no-flag preserves per-case
+tables. `--limit` interaction: truncates groups not
+cases, limit=0 shows indicator + no groups, limit ==
+total no indicator. CLI: parser default False, flag
+sets True, end-to-end rendering, `--limit` composition,
+`--json` still passthrough.
+
+**Decisions / trade-offs.**
+* Group by last-attempt error, not first or
+  intermediate. The final error is the one that made
+  the retry loop give up (or the only error on a
+  single-attempt case); earlier errors are noise in a
+  clustering view. Operators who want the full
+  attempt-by-attempt view can drop `--group-by-error`.
+* Explicit sentinel label for no-error cases, not
+  `None` in markdown. A `(no error)` bucket visible in
+  the section list is much clearer than a missing
+  entry or a `null` string. Scorer failures are a real
+  cluster shape and deserve their own named bucket.
+* `--limit` pivots semantics under grouped mode rather
+  than applying to cases. The flag's value to operators
+  is "don't show me everything"; under grouping, the
+  things getting "everything" counted are groups, not
+  cases. A flag that truncates one dimension under one
+  flag and the other dimension under a different flag
+  would be surprising.
+* Per-group table is four columns, not the full five-
+  column per-attempt table. Grouping is a summary
+  mode; showing sleep_before_ms per attempt inside
+  each group would balloon the output and defeat the
+  purpose. The raw JSON still carries the full data.
+* Alpha tiebreak on error string for same-size groups.
+  Determinism matters for text diffs between runs; the
+  alternative (dict-insertion order) would produce
+  run-dependent output, which breaks snapshot tests.
+* Sort cases within each group using `_worst_first_key`
+  from §27 rather than a different ordering (e.g.
+  alpha). The sort key is the tool's canonical "most
+  interesting case" ordering — using it everywhere
+  (plain mode detail, grouped mode within-group,
+  future per-report ranking) keeps operators'
+  expectations aligned.
+
+**Next suggested action:** `Extend Phase 5 §29 with a
+\`frok retry show --min-attempts N\` filter that drops
+any case whose attempt count is below N from the detail
+sections. Useful to hide the "passed first try but
+budget > 1" noise when operators have allocated a
+generous retry budget and want to focus only on cases
+that actually used it. Composes with --group-by-error
+(filters before grouping) and --limit (filters before
+truncating). Markdown-only.`
+
 ## 2026-04-24 — Phase 5 §27: retry-show-limit
 
 **Shipped** ``frok retry show --limit N`` — a truncation

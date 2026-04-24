@@ -84,9 +84,9 @@ async def show_cmd(args: argparse.Namespace) -> int:
         compare_payload = _load_report(args.compare_to)
 
     if args.json:
-        # Passthrough of the primary payload. --compare-to and --limit
-        # are markdown-only enrichments; operators wanting structured
-        # pair diff should use `frok retry diff` instead.
+        # Passthrough of the primary payload. --compare-to, --limit,
+        # and --group-by-error are markdown-only enrichments; operators
+        # wanting structured pair diff should use `frok retry diff`.
         out = json.dumps(payload, indent=2, default=str)
     else:
         out = format_retry_report(
@@ -95,6 +95,7 @@ async def show_cmd(args: argparse.Namespace) -> int:
             compare_to=compare_payload,
             compare_to_path=args.compare_to,
             limit=args.limit,
+            group_by_error=args.group_by_error,
         )
 
     if args.output is not None:
@@ -302,9 +303,24 @@ def register(sub: "argparse._SubParsersAction") -> None:
             "truncate the per-case detail to the N most-attention-"
             "worthy retried/failing cases (failing first, then "
             "highest attempts/budget ratio, then most raw attempts, "
-            "then case name). Clean passes and 'Only in previous' "
+            "then case name). Under --group-by-error, truncates to "
+            "the N biggest error clusters instead (cases within a "
+            "group stay whole). Clean passes and 'Only in previous' "
             "are NOT truncated. A '(showing N of M)' indicator marks "
             "the truncation. Markdown-only."
+        ),
+    )
+    show.add_argument(
+        "--group-by-error",
+        action="store_true",
+        help=(
+            "collapse retried/failing cases sharing the same last-"
+            "attempt error string into '## Error: <err>' sections, "
+            "each listing the affected cases with their attempt "
+            "ratios. Cases with no observation error (scorer-only "
+            "failures) group under a dedicated 'no error' bucket. "
+            "Useful on large-suite outages where dozens of cases "
+            "fail with the same transient error. Markdown-only."
         ),
     )
     show.set_defaults(fn=show_cmd)

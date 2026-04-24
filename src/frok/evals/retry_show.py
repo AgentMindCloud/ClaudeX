@@ -47,6 +47,19 @@ def _worst_first_key(case: dict[str, Any]) -> tuple[bool, float, int, str]:
     return (passed, -ratio, -attempts, case.get("case", ""))
 
 
+def _last_attempt_error(case: dict[str, Any]) -> str | None:
+    attempts = case.get("attempts") or []
+    if not attempts:
+        return None
+    return attempts[-1].get("error")
+
+
+# Sentinel label for cases whose last attempt had no observation error
+# (typically scorer-only failures). Kept explicit rather than `None` in
+# the markdown so operators see the bucket at a glance.
+_NO_ERROR_LABEL = "(no error — scorer failure or passing retry)"
+
+
 def format_retry_report(
     payload: dict[str, Any],
     *,
@@ -54,6 +67,7 @@ def format_retry_report(
     compare_to: dict[str, Any] | None = None,
     compare_to_path: Path | str | None = None,
     limit: int | None = None,
+    group_by_error: bool = False,
 ) -> str:
     cases = payload.get("cases", [])
     total_attempts = sum(len(c.get("attempts") or []) for c in cases)
@@ -115,68 +129,118 @@ def format_retry_report(
         if len(c.get("attempts") or []) == 1 and c.get("passed")
     ]
 
-    # `--limit N` truncates the per-case detail to the N most-attention-
-    # worthy cases (failing first → highest attempts/budget ratio → most
-    # raw attempts → name). Clean passes and the "Only in previous"
-    # section are NOT truncated; they're already terse and operators
-    # may still want the full picture there.
-    total_detailed = len(retried_or_failed)
-    truncated = False
-    if limit is not None and limit < total_detailed:
-        retried_or_failed = sorted(retried_or_failed, key=_worst_first_key)[
-            : max(limit, 0)
-        ]
-        truncated = True
-
-    if truncated:
-        lines.append(
-            f"_Showing {len(retried_or_failed)} of {total_detailed} "
-            f"retried/failing cases (worst-first)._"
+    # `--limit N` meaning depends on --group-by-error:
+    #   * plain mode: truncate to the N most-attention-worthy cases
+    #     (failing first → highest attempts/budget ratio → most raw
+    #     attempts → name).
+    #   * grouped mode: truncate to the N biggest error clusters
+    #     (most cases in the group). Cases within a group stay whole.
+    # Clean passes and "Only in previous" are NOT truncated in either
+    # mode — both terse; operators may want the full picture there.
+    if group_by_error:
+        # Group by last-attempt error string; None → _NO_ERROR_LABEL.
+        by_error: dict[str, list[dict[str, Any]]] = {}
+        for c in retried_or_failed:
+            err = _last_attempt_error(c)
+            label = err if err else _NO_ERROR_LABEL
+            by_error.setdefault(label, []).append(c)
+        # Order groups by size desc, then label alpha for determinism.
+        ordered_groups = sorted(
+            by_error.items(),
+            key=lambda kv: (-len(kv[1]), kv[0]),
         )
-        lines.append("")
-
-    for c in retried_or_failed:
-        verdict = "PASS" if c.get("passed") else "FAIL"
-        name = c.get("case", "?")
-        repeat = c.get("repeat", 0)
-        attempts = c.get("attempts") or []
-        budget = int(c.get("retry_budget", 1) or 1)
-        suffix = ""
-        if compare_to is not None:
-            prev = prev_lookup.get((name, int(repeat)))
-            if prev is not None:
-                prev_attempts = len(prev.get("attempts") or [])
-                prev_budget = int(prev.get("retry_budget", 1) or 1)
-                prev_verdict = "PASS" if prev.get("passed") else "FAIL"
-                suffix = (
-                    f" (was {prev_attempts}/{prev_budget}, {prev_verdict})"
-                )
-            else:
-                suffix = " (NEW — not in previous)"
-        lines.append(
-            f"## {verdict}: {name} (repeat {repeat}) — "
-            f"{len(attempts)}/{budget} attempts{suffix}"
-        )
-        lines.append("")
-        lines.append(
-            "| Attempt | Passed | Error | Sleep before (ms) |"
-        )
-        lines.append(
-            "|--------:|--------|-------|------------------:|"
-        )
-        for a in attempts:
-            err = a.get("error")
-            err_cell = f"`{err}`" if err else "-"
-            sleep = a.get("sleep_before_ms")
-            sleep_cell = (
-                f"{float(sleep):.1f}" if sleep is not None else "-"
-            )
-            passed_cell = "yes" if a.get("passed") else "no"
+        total_groups = len(ordered_groups)
+        truncated_groups = False
+        if limit is not None and limit < total_groups:
+            ordered_groups = ordered_groups[: max(limit, 0)]
+            truncated_groups = True
+        if truncated_groups:
             lines.append(
-                f"| {a.get('attempt', '?')} | {passed_cell} | "
-                f"{err_cell} | {sleep_cell} |"
+                f"_Showing {len(ordered_groups)} of {total_groups} "
+                f"error groups (largest-first)._"
             )
-        lines.append("")
+            lines.append("")
+        for err_label, group_cases in ordered_groups:
+            sorted_cases = sorted(group_cases, key=_worst_first_key)
+            lines.append(
+                f"## Error: `{err_label}` — {len(group_cases)} case(s)"
+            )
+            lines.append("")
+            lines.append(
+                "| Case | Repeat | Attempts/Budget | Verdict |"
+            )
+            lines.append(
+                "|------|-------:|-----------------|---------|"
+            )
+            for c in sorted_cases:
+                name = c.get("case", "?")
+                repeat = c.get("repeat", 0)
+                attempts_n = len(c.get("attempts") or [])
+                budget = int(c.get("retry_budget", 1) or 1)
+                verdict = "PASS" if c.get("passed") else "FAIL"
+                lines.append(
+                    f"| {name} | {repeat} | {attempts_n}/{budget} | "
+                    f"{verdict} |"
+                )
+            lines.append("")
+    else:
+        total_detailed = len(retried_or_failed)
+        truncated = False
+        if limit is not None and limit < total_detailed:
+            retried_or_failed = sorted(retried_or_failed, key=_worst_first_key)[
+                : max(limit, 0)
+            ]
+            truncated = True
+
+        if truncated:
+            lines.append(
+                f"_Showing {len(retried_or_failed)} of {total_detailed} "
+                f"retried/failing cases (worst-first)._"
+            )
+            lines.append("")
+
+        for c in retried_or_failed:
+            verdict = "PASS" if c.get("passed") else "FAIL"
+            name = c.get("case", "?")
+            repeat = c.get("repeat", 0)
+            attempts = c.get("attempts") or []
+            budget = int(c.get("retry_budget", 1) or 1)
+            suffix = ""
+            if compare_to is not None:
+                prev = prev_lookup.get((name, int(repeat)))
+                if prev is not None:
+                    prev_attempts = len(prev.get("attempts") or [])
+                    prev_budget = int(prev.get("retry_budget", 1) or 1)
+                    prev_verdict = "PASS" if prev.get("passed") else "FAIL"
+                    suffix = (
+                        f" (was {prev_attempts}/{prev_budget}, {prev_verdict})"
+                    )
+                else:
+                    suffix = " (NEW — not in previous)"
+            lines.append(
+                f"## {verdict}: {name} (repeat {repeat}) — "
+                f"{len(attempts)}/{budget} attempts{suffix}"
+            )
+            lines.append("")
+            lines.append(
+                "| Attempt | Passed | Error | Sleep before (ms) |"
+            )
+            lines.append(
+                "|--------:|--------|-------|------------------:|"
+            )
+            for a in attempts:
+                err = a.get("error")
+                err_cell = f"`{err}`" if err else "-"
+                sleep = a.get("sleep_before_ms")
+                sleep_cell = (
+                    f"{float(sleep):.1f}" if sleep is not None else "-"
+                )
+                passed_cell = "yes" if a.get("passed") else "no"
+                lines.append(
+                    f"| {a.get('attempt', '?')} | {passed_cell} | "
+                    f"{err_cell} | {sleep_cell} |"
+                )
+            lines.append("")
 
     if clean_passes:
         lines.append("## Clean passes")

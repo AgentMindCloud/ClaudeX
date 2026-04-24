@@ -298,6 +298,19 @@ builds on these three.
     Markdown-only. Pairs with `--compare-to`:
     "show me the 5 cases that got worst since
     yesterday". *Shipped 2026-04-24.*
+28. **retry-show-group-by-error** — `frok retry show
+    --group-by-error` collapses retried/failing cases
+    sharing the same last-attempt error into "`##
+    Error: <err> — N case(s)`" sections, each listing
+    affected cases with their attempt ratio. Scorer-
+    only failures (no observation error) group under
+    a dedicated "(no error)" bucket. Groups sorted by
+    size desc (alpha tiebreak for determinism); cases
+    within each group use the worst-first sort from
+    §27. Under `--limit N`, truncates the group count
+    instead of the case count — "show me the 3
+    biggest error clusters". Markdown-only.
+    *Shipped 2026-04-24.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable
