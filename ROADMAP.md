@@ -62,6 +62,14 @@ builds on these three.
     reason over. (Interpretation chosen on this branch; see PROGRESS.md.
     Narrow to rename if a different #10 was intended.)
 
+## Phase 5 — Real-integration polish
+1. **init-transport** — `frok init --transport {stub,real}`
+   switches the generated `cases/smoke.py` between the stub
+   (default, runs with no api_key) and a `urllib_transport`-backed
+   live template that reads `FROK_CLIENT_API_KEY` from the
+   environment. Next-steps message is conditional on the
+   transport. *Shipped 2026-04-23.*
+
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable
    skeleton: `CLAUDE.md`, `frok.toml` (with a prod profile),

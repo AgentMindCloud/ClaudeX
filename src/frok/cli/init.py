@@ -229,6 +229,48 @@ TEMPLATES: dict[str, str] = {
 }
 
 
+_SMOKE_CASE_REAL = '''"""Starter smoke case (live transport).
+
+Uses the default urllib-backed client factory — set
+``FROK_CLIENT_API_KEY`` in your environment before running:
+
+    export FROK_CLIENT_API_KEY=sk-...
+    frok doctor                   # verify the setup
+    frok run cases/smoke.py       # hit the real API
+
+No ``make_client`` override here, so frok's default factory wires
+``frok.clients.transports.urllib_transport`` against the resolved
+``FrokConfig``. The scorers are intentionally loose so the case
+doesn't fail the first time you swap models.
+"""
+
+from frok.clients import GrokMessage
+from frok.evals import AnswerMatches, EvalCase, NoErrors
+
+
+CASES = [
+    EvalCase(
+        name="smoke-greeting",
+        messages=[GrokMessage("user", "Say hello in one sentence.")],
+        scorers=[
+            # Any non-empty, non-whitespace answer is fine for a smoke check.
+            AnswerMatches(r"\\S"),
+            NoErrors(),
+        ],
+    ),
+]
+'''
+
+
+# Transport flavors. The "stub" default is for out-of-the-box runs;
+# "real" swaps to a template that uses the urllib transport + an
+# api_key read from the environment.
+_TRANSPORT_TEMPLATES: dict[str, str] = {
+    "stub": _SMOKE_CASE,
+    "real": _SMOKE_CASE_REAL,
+}
+
+
 # ---------------------------------------------------------------------------
 # --example flavors
 # ---------------------------------------------------------------------------
@@ -604,8 +646,10 @@ async def init_cmd(args: argparse.Namespace) -> int:
 
     target: Path = args.path
 
-    # Compose base templates + any requested --example flavors.
+    # Compose base templates + any requested --example flavors. The
+    # smoke-case template is switched based on --transport.
     templates = dict(TEMPLATES)
+    templates["cases/smoke.py"] = _TRANSPORT_TEMPLATES[args.transport]
     for name in args.example or ():
         templates[f"cases/{name}.py"] = EXAMPLE_TEMPLATES[name]
 
@@ -632,9 +676,18 @@ async def init_cmd(args: argparse.Namespace) -> int:
         "\nNext steps:\n"
         "  1. Review the generated files (especially frok.toml).\n"
         "  2. `frok run cases/smoke.py --list` to preview the case set.\n"
-        "  3. `frok run cases/smoke.py` to run it — the bundled stub\n"
-        "     transport means no API key is required yet.\n"
     )
+    if args.transport == "real":
+        writer.write(
+            "  3. Set FROK_CLIENT_API_KEY in your environment, then\n"
+            "     `frok doctor` to verify the setup.\n"
+            "  4. `frok run cases/smoke.py` to hit the real API.\n"
+        )
+    else:
+        writer.write(
+            "  3. `frok run cases/smoke.py` to run it — the bundled stub\n"
+            "     transport means no API key is required yet.\n"
+        )
     return 0
 
 
@@ -678,6 +731,16 @@ def register(sub: "argparse._SubParsersAction") -> None:
         help=(
             "print available --example names and their one-line "
             "descriptions, then exit; no files are written"
+        ),
+    )
+    init.add_argument(
+        "--transport",
+        choices=sorted(_TRANSPORT_TEMPLATES.keys()),
+        default="stub",
+        help=(
+            "smoke-case transport. 'stub' (default) runs without "
+            "credentials via a scripted fake; 'real' wires the "
+            "urllib-backed transport and expects FROK_CLIENT_API_KEY."
         ),
     )
     init.set_defaults(fn=init_cmd)

@@ -2,6 +2,19 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.27.0] — 2026-04-23
+### Added
+- `frok init --transport {stub,real}` — choose the generated
+  `cases/smoke.py` transport. `stub` (default) runs with no
+  credentials; `real` wires `urllib_transport` + reads
+  `FROK_CLIENT_API_KEY` from the environment. Next-steps block
+  prints the right on-ramp for each.
+- `frok.cli.init._TRANSPORT_TEMPLATES` map + `_SMOKE_CASE_REAL`
+  template.
+- Tests: 11 new (parser, template contents, next-steps
+  switching, run-without-api_key error, stubbed-urllib live
+  green-path, example composition); 459 total.
+
 ## [0.26.0] — 2026-04-23
 ### Changed
 - Root `frok --help` now opens with a mission-statement line and

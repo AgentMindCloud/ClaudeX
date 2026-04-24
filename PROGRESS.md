@@ -2,6 +2,79 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 5 §1: init-transport
+
+**Shipped** ``frok init --transport {stub,real}`` — the "how do
+I flip from stub to real?" gap-closer. Every example's docstring
+previously told operators to swap the transport by hand; now
+there's a flag that produces a ready-to-run live template.
+
+* **New template** — ``_SMOKE_CASE_REAL`` is a ~20-line
+  module: a single ``EvalCase`` with loose scorers
+  (``AnswerMatches(r"\S")``, ``NoErrors()``), no ``make_client``,
+  no ``_StubTransport``. The runner's default factory picks it up
+  and wires ``frok.clients.transports.urllib_transport`` +
+  whatever `FrokConfig.client` carries, so the only thing the
+  operator needs to set is ``FROK_CLIENT_API_KEY``.
+* **`_TRANSPORT_TEMPLATES`** map — ``stub`` → existing
+  scripted-fake template; ``real`` → the live template. Keeps
+  argparse's ``choices=`` list and the template lookup in one
+  place.
+* **Next-steps message is conditional**. Stub path still says
+  "no API key is required yet"; real path walks the operator
+  through setting ``FROK_CLIENT_API_KEY`` → running ``frok
+  doctor`` → running the case for real.
+* **Composition preserved**. ``--transport real --example
+  tools`` still scaffolds the stub-backed ``cases/tools.py``;
+  only the *smoke* case gets swapped. The examples rely on
+  scripted tool-call sequences / canned descriptions that the
+  real model can't be asked to reproduce deterministically.
+
+**Verification.** `python3 -m pytest -q` → 459 passed in 1.56s (11
+new). Tests cover: argparse default + real + bogus rejection,
+stub default preserves every previously-asserted marker
+(``_StubTransport`` / ``make_client`` / ``api_key="stub"``) and
+the "no API key is required" next-steps line, real-template
+content (no stub markers, FROK_CLIENT_API_KEY surfaced in the
+docstring, module parses via ``ast.parse``, loose scorers
+present), real template's next-steps block mentions
+FROK_CLIENT_API_KEY + ``frok doctor``, real case errors with
+exit 2 on a missing api_key (surfaced as ``ConfigError``), real
+case runs green end-to-end when ``urllib_transport`` is
+monkey-patched to a stub and an api_key is set (exercising the
+exact default-factory code path), and real + ``--example``
+composes correctly (smoke swapped, example stubs intact).
+
+**Decisions / trade-offs.**
+* Only the smoke case gets a real-transport variant. Examples
+  script specific tool calls; the live model can't be promised
+  to emit exactly those, and a "real" example that sometimes
+  fails would undermine the first-impression principle the
+  examples were written for.
+* Loose scorers on the real smoke case (``\S`` regex). The point
+  is "the call succeeded and the model said something"; tight
+  assertions would force every operator to tune them per model
+  on the first run.
+* Default stays ``stub``. Backwards compatibility with the §1
+  scaffold + zero surprise on a first-time ``frok init`` with
+  no flags.
+* Test for live-path uses a monkey-patched ``urllib_transport``
+  imported into ``frok.cli.run``'s namespace. Production code
+  paths are exercised end-to-end except for the wire itself —
+  which is exactly the boundary a unit test should cut at.
+
+Phase 5 opens with real-integration scaffolding; the remaining
+§s can focus on the actual xAI API contract (streaming, tool-
+choice hints, model-version swapping) now that the flip-to-real
+path is a flag rather than a manual edit.
+
+**Next suggested action:** `Extend Phase 5 with streaming support
+in GrokClient: \`chat_stream(messages, …)\` yields content tokens
+as they arrive over the wire, honoring the same safety / telemetry
+hooks as \`chat()\`. Today a live run waits for the whole response;
+streaming unlocks live progress indicators in the CLI and shorter
+apparent latency on long answers.`
+
 ## 2026-04-23 — Phase 4 §6: help-polish
 
 **Shipped** the root `frok --help` rewrite. First-time operators
