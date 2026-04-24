@@ -10,7 +10,7 @@ from ..config import ConfigError
 from .common import CliError
 from .config import register as _register_config
 from .config import show_cmd
-from .eval import diff_cmd
+from .eval import diff_cmd, summarize_cmd
 from .eval import register as _register_eval
 from .run import (
     ClientFactory,
@@ -33,6 +33,7 @@ __all__ = [
     "main",
     "run_cmd",
     "show_cmd",
+    "summarize_cmd",
 ]
 
 

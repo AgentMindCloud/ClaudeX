@@ -2,6 +2,21 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.17.0] — 2026-04-23
+### Added
+- `frok eval summarize <DIR>` — walk a baseline directory, roll up
+  per-case spans / tokens / errors / duration, surface cross-case
+  leaders (slowest, heaviest tokens, most errors, errored tools,
+  top tools). Markdown or `--json`; `--top N` caps leader rows;
+  `--fail-on-errors` for CI gates.
+- `frok.telemetry.CaseSummary` + `DirectorySummary` dataclasses
+  with aggregate properties and `slowest` / `heaviest_tokens` /
+  `most_errors` leader methods.
+- `frok.telemetry.summarize_directory(dir)`,
+  `dir_summary_to_markdown`, `dir_summary_to_json`.
+- Tests: 24 new (library walker + aggregates + renderers; CLI
+  paths + interop with `run --capture-baseline`); 316 total.
+
 ## [0.16.0] — 2026-04-23
 ### Added
 - `frok eval diff <a.jsonl> <b.jsonl>` — diff two JsonlSink

@@ -1,17 +1,21 @@
 """Post-hoc trace analysis: reconstruct tree + aggregate stats.
 
 Consumes an iterable of `Event`s (typically from `read_jsonl` replaying a
-`JsonlSink` capture) and produces two artefacts:
+`JsonlSink` capture) and produces:
 
-* a `list[TraceNode]` tree keyed on `parent_span_id`, and
+* a `list[TraceNode]` tree keyed on `parent_span_id`,
 * a `TraceSummary` with per-name duration stats, errored-span list, and
-  top-tool aggregates.
+  top-tool aggregates, and
+* for an entire directory of captures: a `DirectorySummary` with a
+  per-case rollup and cross-case leaders.
 
-Used by ``frok trace inspect``; also callable as a library for tests /
-notebooks / ad-hoc diagnostics.
+Used by ``frok trace inspect`` and ``frok eval summarize``; also callable
+as a library for tests / notebooks / ad-hoc diagnostics.
 """
 
 from __future__ import annotations
+
+from pathlib import Path
 
 import statistics
 from dataclasses import dataclass, field
@@ -297,4 +301,210 @@ def summary_to_json(summary: TraceSummary, *, top: int = 20) -> dict:
             }
             for t in summary.top_tools[:top]
         ],
+    }
+
+
+# ---------------------------------------------------------------------------
+# directory-level aggregation (`frok eval summarize <dir>`)
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class CaseSummary:
+    """Per-capture rollup for a single `<slug>.jsonl` file."""
+
+    name: str
+    path: str
+    spans: int
+    total_tokens: int
+    error_count: int
+    duration_ms: float  # sum of root-span durations
+    tool_counts: dict[str, int]
+    errored_tool_counts: dict[str, int]
+
+
+@dataclass
+class DirectorySummary:
+    directory: str
+    cases: list[CaseSummary]
+
+    @property
+    def total_spans(self) -> int:
+        return sum(c.spans for c in self.cases)
+
+    @property
+    def total_tokens(self) -> int:
+        return sum(c.total_tokens for c in self.cases)
+
+    @property
+    def total_errors(self) -> int:
+        return sum(c.error_count for c in self.cases)
+
+    @property
+    def tool_counts(self) -> dict[str, int]:
+        out: dict[str, int] = {}
+        for c in self.cases:
+            for k, v in c.tool_counts.items():
+                out[k] = out.get(k, 0) + v
+        return out
+
+    @property
+    def errored_tool_counts(self) -> dict[str, int]:
+        out: dict[str, int] = {}
+        for c in self.cases:
+            for k, v in c.errored_tool_counts.items():
+                out[k] = out.get(k, 0) + v
+        return out
+
+    def slowest(self, n: int = 5) -> list[CaseSummary]:
+        return sorted(self.cases, key=lambda c: -c.duration_ms)[:n]
+
+    def heaviest_tokens(self, n: int = 5) -> list[CaseSummary]:
+        return sorted(self.cases, key=lambda c: -c.total_tokens)[:n]
+
+    def most_errors(self, n: int = 5) -> list[CaseSummary]:
+        return sorted(
+            (c for c in self.cases if c.error_count > 0),
+            key=lambda c: -c.error_count,
+        )[:n]
+
+
+def _summarize_events(name: str, path: Path, events: list[Event]) -> CaseSummary:
+    summary = summarize(events)
+    roots = [
+        n for n in _nodes_from(events).values() if n.parent_span_id is None
+    ]
+    duration = sum(n.duration_ms for n in roots)
+
+    tool_counts: dict[str, int] = {}
+    errored_tool_counts: dict[str, int] = {}
+    for t in summary.top_tools:
+        tool_counts[t.tool] = t.count
+        if t.errors:
+            errored_tool_counts[t.tool] = t.errors
+
+    return CaseSummary(
+        name=name,
+        path=str(path),
+        spans=summary.span_count,
+        total_tokens=sum(
+            int(e.data.get("total_tokens", 0) or 0)
+            for e in events
+            if e.kind == SPAN_END and e.name == "grok.chat"
+        ),
+        error_count=len(summary.errors),
+        duration_ms=duration,
+        tool_counts=tool_counts,
+        errored_tool_counts=errored_tool_counts,
+    )
+
+
+def summarize_directory(directory: str | Path) -> DirectorySummary:
+    """Walk ``<dir>/*.jsonl`` and return a per-case rollup."""
+    d = Path(directory)
+    if not d.is_dir():
+        raise NotADirectoryError(f"not a directory: {directory}")
+    cases: list[CaseSummary] = []
+    for path in sorted(d.glob("*.jsonl")):
+        # Import here to avoid pulling `read_jsonl` at module top — keeps
+        # analysis importable without the sink module in odd test envs.
+        from .sink import read_jsonl
+
+        events = list(read_jsonl(path))
+        if not events:
+            continue
+        cases.append(_summarize_events(path.stem, path, events))
+    return DirectorySummary(directory=str(d), cases=cases)
+
+
+def dir_summary_to_markdown(
+    summary: DirectorySummary, *, top: int = 5
+) -> str:
+    lines = [
+        "# Frok Eval Directory Summary",
+        "",
+        f"- Directory: `{summary.directory}`",
+        f"- Cases: {len(summary.cases)}",
+        f"- Total spans: {summary.total_spans}",
+        f"- Total tokens: {summary.total_tokens}",
+        f"- Total errors: {summary.total_errors}",
+        "",
+        "## Per-case rollup",
+        "",
+        "| Case | Spans | Tokens | Errors | Duration ms | Tools |",
+        "|------|------:|-------:|-------:|------------:|-------|",
+    ]
+    for c in summary.cases:
+        tools = (
+            ", ".join(f"{name}:{count}" for name, count in sorted(c.tool_counts.items()))
+            or "-"
+        )
+        lines.append(
+            f"| {c.name} | {c.spans} | {c.total_tokens} | {c.error_count} | "
+            f"{c.duration_ms:.1f} | {tools} |"
+        )
+
+    if summary.cases:
+        lines += ["", "## Cross-case leaders", "", "### Slowest cases"]
+        for i, c in enumerate(summary.slowest(top), 1):
+            lines.append(f"{i}. `{c.name}` — {c.duration_ms:.1f} ms")
+
+        lines += ["", "### Heaviest token use"]
+        for i, c in enumerate(summary.heaviest_tokens(top), 1):
+            lines.append(f"{i}. `{c.name}` — {c.total_tokens} tokens")
+
+        most_err = summary.most_errors(top)
+        if most_err:
+            lines += ["", "### Most-errored cases"]
+            for i, c in enumerate(most_err, 1):
+                lines.append(f"{i}. `{c.name}` — {c.error_count} errored spans")
+
+        errored_tools = summary.errored_tool_counts
+        if errored_tools:
+            lines += ["", "### Tools with errors (aggregate)"]
+            for name, count in sorted(errored_tools.items(), key=lambda kv: -kv[1])[:top]:
+                lines.append(f"- `{name}` — {count}")
+
+        tools = summary.tool_counts
+        if tools:
+            lines += ["", "### Top tools by invocation count (aggregate)"]
+            for name, count in sorted(tools.items(), key=lambda kv: -kv[1])[:top]:
+                lines.append(f"- `{name}` — {count}")
+
+    return "\n".join(lines) + "\n"
+
+
+def dir_summary_to_json(
+    summary: DirectorySummary, *, top: int = 5
+) -> dict[str, Any]:
+    return {
+        "directory": summary.directory,
+        "total_spans": summary.total_spans,
+        "total_tokens": summary.total_tokens,
+        "total_errors": summary.total_errors,
+        "cases": [
+            {
+                "name": c.name,
+                "path": c.path,
+                "spans": c.spans,
+                "total_tokens": c.total_tokens,
+                "error_count": c.error_count,
+                "duration_ms": c.duration_ms,
+                "tool_counts": c.tool_counts,
+                "errored_tool_counts": c.errored_tool_counts,
+            }
+            for c in summary.cases
+        ],
+        "slowest": [
+            {"name": c.name, "duration_ms": c.duration_ms}
+            for c in summary.slowest(top)
+        ],
+        "heaviest_tokens": [
+            {"name": c.name, "total_tokens": c.total_tokens}
+            for c in summary.heaviest_tokens(top)
+        ],
+        "most_errors": [
+            {"name": c.name, "error_count": c.error_count}
+            for c in summary.most_errors(top)
+        ],
+        "tool_counts": summary.tool_counts,
+        "errored_tool_counts": summary.errored_tool_counts,
     }

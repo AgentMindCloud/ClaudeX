@@ -96,5 +96,12 @@ builds on these three.
    with Markdown or JSON output. Symmetric two-file A/B
    comparison complementing `trace inspect` (single capture) and
    `--use-baseline` (per-case). *Shipped 2026-04-23.*
-8. *Sketch:* `frok serve` (long-running agent), distributed
+8. **eval-summarize** — `frok eval summarize <dir>` walks a
+   directory of `<slug>.jsonl` captures (e.g. from
+   `--capture-baseline`), rolls up per-case spans / tokens /
+   errors / duration, and surfaces cross-case leaders (slowest,
+   heaviest tokens, most errors, errored tools, top tools).
+   Markdown or JSON; `--fail-on-errors` for CI gates.
+   *Shipped 2026-04-23.*
+9. *Sketch:* `frok serve` (long-running agent), distributed
    inference, X-native production agents, alignment red-teaming.

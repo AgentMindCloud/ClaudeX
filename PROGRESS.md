@@ -2,6 +2,79 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 3 §8: eval-summarize
+
+**Shipped** ``frok eval summarize <dir>`` — a directory-wide
+rollup over a bag of `JsonlSink` captures. Closes the last
+discoverability gap: today operators could `trace inspect` one
+file or `eval diff` two; now they can point at a
+``--capture-baseline`` directory and get one report.
+
+* **`frok.telemetry.analysis`** (extension)
+  * ``CaseSummary`` — per-capture rollup: name (file stem),
+    path, span count, total tokens (from `grok.chat`), error
+    count, duration (sum of root spans), tool counts, errored
+    tool counts.
+  * ``DirectorySummary`` — cases + aggregate properties
+    (``total_spans`` / ``total_tokens`` / ``total_errors`` /
+    ``tool_counts`` / ``errored_tool_counts``) and leader
+    methods (``slowest(n)`` / ``heaviest_tokens(n)`` /
+    ``most_errors(n)``).
+  * ``summarize_directory(dir)`` walks ``<dir>/*.jsonl`` in
+    sorted order, skipping empty captures; raises
+    ``NotADirectoryError`` if the path isn't a directory.
+  * ``dir_summary_to_markdown`` + ``dir_summary_to_json``
+    renderers. Markdown hides leader sections that'd be empty
+    (no errored tools, no errored cases) so a clean run's report
+    stays tight.
+* **`frok eval summarize <dir>`** (`frok/cli/eval.py`)
+  * Flags: `-o/--output`, `--json`, `--top N` (default 5),
+    `--fail-on-errors` for CI. Missing / not-a-dir / empty
+    directory all raise ``CliError`` (exit 2); full traces in
+    empty JSONL files are silently skipped so a partial capture
+    doesn't tank the whole report.
+  * Lives under the existing `eval` subparser alongside
+    `eval diff`.
+
+**Verification.** `python3 -m pytest -q` → 316 passed in 0.89s (24
+new). Library tests cover the directory walker (sorted order,
+non-jsonl files ignored, missing dir errors, empty captures
+skipped); CaseSummary field correctness (token aggregation, chat+
+tool error counting, tool/errored tool counts, root-span duration
+summation with nested children excluded); DirectorySummary
+aggregates (tool merging, errored-tool merging, slowest/heaviest/
+most-errors leader ordering); renderers (all section headers
+present, empty leader sections hidden, JSON round-trips). CLI
+tests cover argparse shape, Markdown + JSON outputs, `-o` writes
++ stdout suppression, `--top` caps leader rows but not per-case
+rollup, `--fail-on-errors` flips the exit code, error paths
+(missing dir, not-a-directory, empty directory), and an end-to-
+end interop test that pipes a `frok run --capture-baseline` run
+directly into `frok eval summarize` and asserts both case names
+appear.
+
+**Decisions / trade-offs.**
+* Directory walker silently skips empty JSONL files rather than
+  erroring — a half-written capture from a crashed run
+  shouldn't prevent the operator from summarising the 99 that
+  succeeded.
+* `--top` caps only the leader tables, not the per-case rollup.
+  A dashboard for 200 cases should list all 200 but highlight
+  the top-N on each dimension.
+* Errored-tool and errored-case sections are hidden on clean
+  runs. Operators who scroll a perfectly-green report shouldn't
+  be made to stare at empty "## Tools with errors" headers.
+* Directory aggregation reuses the single-capture `summarize`
+  helper so the two entry points can't drift on what counts as
+  a tool invocation, a token, or an error.
+
+**Next suggested action:** `Extend Phase 3 with \`frok eval
+summarize --diff-against <dir>\`: two directories, each a set of
+\`<slug>.jsonl\` captures; surface per-case diffs (tokens,
+tool-order, errors) where the slugs match, and flag slugs that
+appear in one side but not the other. Makes it a one-shot "did
+the PR regress any of my captured baselines?" command.`
+
 ## 2026-04-23 — Phase 3 §7: eval-diff
 
 **Shipped** ``frok eval diff <a.jsonl> <b.jsonl>`` — symmetric

@@ -1,18 +1,11 @@
-"""``frok eval diff <a.jsonl> <b.jsonl>`` — A/B two JsonlSink captures.
+"""Evaluation CLI — ``frok eval diff`` and ``frok eval summarize``.
 
-Complements:
-  * ``frok trace inspect`` (summarise ONE capture)
-  * ``frok run --use-baseline`` (per-case diff against a recorded
-    baseline, one case at a time)
-with a symmetric two-file comparison that the operator can run
-outside of a live eval — e.g. to A/B a prompt change, a model
-version bump, or a config tweak against captures collected from
-earlier ``frok run --capture-baseline`` invocations.
+Three complementary operations over `JsonlSink` captures:
 
-The ``a`` side is treated as the reference ("before"); ``b`` is the
-candidate ("after"). A diff carrying ``regressed=True`` — tool
-order diverged or a new error appeared — turns the exit code red
-under ``--fail-on-regression``.
+* ``frok trace inspect <file>`` — summarise ONE capture.
+* ``frok eval diff <a> <b>`` — symmetric A/B of two captures.
+* ``frok eval summarize <dir>`` — aggregate rollup + cross-case
+  leaders across every ``<slug>.jsonl`` in a baseline directory.
 """
 
 from __future__ import annotations
@@ -22,7 +15,12 @@ import json
 from pathlib import Path
 
 from ..evals import diff_event_streams, diff_to_markdown
-from ..telemetry import read_jsonl
+from ..telemetry import (
+    dir_summary_to_json,
+    dir_summary_to_markdown,
+    read_jsonl,
+    summarize_directory,
+)
 from .common import CliError
 
 
@@ -62,6 +60,39 @@ async def diff_cmd(args: argparse.Namespace) -> int:
         print(out)
 
     if args.fail_on_regression and diff["regressed"]:
+        return 1
+    return 0
+
+
+async def summarize_cmd(args: argparse.Namespace) -> int:
+    directory: Path = args.directory
+    if not directory.exists():
+        raise CliError(f"directory not found: {directory}")
+    if not directory.is_dir():
+        raise CliError(f"not a directory: {directory}")
+
+    try:
+        summary = summarize_directory(directory)
+    except Exception as exc:
+        raise CliError(f"cannot summarize {directory}: {exc}") from exc
+
+    if not summary.cases:
+        raise CliError(f"no .jsonl captures found in {directory}")
+
+    if args.json:
+        out = json.dumps(
+            dir_summary_to_json(summary, top=args.top), indent=2, default=str
+        )
+    else:
+        out = dir_summary_to_markdown(summary, top=args.top)
+
+    if args.output is not None:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(out, encoding="utf-8")
+    else:
+        print(out)
+
+    if args.fail_on_errors and summary.total_errors > 0:
         return 1
     return 0
 
@@ -109,3 +140,41 @@ def register(sub: "argparse._SubParsersAction") -> None:
         ),
     )
     diff.set_defaults(fn=diff_cmd)
+
+    summ = eval_sub.add_parser(
+        "summarize",
+        help="Aggregate stats + leaders across a directory of captures.",
+        description=(
+            "Walk <DIR>/*.jsonl, summarize each capture, and print a "
+            "per-case rollup plus cross-case leaders (slowest, heaviest "
+            "tokens, most errors, errored tools, top tools)."
+        ),
+    )
+    summ.add_argument(
+        "directory",
+        type=Path,
+        help="directory of JsonlSink captures (e.g. from --capture-baseline)",
+    )
+    summ.add_argument(
+        "-o",
+        "--output",
+        type=Path,
+        help="write report to this file instead of stdout",
+    )
+    summ.add_argument(
+        "--json",
+        action="store_true",
+        help="emit machine-readable JSON instead of Markdown",
+    )
+    summ.add_argument(
+        "--top",
+        type=int,
+        default=5,
+        help="limit leader tables to this many rows (default 5)",
+    )
+    summ.add_argument(
+        "--fail-on-errors",
+        action="store_true",
+        help="exit non-zero when any capture contains an errored span",
+    )
+    summ.set_defaults(fn=summarize_cmd)
