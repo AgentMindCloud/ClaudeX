@@ -242,17 +242,21 @@ def apply_seed(seed: int, repeat_index: int) -> int:
 _retry_sleep: Callable[[float], Any] = asyncio.sleep
 
 
-async def _apply_retry_backoff(ms: int, jitter: float) -> None:
+async def _apply_retry_backoff(ms: int, jitter: float) -> float:
     """Sleep for ``ms`` milliseconds with optional symmetric jitter.
 
     ``jitter`` is a fraction in [0, 1]; the actual sleep is
     ``random.uniform(1 - jitter, 1 + jitter) * ms / 1000.0`` seconds.
-    No-op when ``ms <= 0``.
+    No-op when ``ms <= 0``. Returns the actual milliseconds slept
+    (0 when no-op), so the retry-report can record exactly what
+    happened rather than re-computing from the base/jitter config.
     """
     if ms <= 0:
-        return
+        return 0.0
     factor = random.uniform(1 - jitter, 1 + jitter) if jitter > 0 else 1.0
-    await _retry_sleep(ms / 1000.0 * factor)
+    actual_ms = ms * factor
+    await _retry_sleep(actual_ms / 1000.0)
+    return actual_ms
 
 
 # ---------------------------------------------------------------------------
@@ -409,7 +413,7 @@ async def run_cmd(args: argparse.Namespace) -> int:
         repeat_idx: int,
         jsonl: JsonlSink | None,
         factory: ClientFactory,
-    ) -> EvalResult:
+    ) -> tuple[EvalResult, list[dict[str, Any]]]:
         try:
             async with semaphore:
                 if args.seed is not None:
@@ -429,11 +433,16 @@ async def run_cmd(args: argparse.Namespace) -> int:
                     budget = args.retry + 1
                 result: EvalResult | None = None
                 attempt_count = 0
+                # Per-attempt record: written into the --retry-report JSON
+                # when set. Kept for all runs (cheap) so downstream plumbing
+                # has a single shape to work with.
+                attempts_log: list[dict[str, Any]] = []
+                sleep_before_ms = 0.0
                 for i in range(budget):
                     if i > 0 and args.retry_backoff > 0:
                         # Sleep BEFORE each retry, never after the final
                         # attempt (early breaks skip this entirely).
-                        await _apply_retry_backoff(
+                        sleep_before_ms = await _apply_retry_backoff(
                             args.retry_backoff,
                             args.retry_backoff_jitter,
                         )
@@ -443,6 +452,14 @@ async def run_cmd(args: argparse.Namespace) -> int:
                         repeat=repeat_idx,
                         repeats=args.repeat,
                         stream_sink=sink,
+                    )
+                    attempts_log.append(
+                        {
+                            "attempt": attempt_count,
+                            "passed": result.passed,
+                            "error": result.observation.error,
+                            "sleep_before_ms": round(sleep_before_ms, 3),
+                        }
                     )
                     if result.passed:
                         break
@@ -476,12 +493,13 @@ async def run_cmd(args: argparse.Namespace) -> int:
                     # onto the same line as the streamed answer.
                     sys.stderr.write("\n")
                     sys.stderr.flush()
-                return result
+                return result, attempts_log
         finally:
             if jsonl is not None:
                 jsonl.close()
 
-    tasks: list[asyncio.Task[EvalResult]] = []
+    tasks: list[asyncio.Task[tuple[EvalResult, list[dict[str, Any]]]]] = []
+    task_meta: list[tuple[str, int]] = []  # (case_name, repeat_idx) per task
     for case in loaded.cases:
         for repeat_idx in range(args.repeat):
             jsonl: JsonlSink | None = None
@@ -492,8 +510,11 @@ async def run_cmd(args: argparse.Namespace) -> int:
             tasks.append(
                 asyncio.create_task(_run_unit(case, repeat_idx, jsonl, factory))
             )
+            task_meta.append((case.name, repeat_idx))
 
-    results: list[EvalResult] = list(await asyncio.gather(*tasks))
+    gathered = list(await asyncio.gather(*tasks))
+    results: list[EvalResult] = [g[0] for g in gathered]
+    timelines: list[list[dict[str, Any]]] = [g[1] for g in gathered]
 
     report = EvalReport(results=results)
 
@@ -508,6 +529,25 @@ async def run_cmd(args: argparse.Namespace) -> int:
         args.summary_json.parent.mkdir(parents=True, exist_ok=True)
         args.summary_json.write_text(
             json.dumps(report.to_summary(), indent=2, default=str),
+            encoding="utf-8",
+        )
+
+    if args.retry_report is not None:
+        retry_payload = {
+            "cases": [
+                {
+                    "case": meta[0],
+                    "repeat": meta[1],
+                    "attempts": timeline,
+                    "retry_budget": result.retry_budget,
+                    "passed": result.passed,
+                }
+                for meta, timeline, result in zip(task_meta, timelines, results)
+            ]
+        }
+        args.retry_report.parent.mkdir(parents=True, exist_ok=True)
+        args.retry_report.write_text(
+            json.dumps(retry_payload, indent=2, default=str),
             encoding="utf-8",
         )
 
@@ -720,6 +760,21 @@ def register(sub: "argparse._SubParsersAction") -> None:
             "1 + FRACTION) * MS / 1000 seconds. 0 (default) disables "
             "jitter; 0.5 spreads sleeps across [0.5*MS, 1.5*MS]. "
             "Requires --retry-backoff > 0."
+        ),
+    )
+    run.add_argument(
+        "--retry-report",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help=(
+            "write a per-case per-attempt retry timeline JSON to PATH. "
+            "Each entry carries attempt number, passed, error string, "
+            "and sleep_before_ms (jitter-adjusted). Lets CI diff retry "
+            "behaviour across runs and catch creeping flake (e.g. "
+            "\"attempts grew from 2 to 5 on three cases\") before the "
+            "budget-relative summary would flag it. Always written "
+            "when the flag is set, regardless of --retry value."
         ),
     )
     run.set_defaults(fn=run_cmd)

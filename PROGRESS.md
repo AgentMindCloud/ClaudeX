@@ -2,6 +2,108 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-24 — Phase 5 §22: retry-report
+
+**Shipped** ``frok run --retry-report PATH`` — a sibling
+JSON dump to `--summary-json` carrying the full per-case
+per-attempt retry timeline. Closes the remaining
+diagnostic gap in the retry stack: the markdown report and
+summary JSON both aggregate to "attempts / budget" per
+case, which misses creeping flake patterns like "the suite
+still passes but Tuesday needed 2 attempts per case,
+today's needs 5 across three cases — same 5/5 budget, but
+the shape is eroding." The timeline makes those shifts
+diffable across runs.
+
+* **CLI flag** — `--retry-report PATH`. Default `None`
+  means no file written; setting it always writes,
+  regardless of `--retry` value (so operators see the
+  single-attempt baseline too, which helps when comparing
+  before/after adding `--retry`).
+* **Data shape** — top-level `{"cases": [...]}` with one
+  object per `(case, repeat)` unit. Each carries `case`,
+  `repeat`, `attempts`, `retry_budget`, `passed` (the
+  terminal verdict). Each attempt is `{"attempt",
+  "passed", "error", "sleep_before_ms"}`. `attempt` is
+  1-based; `error` is the raw `observation.error` string
+  or `null`; `sleep_before_ms` is the actual backoff
+  slept *before* this attempt (0.0 for attempt #1, and
+  jitter-adjusted when `--retry-backoff-jitter` is set).
+* **Collection** — `_run_unit` now builds an
+  `attempts_log` list alongside the retry loop, appending
+  a record right after each `runner.run_case` call.
+  Returns a tuple `(result, attempts_log)` instead of
+  just `result`; the gather splits them back apart via
+  `zip(task_meta, timelines, results)`.
+* **Sleep duration** — `_apply_retry_backoff` now returns
+  the actual `ms` slept (was `None`), so the timeline
+  records what really happened rather than re-deriving it
+  from config. With jitter enabled, different runs
+  produce different `sleep_before_ms` values per attempt,
+  which is exactly what operators want to diff.
+* **Parent-dir creation** — mirrors `--summary-json` and
+  `-o`: `args.retry_report.parent.mkdir(parents=True,
+  exist_ok=True)`. Operators can point the flag at
+  `reports/2026-04-24/retry.json` without pre-creating
+  the chain.
+
+**Verification.** `python3 -m pytest -q` → 717 passed in 2.66s
+(8 new). Tests cover: parser default `None`, parser
+accepts Path, single-attempt pass (one entry with
+`sleep_before_ms=0`), multi-attempt with errors (each
+entry carries the specific error string, sleeps from
+attempt 2 onward), exhausted retries (every attempt
+logged with `passed=False`), no-flag writes no file,
+missing parent dir is created, `--repeat 2` + two cases
+produces 4 entries in submission order `[(alpha,0),
+(alpha,1), (beta,0), (beta,1)]`.
+
+**Decisions / trade-offs.**
+* Timelines are collected ALWAYS (even when the flag
+  isn't set), not just when `--retry-report` is set.
+  Bookkeeping is a handful of dict appends per attempt —
+  trivial cost. Doing it unconditionally keeps the
+  code path single-shaped and opens the door for future
+  features (retry-report-append, telemetry span
+  emission) without refactoring.
+* Split `_run_unit`'s return into a tuple rather than
+  stashing the timeline on `EvalResult`. Timelines are a
+  CLI concern, not a library concern — attempts already
+  live on `EvalResult`, but the per-attempt record
+  (error string, sleep ms) belongs to the CLI retry
+  loop. Keeping them separate respects the library
+  contract.
+* Recorded `sleep_before_ms` is the actual slept value,
+  not the configured base. Under jitter, each attempt's
+  sleep differs; the JSON must faithfully record what
+  happened, not what was configured (operators can go
+  back to the flag values for that).
+* `passed` appears both on the top-level case object
+  (terminal verdict after the retry loop) and on each
+  attempt (per-try verdict). Both are useful: the former
+  matches the summary JSON's perspective; the latter
+  shows the inside-the-loop view.
+* No gating on `--retry > 0`. Writing a single-attempt
+  timeline for a no-retry run is valid baseline data —
+  operators flipping `--retry` on later can diff the
+  before/after. Hard-erroring on no-retry would break
+  that workflow.
+* Submission-order entries (not pass-first, not grouped
+  by case name). Matches the `asyncio.gather` contract
+  that preserves submission order regardless of
+  completion order — same mental model as every other
+  CLI output in the tool.
+
+**Next suggested action:** `Extend Phase 5 §23 with a
+\`frok run --retry-report-diff A B\` subcommand (or
+sibling CLI) that loads two retry-report JSONs, matches
+(case, repeat) pairs across them, and prints a markdown
+table flagging cases whose attempt count grew, cases
+whose error shape changed, and cases that newly appeared
+/ disappeared. Gives operators a single-command creeping-
+flake detector — today's retry-report vs last Friday's,
+one glance tells the trend.`
+
 ## 2026-04-24 — Phase 5 §21: retry-backoff
 
 **Shipped** ``frok run --retry-backoff MS`` +

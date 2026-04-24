@@ -2,6 +2,32 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.48.0] — 2026-04-24
+### Added
+- `frok run --retry-report PATH` — writes a per-case per-
+  attempt timeline JSON: `{"cases": [{"case", "repeat",
+  "attempts": [{"attempt", "passed", "error",
+  "sleep_before_ms"}], "retry_budget", "passed"}]}`.
+  Always writes when the flag is set (even without
+  `--retry`). Parent directory created if missing.
+- `_apply_retry_backoff` now returns the actual ms slept
+  (was `None`) so the timeline records jitter-adjusted
+  sleeps faithfully.
+- `_run_unit` now returns `(EvalResult, attempts_log)`
+  instead of just `EvalResult`; gather splits them back
+  apart for the report writer.
+- Tests: 8 new (parser default + Path, single-attempt
+  pass shape, multi-attempt with specific errors +
+  sleeps, exhausted retries logs every attempt, no-flag
+  writes nothing, parent-dir creation, `--repeat` +
+  multi-case submission-order entries); 717 total.
+
+### Changed
+- `_apply_retry_backoff(ms, jitter)` return type:
+  `None` → `float` (ms actually slept). Existing backoff
+  tests updated implicitly (they only observed the sleep
+  call, not the return).
+
 ## [0.47.0] — 2026-04-24
 ### Added
 - `frok run --retry-backoff MS` — sleep MS milliseconds

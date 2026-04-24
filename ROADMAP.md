@@ -230,6 +230,16 @@ builds on these three.
     Rejects negative backoff, jitter outside [0, 1],
     jitter without backoff, and backoff without
     `--retry > 0`. *Shipped 2026-04-24.*
+22. **retry-report** — `frok run --retry-report PATH`
+    writes a per-case per-attempt timeline JSON with
+    `{attempt, passed, error, sleep_before_ms}` records
+    plus the case's `retry_budget` and terminal `passed`
+    verdict. Lets CI diff retry behaviour across runs and
+    catch creeping flake ("attempts grew from 2 to 5 on
+    three cases") before the budget-relative summary
+    would flag it. Always written when the flag is set,
+    regardless of `--retry` value; parent dir created if
+    missing. *Shipped 2026-04-24.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable
