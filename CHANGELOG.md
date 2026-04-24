@@ -2,6 +2,16 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.41.0] — 2026-04-23
+### Added
+- `frok run --timeout-s SECONDS` — suite-wide default for
+  `EvalCase.timeout_s`. Fills every case whose own value is
+  `None`; per-case overrides always win. Negative rejected
+  as `CliError`; zero short-circuits unconfigured cases.
+- Tests: 9 new (parser shape, fill behaviour, per-case
+  override wins, zero short-circuit, fail-on-regression
+  interop, negative rejection); 633 total.
+
 ## [0.40.0] — 2026-04-23
 ### Added
 - `EvalCase.timeout_s` — hard wall-clock cap per case. When

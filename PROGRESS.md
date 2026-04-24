@@ -2,6 +2,67 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 5 §15: cli-timeout-default
+
+**Shipped** ``frok run --timeout-s SECONDS`` — a suite-wide
+default for `EvalCase.timeout_s`, filled in per case where the
+case itself hasn't opted out. Operators who want "no case
+should ever take more than 30s" can now set it once at the
+command line instead of editing every case file.
+
+* **CLI flag** (`frok/cli/run.py`) — registered as a float
+  with `metavar="SECONDS"`. Default is `None` (no fill).
+* **Runner fill** — after `load_case_file` + `--use-baseline`,
+  if `args.timeout_s is not None`, iterate `loaded.cases` and
+  set `case.timeout_s = args.timeout_s` for any case whose
+  own value is `None`. Per-case overrides win by construction.
+* **Validation** — negative `--timeout-s` raises `CliError`
+  ("`--timeout-s must be >= 0`", exit 2). Zero is allowed —
+  `asyncio.wait_for(0)` short-circuits every unconfigured case
+  before it runs, which is a legitimate "pre-flight check the
+  loader, skip execution" move. Per-case `timeout_s=0` already
+  has the same semantics (§14).
+
+**Verification.** `python3 -m pytest -q` → 633 passed in 2.58s
+(9 new). Tests cover: parser default `None`, parser accepts
+float + zero, no-flag leaves cases untouched (existing
+behaviour preserved), `--timeout-s 0.05` on a 5s-sleep
+transport fires the timeout with both marker + configured
+value in `observation.error`, mixed-case file with one
+`timeout_s=0.02` + one None + `--timeout-s 0.10` honours both
+boundaries simultaneously, `--timeout-s 0` short-circuits,
+`--fail-on-regression` returns 1 on a timeout case,
+`--timeout-s -1` is a `CliError`.
+
+**Decisions / trade-offs.**
+* Fill at the runner layer, not on the EvalCase directly at
+  load time. Cases authored in the file are the source of
+  truth for their own `timeout_s`; the CLI is a fallback for
+  un-opinionated cases. Filling only the `None` slots keeps
+  that layering clean.
+* Negative is a hard error. Existing flags (`--repeat`,
+  `--jobs`) follow the same rule; zero is a valid edge-case
+  for "don't actually execute" but negatives are always bugs.
+* Mirrors `--use-baseline` semantics. That flag fills
+  `case.baseline` for cases whose own is None; this fills
+  `case.timeout_s` for cases whose own is None. Consistent
+  precedence ladder, consistent operator mental model.
+* No validation that `--timeout-s` is above some floor
+  (e.g. "not less than 1ms"). Unit tests often need sub-
+  millisecond timeouts to exercise the error path
+  deterministically, and operators trying `--timeout-s 0.0001`
+  on a live call will see the same `TimeoutError` the case-
+  level setting produces — the failure is already clean.
+
+**Next suggested action:** `Extend Phase 5 §16 with a
+\`frok run --retry N\` flag wiring \`asyncio\` retry loops
+around each case: on a failing case (not a timeout — those
+are by design), re-run up to N times and mark the case passed
+if any attempt succeeds. Useful for shaking out genuinely
+flaky cases from regressions. Combines cleanly with
+\`--repeat\` (which runs N times and reports every outcome)
+by contrast — retry stops at the first win.`
+
 ## 2026-04-23 — Phase 5 §14: case-timeout
 
 **Shipped** ``EvalCase.timeout_s`` — a hard wall-clock cap per

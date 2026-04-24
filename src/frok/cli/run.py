@@ -274,6 +274,16 @@ async def run_cmd(args: argparse.Namespace) -> int:
             )
         _attach_baselines(loaded.cases, args.use_baseline)
 
+    if args.timeout_s is not None:
+        if args.timeout_s < 0:
+            raise CliError(
+                f"--timeout-s must be >= 0, got {args.timeout_s}"
+            )
+        for case in loaded.cases:
+            # Per-case EvalCase.timeout_s always wins over the CLI default.
+            if case.timeout_s is None:
+                case.timeout_s = args.timeout_s
+
     if args.repeat < 1:
         raise CliError(f"--repeat must be >= 1, got {args.repeat}")
     if args.jobs < 1:
@@ -508,6 +518,18 @@ def register(sub: "argparse._SubParsersAction") -> None:
         help=(
             "attach DIR/<case-slug>.jsonl as each case's baseline when the "
             "file exists; cases with an explicit `baseline=` are untouched"
+        ),
+    )
+    run.add_argument(
+        "--timeout-s",
+        type=float,
+        default=None,
+        metavar="SECONDS",
+        help=(
+            "default wall-clock timeout (seconds) applied to every case "
+            "whose own EvalCase.timeout_s is None. Per-case overrides "
+            "always win. SECONDS=0 short-circuits every unconfigured "
+            "case (asyncio.wait_for(0) fires before the coroutine runs)."
         ),
     )
     run.set_defaults(fn=run_cmd)

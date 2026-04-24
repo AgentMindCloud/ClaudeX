@@ -160,6 +160,13 @@ builds on these three.
     the sink. Catches truly-stuck cases that `LatencyWithin`
     can only gate on AFTER the run completes.
     *Shipped 2026-04-23.*
+15. **cli-timeout-default** — `frok run --timeout-s SECONDS`
+    sets a default timeout on every case whose own
+    `EvalCase.timeout_s` is None. Per-case values always win;
+    negative values error; 0 short-circuits unconfigured
+    cases. Mirrors the `--use-baseline` "fill from CLI"
+    pattern so operators get suite-wide defaults without
+    editing every case file. *Shipped 2026-04-23.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable
