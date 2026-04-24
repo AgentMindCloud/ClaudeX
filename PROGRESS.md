@@ -2,6 +2,65 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 5 §10: invocations-ceiling
+
+**Shipped** ``InvocationsWithin(max_count)`` — the aggregate
+"don't loop forever" cap. `ToolCalled(..., times=N)` pins
+per-tool counts; this scorer pins the total across every tool,
+so a prompt regression that starts over-calling an arbitrary
+tool surfaces without one scorer per tool.
+
+* **`InvocationsWithin`** (`frok/evals/scorers.py`) — frozen
+  dataclass mirroring `LatencyWithin` / `TokensWithin` shape.
+  Reads ``len(obs.invocations)`` — every tool call the
+  orchestrator actually dispatched, regardless of which tool.
+  Inclusive at-limit comparison; failure detail surfaces both
+  actual and ceiling; measure carries the actual count.
+* **Edge cases** — zero invocations passes any non-negative
+  threshold (no-tools cases, blocked-before-tools cases, run-
+  errored cases all report ``len([]) == 0``). Same-tool
+  repeated invocations count as separate entries, which is the
+  right behaviour for a "loop cap" assertion.
+* **Exports** — added to `frok.evals.__all__` alphabetically.
+
+**Verification.** `python3 -m pytest -q` → 562 passed in 1.65s
+(7 new). Tests cover: pass under the ceiling with `measure`
+populated, inclusive at-limit passes, over-ceiling fails with
+both values in detail, zero invocations passes any non-
+negative threshold, no-tools case passes any cap,
+same-tool-repeated correctly counts each invocation, and the
+scorer name includes the configured ``max_count`` for
+aggregated reports to grep on.
+
+**Decisions / trade-offs.**
+* Aggregate across every tool, not per-tool. The per-tool
+  variant is already ``ToolCalled(name, times=N)``. This is
+  the "don't loop forever" cap; enumerating every tool's
+  count would bury the real signal.
+* Same-tool repeated invocations each count as one. A case
+  that legitimately calls ``search`` three times can set
+  ``max_count=3``; a case that calls it twice on purpose
+  then blows up to 15 on a prompt regression will fire the
+  scorer.
+* No matching ``min_count`` ("at least N calls"). Operators
+  who want "tool was called at least once" use
+  ``ToolCalled(name)``; "at least N across any tool" hasn't
+  come up. YAGNI.
+* Zero-invocations path passes by default. A case that
+  failed before any tool dispatch has a real signal
+  (``NoErrors``, missing final response); double-tapping via
+  an invocation-cap assertion would bury it.
+
+**Next suggested action:** `Extend Phase 5 §11 with an
+\`AnswerLength(min_chars=None, max_chars=None)\` scorer:
+assert the assembled response length falls within a range.
+Today's scorers assert answer CONTENT (\`AnswerContains\`,
+\`AnswerMatches\`) but never answer LENGTH. A prompt
+regression that starts producing one-word replies — or a
+runaway prompt that emits 4000 tokens of preamble before the
+actual answer — would both slip through the current scorer
+set without a dedicated length gate.`
+
 ## 2026-04-23 — Phase 5 §9: latency-ceiling
 
 **Shipped** ``LatencyWithin(max_ms)`` — the wall-clock gate that

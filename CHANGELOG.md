@@ -2,6 +2,16 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.36.0] — 2026-04-23
+### Added
+- `frok.evals.InvocationsWithin(max_count)` scorer — asserts
+  the total number of tool invocations on a case stays at or
+  below the threshold. Aggregate "don't loop forever" cap
+  complementing `ToolCalled(..., times=N)`'s per-tool exact
+  count. Inclusive at-limit; zero-invocations edge passes any
+  non-negative threshold.
+- Tests: 7 new (pass / fail / edge / name format); 562 total.
+
 ## [0.35.0] — 2026-04-23
 ### Added
 - `frok.evals.LatencyWithin(max_ms)` scorer — asserts the

@@ -126,6 +126,12 @@ builds on these three.
    ceiling for CI. Inclusive at-limit comparison; zero-latency
    fallback when a run errors before a root span closes.
    *Shipped 2026-04-23.*
+10. **invocations-ceiling** — `InvocationsWithin(max_count)`
+    asserts `len(obs.invocations) <= max_count`. Aggregate
+    "don't loop forever" cap across every tool, complementing
+    `ToolCalled(..., times=N)`'s per-tool exact count. Catches
+    prompt regressions that start over-calling tools without
+    needing one scorer per tool. *Shipped 2026-04-23.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable

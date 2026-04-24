@@ -240,6 +240,32 @@ class LatencyWithin:
 
 
 @dataclass(frozen=True)
+class InvocationsWithin:
+    """Total-tool-invocation ceiling. Complements ``ToolCalled(..., times=N)``
+    (per-tool exact count) with an aggregate "don't loop forever" cap —
+    catches a prompt regression that starts over-calling tools without
+    needing one scorer per tool.
+
+    Counts ``len(obs.invocations)`` — every tool call the orchestrator
+    actually dispatched (regardless of which tool). Cases without tools
+    report 0 invocations and pass any non-negative threshold.
+    """
+
+    max_count: int
+
+    def __call__(self, case: EvalCase, obs: Observation) -> Score:
+        sname = f"invocations_within[{self.max_count}]"
+        count = len(obs.invocations)
+        if count <= self.max_count:
+            return Score.ok(sname, measure=count)
+        return Score.fail(
+            sname,
+            f"{count} tool invocations > max {self.max_count}",
+            measure=count,
+        )
+
+
+@dataclass(frozen=True)
 class NoErrors:
     """Fails if any span recorded an error OR the run itself raised."""
 
