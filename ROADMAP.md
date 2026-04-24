@@ -207,6 +207,17 @@ builds on these three.
     retried/not-retried flag. Summary grows `total_budget`
     alongside `total_attempts` when any case was retry-
     eligible. *Shipped 2026-04-24.*
+20. **retry-on-error** — `frok run --retry-on-error REGEX`
+    narrows `--retry` to failures whose
+    `observation.error` matches REGEX (Python `re.search`
+    semantics; repeatable — any match wins). Scorer-only
+    failures (no observation error) are never retried under
+    this flag — they're almost always real regressions.
+    Timeouts still short-circuit as always. Composes with
+    `--retry-on`: both gates must match (case-name AND
+    error-shape) for a retry to be eligible. Rejects
+    `--retry-on-error` without `--retry > 0` and invalid
+    regexes. *Shipped 2026-04-24.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable

@@ -296,7 +296,21 @@ async def run_cmd(args: argparse.Namespace) -> int:
             "--retry-on requires --retry > 0 (no budget to spend on the "
             "matched cases); either drop --retry-on or set a retry budget"
         )
+    if args.retry_on_error and args.retry == 0:
+        raise CliError(
+            "--retry-on-error requires --retry > 0 (no budget to spend on "
+            "the matching errors); either drop --retry-on-error or set a "
+            "retry budget"
+        )
     retry_on_patterns = [_compile_pattern(p) for p in args.retry_on]
+    retry_on_error_patterns: list[re.Pattern[str]] = []
+    for raw in args.retry_on_error:
+        try:
+            retry_on_error_patterns.append(re.compile(raw))
+        except re.error as exc:
+            raise CliError(
+                f"invalid regex in --retry-on-error {raw!r}: {exc}"
+            )
     if args.seed is not None and args.jobs > 1:
         raise CliError(
             "--seed cannot be combined with --jobs > 1 "
@@ -388,6 +402,18 @@ async def run_cmd(args: argparse.Namespace) -> int:
                     err = result.observation.error or ""
                     if err.startswith("TimeoutError"):
                         break
+                    # --retry-on-error gates retries on error shape. When
+                    # patterns are set, scorer-only failures (no
+                    # observation.error) are never retried — they're
+                    # almost always real regressions. Otherwise require
+                    # the error to match at least one pattern.
+                    if retry_on_error_patterns:
+                        if not err:
+                            break
+                        if not any(
+                            p.search(err) for p in retry_on_error_patterns
+                        ):
+                            break
                 assert result is not None  # retry+1 >= 1
                 # Stamp attempts + retry_budget onto the final result so
                 # the report can surface "used N of M attempts" even when
@@ -605,6 +631,21 @@ def register(sub: "argparse._SubParsersAction") -> None:
             "Useful when a handful of cases depend on flaky external "
             "services and a blanket --retry would mask genuine "
             "regressions elsewhere. Requires --retry > 0."
+        ),
+    )
+    run.add_argument(
+        "--retry-on-error",
+        action="append",
+        default=[],
+        metavar="REGEX",
+        help=(
+            "narrow --retry to failures whose observation.error matches "
+            "REGEX (Python re.search semantics). Repeatable; any match "
+            "wins. Scorer-only failures (no observation error) are never "
+            "retried under this flag — they're almost always real "
+            "regressions. Timeouts still short-circuit as always. "
+            "Composes with --retry-on: both gates must match for a retry "
+            "to be eligible. Requires --retry > 0."
         ),
     )
     run.set_defaults(fn=run_cmd)

@@ -2,6 +2,100 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-24 — Phase 5 §20: retry-on-error
+
+**Shipped** ``frok run --retry-on-error REGEX`` — an
+error-shape filter that narrows `--retry` to failures whose
+`observation.error` matches at least one regex. Closes the
+remaining misuse of §16 `--retry`: blanket retries were
+masking both flaky network calls (which we want to retry)
+AND genuine correctness regressions that happened to raise
+(which we don't). Now `--retry-on-error '429|Connection'`
+expresses exactly "retry transient network errors, never
+scorer or assertion failures."
+
+* **CLI flag** (`frok/cli/run.py`) — `action="append"` with
+  `default=[]`, `metavar="REGEX"`. Patterns compile once via
+  `re.compile` (raw Python regex, not the glob+`re:` grammar
+  used for case-name selectors — errors are already strings
+  that lean on regex syntax, and operators will paste
+  regex-shaped text here).
+* **Retry-loop gate** — after a failing attempt, compute the
+  observation error string. Existing `TimeoutError` short-
+  circuit runs unchanged. If any `--retry-on-error` pattern
+  is set AND (the error is empty OR no pattern matches), the
+  loop breaks. Scorer-only failures (no observation error)
+  are never retried under this flag by explicit design —
+  they're almost always real regressions, and `.*` would
+  otherwise match an empty string and silently turn
+  assertion failures into infinite retries.
+* **Validation** — `args.retry_on_error and args.retry == 0`
+  → `CliError` (same shape as §18's `--retry-on` guard).
+  Invalid regex surfaces inline: "`invalid regex in
+  --retry-on-error '[invalid': ...`".
+* **Composes with `--retry-on`** via AND semantics: a case
+  must be in the name-selector AND its error must match the
+  error-selector for a retry to be eligible. This is the
+  cleanest layering — each flag owns one dimension, both
+  must agree for the retry to fire.
+
+**Verification.** `python3 -m pytest -q` → 695 passed in 2.83s
+(10 new). Tests cover: parser default empty, parser append-
+able, matching error triggers retry, non-matching error runs
+once, scorer-only failure runs once (the empty-error edge
+case), multiple patterns any-match-wins, timeout still
+short-circuits even when pattern would match `TimeoutError`,
+`--retry-on` + `--retry-on-error` AND composition
+(flaky-net retries on 429, deterministic doesn't retry
+despite matching error because it doesn't match the name
+selector), `--retry-on-error` without `--retry` is CliError,
+invalid regex is CliError.
+
+**Decisions / trade-offs.**
+* Regex grammar, not glob+`re:`. Error strings like
+  "`ConnectionResetError: peer closed`" lean on regex
+  syntax already (`|`, `.*`, `^`/`$`). Forcing operators to
+  opt into regex via a `re:` prefix would have meant every
+  invocation starts with `re:`, which is just noise. `--
+  retry-on` keeps the glob syntax because case names are
+  typically simple identifiers where globs feel natural.
+* Scorer-only failures never retry under the filter, even
+  when `.*` is specified. `.*` matching the empty string
+  would have made `--retry-on-error .*` equivalent to
+  `--retry` alone; that's a footgun. Explicitly short-
+  circuiting on empty-error makes the flag always mean
+  "retry only errors I know about."
+* Timeouts still win the short-circuit race. §16's design
+  stands: a case-level timeout is operator intent, not
+  flakiness. Operators who truly want to retry timeouts can
+  raise `--timeout-s`. `--retry-on-error TimeoutError`
+  doesn't override this because that would break the layer
+  between "operator-set cap" and "flake absorption" — two
+  distinct concerns.
+* AND semantics with `--retry-on`, not OR. If both flags are
+  set, an operator is expressing "retry X *kinds* of cases
+  when they fail in Y *way*" — a conjunction. OR would
+  broaden retries unpredictably. The tests lock in this
+  behaviour end-to-end.
+* Budget still gets allocated even when the error filter
+  stops the loop early. A case that matched `--retry-on` but
+  whose first error didn't match `--retry-on-error` shows
+  `1/4` in the markdown — used 1 of 4 allocated attempts,
+  with the specific error visible in `observation.error`.
+  That's diagnostic gold: "operator allocated 4 retries;
+  case used 1 because the error wasn't retry-eligible."
+
+**Next suggested action:** `Extend Phase 5 §21 with a
+\`frok run --retry-backoff MS\` flag that sleeps for MS
+milliseconds between retries (linear); optionally
+\`--retry-backoff MS --retry-backoff-jitter FRACTION\` for
+\`random.uniform(1 - F, 1 + F) * MS\` jitter. Mainly useful
+against rate-limited APIs like 429-on-xAI, where
+immediately retrying just hits the same rate limit again.
+Default 0 (no sleep) preserves every existing test's
+behaviour; negatives rejected; the sleep goes before the
+next attempt, not after the final one.`
+
 ## 2026-04-24 — Phase 5 §19: retry-budget
 
 **Shipped** ``EvalResult.retry_budget`` — the attempt

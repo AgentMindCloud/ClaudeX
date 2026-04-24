@@ -2,6 +2,26 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.46.0] — 2026-04-24
+### Added
+- `frok run --retry-on-error REGEX` — narrows `--retry` to
+  failures whose `observation.error` matches REGEX (Python
+  `re.search`; repeatable, any match wins). Scorer-only
+  failures (no observation error) never retry under the
+  flag — explicit safeguard against `.*` silently matching
+  empty-string errors.
+- Composes with `--retry-on` via AND semantics: case must
+  match the name selector AND the error must match the
+  error selector for a retry. Timeouts still short-circuit
+  as always.
+- Rejects `--retry-on-error` without `--retry > 0` and
+  surfaces invalid regexes inline.
+- Tests: 10 new (parser default + append, matching error
+  retries, non-match runs once, scorer-only failure runs
+  once under `.*`, multiple patterns, timeout short-
+  circuits, --retry-on+--retry-on-error AND composition,
+  --retry=0 rejected, invalid regex rejected); 695 total.
+
 ## [0.45.0] — 2026-04-24
 ### Added
 - `EvalResult.retry_budget: int = 1` — the retry allowance
