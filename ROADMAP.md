@@ -351,6 +351,17 @@ builds on these three.
     within `--group-by-error` groups too. argparse
     `choices` rejects unknown keys.
     *Shipped 2026-04-24.*
+32. **retry-show-reverse** — `frok retry show
+    --reverse` flips the chosen sort order. With the
+    default `worst` key it forces the sort (normally
+    conditional) and then reverses — "least-worst
+    first". With `--limit N` the truncation happens
+    AFTER the reverse, so `--reverse --limit 5`
+    surfaces the 5 least-attention-worthy cases.
+    Reverses WITHIN `--group-by-error` groups; the
+    group order (size desc) is untouched — those are
+    different dimensions. Default False preserves
+    §31. Markdown-only. *Shipped 2026-04-24.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable

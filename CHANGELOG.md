@@ -2,6 +2,25 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.58.0] — 2026-04-24
+### Added
+- `frok retry show --reverse` — flips the chosen sort
+  order. With default `worst`, forces the sort
+  (normally conditional) and reverses → "least-worst
+  first". With `--limit N`, truncation applies AFTER
+  reverse so `--reverse --limit 5` surfaces the 5
+  least-attention-worthy cases. Reverses WITHIN
+  `--group-by-error` groups; group order (size desc)
+  untouched. Markdown-only.
+- `frok.evals.format_retry_report(..., reverse=False)`
+  — new keyword-only param; default preserves §31.
+- Tests: 11 new (8 format behaviour + 3 CLI): default
+  byte-identical, flips name/attempts sorts, default-
+  worst sorts-then-flips, --limit-after-reverse,
+  within-group reverse preserves group order, composes
+  with --only-errors, parser default/set, end-to-end,
+  --json passthrough; 873 total.
+
 ## [0.57.0] — 2026-04-24
 ### Added
 - `frok retry show --sort-by KEY` — five new sort

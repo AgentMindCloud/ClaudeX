@@ -123,6 +123,7 @@ def format_retry_report(
     min_attempts: int | None = None,
     only_errors: bool = False,
     sort_by: str = "worst",
+    reverse: bool = False,
 ) -> str:
     sort_fn = SORT_KEYS.get(sort_by)
     if sort_fn is None:
@@ -260,8 +261,12 @@ def format_retry_report(
             lines.append("")
         for err_label, group_cases in ordered_groups:
             # Within a group, intra-group order follows --sort-by (default
-            # 'worst' preserves the §28 behaviour).
+            # 'worst' preserves the §28 behaviour). --reverse flips the
+            # within-group order; group ORDER (size desc) is untouched
+            # since it's a different dimension than the sort key.
             sorted_cases = sorted(group_cases, key=sort_fn)
+            if reverse:
+                sorted_cases = list(reversed(sorted_cases))
             lines.append(
                 f"## Error: `{err_label}` — {len(group_cases)} case(s)"
             )
@@ -286,17 +291,22 @@ def format_retry_report(
     else:
         total_detailed = len(retried_or_failed)
         truncated = False
-        # Sort whenever the operator chose a non-default key (they want
-        # an order) OR when --limit forces truncation (we need to pick
-        # the top N consistently). With sort_by='worst' (default) and
-        # no --limit, payload order is preserved — matches §27.
-        if sort_by != "worst":
+        # Sort when the operator chose a non-default key, OR requested
+        # --reverse (nothing to flip without a sorted base), OR --limit
+        # will truncate (need a consistent pick for the top N). With
+        # defaults (sort_by='worst', reverse=False, no --limit), payload
+        # order is preserved — matches §27.
+        needs_truncate = (
+            limit is not None and limit < total_detailed
+        )
+        if sort_by != "worst" or reverse or needs_truncate:
             retried_or_failed = sorted(retried_or_failed, key=sort_fn)
-        if limit is not None and limit < total_detailed:
-            if sort_by == "worst":
-                retried_or_failed = sorted(
-                    retried_or_failed, key=sort_fn
-                )
+        if reverse:
+            # Reverse BEFORE truncation so `--reverse --limit N` yields
+            # the N least-worst cases (the tail of the natural sort),
+            # not the top N displayed in flipped order.
+            retried_or_failed = list(reversed(retried_or_failed))
+        if needs_truncate:
             retried_or_failed = retried_or_failed[: max(limit, 0)]
             truncated = True
 

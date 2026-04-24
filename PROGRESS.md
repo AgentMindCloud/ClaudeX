@@ -2,6 +2,80 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-24 — Phase 5 §32: retry-show-reverse
+
+**Shipped** ``frok retry show --reverse`` — flips the
+chosen sort order so operators can surface the OPPOSITE
+end of any ranking. With `--sort-by attempts --reverse`,
+the "which case has the fewest attempts" question becomes
+a one-command answer; with `--sort-by sleep --reverse`,
+"which case uses the least backoff". Combined with
+`--limit N`, the N LEAST-interesting cases surface — useful
+for debugging "why isn't this case getting any retry
+budget?"
+
+* **API extension** — `format_retry_report(...,
+  reverse=False)`. When True: sort is applied
+  unconditionally (even with default `sort_by='worst'`,
+  which is normally a conditional sort), then the sorted
+  list is reversed, then `--limit` truncates. Defaults
+  preserve §31 byte-for-byte.
+* **Plain mode** — restructured the sort / truncate
+  path so the three operations compose cleanly:
+  `sort → reverse → truncate`. Truncation happens AFTER
+  reverse so `--reverse --limit N` yields the N tail
+  cases of the natural order, not the top N displayed
+  in flipped order.
+* **Grouped mode** — `--reverse` reverses within each
+  group; the group ORDER (size desc) stays unchanged.
+  Different dimensions: group order is "which cluster
+  is biggest"; within-group order is "operator's chosen
+  lens into that cluster". Composing them produces a
+  natural "biggest cluster, scanned bottom-up" view.
+* **CLI** — `--reverse` boolean, no validation. Passes
+  through to `format_retry_report`. `--json` still
+  passes the raw payload (markdown-only feature, same as
+  every other display flag since §26).
+* **Default False preserves §31** — locked in by a
+  byte-identical comparison test.
+
+**Verification.** `python3 -m pytest -q` → 873 passed in 3.25s
+(11 new). Unit tests cover: default False byte-identical
+to no-flag, --reverse flips name sort, --reverse flips
+attempts sort, --reverse with default `worst` sorts then
+flips (least-worst first), `--reverse --limit 1` picks
+the least-worst case, within-group reverse preserves
+group order, composes with `--only-errors`. CLI: parser
+default False, flag sets True, end-to-end with
+`--sort-by name --reverse`, --json passthrough.
+
+**Decisions / trade-offs.**
+* Truncate AFTER reverse, not before. `--reverse
+  --limit 5` means "5 least-worst cases", which is the
+  tail of the natural sort. Truncating first would give
+  "top 5 worst, flipped for display" — same cases, just
+  different order, which is a different (and usually
+  wrong) answer.
+* `--reverse` without explicit `--sort-by` forces the
+  default worst-first sort (normally conditional).
+  Nothing to reverse without a sorted base; making the
+  flag imply the sort matches operator intent ("flip my
+  output") better than silently no-op'ing.
+* Group order (size desc) stays untouched. Reversing it
+  would say "smallest cluster first", which serves no
+  common operator question. Group order is a separate
+  dimension; keeping it orthogonal to within-group sort
+  maximises composition flexibility.
+* Boolean flag, not a KEY value. Operators don't need
+  fine control over "reverse just the within-group
+  order but not the group order"; either dimension has
+  one sensible reverse, not a matrix of choices.
+
+**This closes the retry-show display toolkit** at 8
+composable flags (§25-§32). Further extensions should
+pivot to different surfaces; the current flag set covers
+the common triage, diff, cluster, and ranking needs.
+
 ## 2026-04-24 — Phase 5 §31: retry-show-sort-by
 
 **Shipped** ``frok retry show --sort-by KEY`` — five

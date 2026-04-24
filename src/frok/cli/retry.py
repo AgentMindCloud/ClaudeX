@@ -88,10 +88,11 @@ async def show_cmd(args: argparse.Namespace) -> int:
         compare_payload = _load_report(args.compare_to)
 
     if args.json:
-        # Passthrough of the primary payload. --compare-to, --limit,
-        # --group-by-error, --min-attempts, --only-errors, and
-        # --sort-by are markdown-only enrichments; operators wanting
-        # structured pair diff should use `frok retry diff`.
+        # Passthrough of the primary payload. Every display flag
+        # (--compare-to, --limit, --group-by-error, --min-attempts,
+        # --only-errors, --sort-by, --reverse) is markdown-only;
+        # operators wanting structured pair diff should use
+        # `frok retry diff`.
         out = json.dumps(payload, indent=2, default=str)
     else:
         out = format_retry_report(
@@ -104,6 +105,7 @@ async def show_cmd(args: argparse.Namespace) -> int:
             min_attempts=args.min_attempts,
             only_errors=args.only_errors,
             sort_by=args.sort_by,
+            reverse=args.reverse,
         )
 
     if args.output is not None:
@@ -375,6 +377,19 @@ def register(sub: "argparse._SubParsersAction") -> None:
             "within --group-by-error groups. With 'worst' (default), "
             "cases are unsorted unless --limit forces truncation; with "
             "any other key, sort is unconditional. Markdown-only."
+        ),
+    )
+    show.add_argument(
+        "--reverse",
+        action="store_true",
+        help=(
+            "flip the chosen sort order. With the default 'worst' key, "
+            "applies the worst-first sort and then reverses it (least-"
+            "worst first). Combined with --limit N, truncation happens "
+            "AFTER the reverse — so `--reverse --limit 5` surfaces the "
+            "5 least-attention-worthy cases. Reverses within "
+            "--group-by-error groups; the group ORDER (size desc) is "
+            "untouched. Markdown-only."
         ),
     )
     show.set_defaults(fn=show_cmd)
