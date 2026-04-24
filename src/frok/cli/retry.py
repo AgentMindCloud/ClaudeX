@@ -15,6 +15,7 @@ from pathlib import Path
 
 from ..evals import (
     diff_retry_reports,
+    format_retry_report,
     retry_diff_to_markdown,
     retry_summary_to_markdown,
     summarize_retry_reports,
@@ -68,6 +69,27 @@ async def diff_cmd(args: argparse.Namespace) -> int:
         print(out)
 
     if args.fail_on_regression and diff["regressed"]:
+        return 1
+    return 0
+
+
+async def show_cmd(args: argparse.Namespace) -> int:
+    payload = _load_report(args.path)
+
+    if args.json:
+        out = json.dumps(payload, indent=2, default=str)
+    else:
+        out = format_retry_report(payload, path=args.path)
+
+    if args.output is not None:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(out, encoding="utf-8")
+    else:
+        print(out)
+
+    cases = payload.get("cases", [])
+    failed = sum(1 for c in cases if not c.get("passed"))
+    if args.fail_on_failure and failed > 0:
         return 1
     return 0
 
@@ -198,3 +220,46 @@ def register(sub: "argparse._SubParsersAction") -> None:
         ),
     )
     summ.set_defaults(fn=summarize_cmd)
+
+    show = retry_sub.add_parser(
+        "show",
+        help="Pretty-print a single retry-report JSON as markdown.",
+        description=(
+            "Render one retry-report JSON (from `frok run "
+            "--retry-report PATH`) as markdown: a summary bloc plus "
+            "per-case attempt tables for retried or failing cases. "
+            "Single-attempt passes collapse to a bulleted list so the "
+            "output stays scannable. Complements `retry diff` (two "
+            "reports) and `retry summarize` (series) with the single-"
+            "report triage view."
+        ),
+    )
+    show.add_argument(
+        "path",
+        type=Path,
+        help="retry-report JSON file",
+    )
+    show.add_argument(
+        "-o",
+        "--output",
+        type=Path,
+        help="write rendered view to this file instead of stdout",
+    )
+    show.add_argument(
+        "--json",
+        action="store_true",
+        help=(
+            "pass through the raw JSON payload (re-serialised "
+            "indented) instead of rendering markdown"
+        ),
+    )
+    show.add_argument(
+        "--fail-on-failure",
+        action="store_true",
+        help=(
+            "exit non-zero when any case's terminal verdict is failed. "
+            "Useful when the retry-report is the only CI artifact "
+            "and the producer didn't pass --fail-on-regression."
+        ),
+    )
+    show.set_defaults(fn=show_cmd)

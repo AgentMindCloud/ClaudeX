@@ -20,6 +20,7 @@ from .version import version_cmd
 from .version import register as _register_version
 from .retry import diff_cmd as retry_diff_cmd
 from .retry import register as _register_retry
+from .retry import show_cmd as retry_show_cmd
 from .retry import summarize_cmd as retry_summarize_cmd
 from .run import (
     ClientFactory,
@@ -43,6 +44,7 @@ __all__ = [
     "load_case_file",
     "main",
     "retry_diff_cmd",
+    "retry_show_cmd",
     "retry_summarize_cmd",
     "run_cmd",
     "show_cmd",
@@ -72,6 +74,7 @@ _EPILOG = (
     "  frok trace inspect FILE    summarize a JsonlSink capture\n"
     "  frok eval diff A B         diff two captures side-by-side\n"
     "  frok eval summarize DIR    roll up a baseline directory\n"
+    "  frok retry show FILE       pretty-print a single retry report\n"
     "  frok retry diff A B        diff two --retry-report JSONs\n"
     "  frok retry summarize DIR   trend-view a series of retry reports\n"
     "\n"

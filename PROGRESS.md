@@ -2,6 +2,98 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-24 — Phase 5 §25: retry-show
+
+**Shipped** ``frok retry show PATH`` — the single-report
+triage view that completes the retry-report toolkit. The
+four subcommands now cover every operator need:
+
+* `frok run --retry-report PATH` — produces (§22)
+* `frok retry diff A B` — compares two (§23)
+* `frok retry summarize DIR` — series trend across many (§24)
+* `frok retry show PATH` — pretty-prints one (§25, this)
+
+* **Module** (`src/frok/evals/retry_show.py`) — one
+  function: `format_retry_report(payload, *, path=None)`
+  returning markdown. Top-level summary bloc (cases,
+  passed, failed, retried cases, attempts/budget), per-
+  case sections for retried OR failing cases with full
+  attempt tables (attempt, passed, error, sleep_before_
+  ms), and a terse "Clean passes" bulleted list for
+  single-attempt passes so the output stays scannable on
+  mostly-green suites.
+* **CLI subcommand** (`src/frok/cli/retry.py`) — added
+  `show` alongside `diff` and `summarize`:
+  `frok retry show PATH [-o OUT] [--json]
+  [--fail-on-failure]`. Reuses the §23 `_load_report`
+  helper so error messages stay consistent across the
+  subcommand group (missing file, malformed JSON, missing
+  `cases` key all surface the same way).
+* **`--json` passthrough** — unlike `retry diff --json`
+  and `retry summarize --json` which emit STRUCTURED
+  diff/summary data, `retry show --json` re-serialises
+  the raw payload. The operator's intent with `show` is
+  "what's in this file?" — passthrough matches it.
+  (The raw and structured views are already distinct
+  artifacts; no translation needed.)
+* **`--fail-on-failure`** — exits 1 when any case's
+  terminal verdict is failed. Useful when the retry-
+  report is the only CI artifact and the producer didn't
+  pass `--fail-on-regression`. Complements §24's
+  `--fail-on-growing` and §23's `--fail-on-regression`.
+
+**Verification.** `python3 -m pytest -q` → 781 passed in 2.98s
+(16 new: 7 module + 9 CLI). Module tests cover: summary
+bloc with/without source path, clean-passes bucketed list
+(no full tables for single-attempt passes), retried case
+gets full attempt table + sleep column, failing case has
+`FAIL` header, empty cases list renders cleanly, mixed
+report surfaces everything. CLI tests cover: parser
+registration, clean-pass markdown, `--json` passthrough,
+retried case end-to-end, `--fail-on-failure` returns 1
+on any failure + 0 on all-pass, missing / malformed /
+missing-cases CliError paths.
+
+**Decisions / trade-offs.**
+* Two buckets: retried-or-failed (full tables) and
+  clean-passes (bulleted). A third "shrank" bucket
+  doesn't exist because single-report view has nothing
+  to compare against — shrinkage is a diff/summarize
+  concept. Two buckets cover every single-report story:
+  "something interesting happened" vs "nothing did."
+* Clean-passes collapse to bullets, not tables. A
+  1-row table with a single "yes" cell is pure noise
+  for operators scanning a 50-case suite for problems.
+  Bullets keep the happy path out of the way so the
+  signal (retries, failures) dominates the screen.
+* `--json` passes through verbatim, not a re-rendered
+  summary. The single-report case doesn't need a
+  summarised JSON — that's `retry summarize`'s job.
+  Passthrough lets operators use `show --json` as a
+  "validate this file parses" step in CI pipelines.
+* Reuse `_load_report` from §23. Duplicating the
+  loader would have diverged the error messages; one
+  shared helper keeps the subcommand group's error
+  surface uniform.
+* Header format: `## PASS/FAIL: <case> (repeat R) —
+  N/M attempts`. The ratio in the header surfaces
+  budget utilisation at a glance without requiring the
+  operator to read the table. `(repeat R)` makes multi-
+  repeat suites unambiguous.
+* Budget = 1 cases still show `N/M` (e.g. `1/1`) in
+  the header. Keeps the header format consistent across
+  all sections; operators never have to special-case
+  reading the ratio.
+
+**Next suggested action:** `Extend Phase 5 §26 with a
+\`frok retry show --compare-to PATH2\` flag that renders
+a single report WITH an inline "vs previous run" column
+on each attempt table (e.g. "was 2/3 on 2026-04-22,
+now 3/3"). One command gives the single-report triage
+view + the pairwise regression signal; operators stop
+needing to run \`retry show\` and \`retry diff\` in two
+separate invocations for day-to-day investigation.`
+
 ## 2026-04-24 — Phase 5 §24: retry-summarize
 
 **Shipped** ``frok retry summarize DIR`` — a longitudinal

@@ -262,6 +262,17 @@ builds on these three.
     creeping-flake pattern; `--json` emits structured
     output. Complements §23's pairwise diff with a
     longitudinal view. *Shipped 2026-04-24.*
+25. **retry-show** — `frok retry show PATH` pretty-
+    prints a single retry-report JSON as markdown:
+    summary bloc plus per-case attempt tables for
+    retried OR failing cases. Single-attempt passes
+    collapse to a bulleted "Clean passes" list so the
+    output stays scannable when most of the suite is
+    green. `--fail-on-failure` gates CI when any case
+    failed; `--json` passes through the raw payload.
+    Completes the retry-report toolkit: produces (§22),
+    diff (§23), summarize (§24), show (§25).
+    *Shipped 2026-04-24.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable

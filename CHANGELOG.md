@@ -2,6 +2,26 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.51.0] — 2026-04-24
+### Added
+- `frok retry show PATH` — new CLI subcommand that
+  pretty-prints a single retry-report JSON as markdown:
+  summary bloc, per-case attempt tables for retried OR
+  failing cases, "Clean passes" bulleted list for
+  single-attempt passes. Flags: `-o OUT`, `--json`
+  (passthrough), `--fail-on-failure` (exit 1 on any
+  failed case).
+- `frok.evals.format_retry_report(payload, *, path=None)`
+  — new public API returning markdown.
+- `frok` root parser epilog now includes `retry show`
+  alongside `retry diff` / `retry summarize`.
+- Tests: 16 new (7 module + 9 CLI): summary bloc with
+  / without source path, clean-passes bucketing,
+  retried-case table, failing-case header, empty
+  report, mixed report, parser, JSON passthrough,
+  --fail-on-failure gate both directions, missing /
+  malformed / missing-cases errors; 781 total.
+
 ## [0.50.0] — 2026-04-24
 ### Added
 - `frok retry summarize DIR` — new CLI subcommand that
