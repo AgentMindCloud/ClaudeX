@@ -176,6 +176,16 @@ builds on these three.
     (retries would overwrite the previous attempt's JSONL).
     Shakes genuinely flaky cases out of regression runs
     without masking hard failures. *Shipped 2026-04-24.*
+17. **attempts-field** — `EvalResult.attempts` records how
+    many runner invocations produced the result; the CLI
+    retry loop bumps it via `dataclasses.replace` on exit.
+    `to_summary()` omits the field when 1 (clean baseline);
+    `EvalReport._has_retries` drives an Attempts column in
+    flat + aggregated markdown plus `total_attempts` and
+    `retried_cases` in the summary. Surfaces "this case
+    passes in CI but only on attempt 3/3" before retries
+    silently mask it into a full failure.
+    *Shipped 2026-04-24.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable

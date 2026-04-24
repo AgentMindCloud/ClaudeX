@@ -2,6 +2,88 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-24 — Phase 5 §17: attempts-field
+
+**Shipped** ``EvalResult.attempts`` — a count of how many
+runner invocations produced each result, plumbed through
+`to_summary()` and `to_markdown()` so flaky cases stay
+visible in the verdict doc even when `--retry` successfully
+masks their failure.
+
+* **`EvalResult.attempts: int = 1`** — new dataclass field,
+  default 1 preserves existing behaviour for every code path
+  that doesn't retry. `to_summary()` omits the key when 1
+  (clean baseline) and emits the integer when higher, so
+  passing runs produce the same summary shape they did before
+  §17.
+* **CLI retry loop** updates the attempts count on the final
+  result via `dataclasses.replace(result, attempts=N)`. The
+  replace happens only when `attempt_count > 1`, so single-
+  attempt results keep the library-default 1. This leaves the
+  runner's contract untouched ("one `run_case` → one
+  `EvalResult`") and puts the attempt count where the only
+  layer that knows it lives — the CLI retry loop.
+* **`EvalReport` gains** `_has_retries` (any result with
+  `attempts > 1`), `total_attempts` (sum across all results),
+  and `retried_cases` (count of cases where any repeat
+  needed more than one attempt). The summary dict grows
+  `total_attempts` and `retried_cases` when any result was
+  retried; the markdown report grows an Attempts column in
+  both the flat and aggregated forms plus a "Retried cases: K
+  (total attempts N)" summary line. All additions are gated
+  on `_has_retries` so runs without `--retry` produce the
+  exact same summary/markdown shape as before.
+* **Aggregated form per-case total** — when repeats and
+  retries compose (`--repeat N --retry M`), the aggregated
+  row sums `attempts` across the repeats for that case. A
+  case with attempts `[1, 3]` across two repeats shows total
+  4 in the aggregated table; flaky + retried is the most
+  diagnostic signal, so it gets the cleanest surfacing.
+
+**Verification.** `python3 -m pytest -q` → 661 passed in 2.77s
+(16 new). Tests cover: field default = 1, summary omit vs
+include, `_has_retries` / `total_attempts` / `retried_cases`
+properties, flat markdown column + header line, aggregated
+markdown column + header line, CLI with no-retry leaves
+attempts off summary, CLI with retry + pass-first leaves
+attempts=1, CLI with fail-then-succeed records attempts=3,
+CLI with exhausted retries records attempts=retry+1, CLI with
+`--timeout-s` short-circuit leaves attempts=1.
+
+**Decisions / trade-offs.**
+* `attempts` lives on `EvalResult`, not `EvalReport`, so the
+  runner and baseline diff machinery can both interrogate it
+  per-case. The report-level totals (`total_attempts`,
+  `retried_cases`) are computed properties, not stored state,
+  so reports composed from arbitrary result lists always
+  produce a consistent rollup.
+* Default 1, not 0. A result you got back from the runner was
+  produced by at least one attempt; modelling it as zero would
+  be a lie.
+* Gate all surfacing on `_has_retries`. Existing runs should
+  produce byte-identical summaries and markdown; tests lock
+  in that behaviour. Anyone rolling out `--retry` gets the
+  new columns automatically.
+* CLI uses `dataclasses.replace` rather than mutating the
+  result in-place. Matches the frozen-adjacent style used
+  elsewhere (scorers are frozen dataclasses) and keeps the
+  retry loop's intermediate `result` objects logically
+  immutable.
+* Didn't add a `retry_budget` field or similar. The report
+  only needs to say what happened, not what was budgeted —
+  the CLI flag captures operator intent; the result captures
+  actual behaviour. Keeping them separate avoids misleading
+  "budget 5, used 1" rows that look like flakiness.
+
+**Next suggested action:** `Extend Phase 5 §18 with a
+\`frok run --retry-on PATTERN\` flag that narrows the retry
+loop to cases whose names match a glob / regex (same
+\`re:\`/glob syntax as --filter / --exclude). Lets operators
+retry only known-flaky cases while keeping strict single-
+attempt discipline on the rest of the suite — useful when a
+handful of cases depend on flaky external services and the
+blanket --retry would hide genuine regressions elsewhere.`
+
 ## 2026-04-24 — Phase 5 §16: cli-retry
 
 **Shipped** ``frok run --retry N`` — a per-case retry loop that

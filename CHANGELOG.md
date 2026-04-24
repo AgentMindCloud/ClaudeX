@@ -2,6 +2,25 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.43.0] — 2026-04-24
+### Added
+- `EvalResult.attempts: int = 1` — how many runner
+  invocations produced the result. Set by the CLI retry
+  loop via `dataclasses.replace` on exit; default 1 keeps
+  the library-level contract unchanged. `to_summary()` emits
+  `attempts` only when > 1.
+- `EvalReport._has_retries`, `total_attempts`,
+  `retried_cases` — computed rollups. `to_summary()` emits
+  `total_attempts` + `retried_cases` when any result was
+  retried; flat and aggregated markdown both grow an
+  Attempts column and a "Retried cases: K (total attempts
+  N)" summary line. Runs without `--retry` produce the same
+  summary / markdown shape as before.
+- Tests: 16 new (field default, summary gating, report
+  properties, flat markdown column, aggregated markdown
+  column, CLI: no-retry / pass-first / fail-then-succeed /
+  exhausted / timeout short-circuit); 661 total.
+
 ## [0.42.0] — 2026-04-24
 ### Added
 - `frok run --retry N` — per-case retry loop. Re-runs a

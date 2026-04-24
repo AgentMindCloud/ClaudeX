@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import dataclasses
 import fnmatch
 import importlib.util
 import json
@@ -360,7 +361,9 @@ async def run_cmd(args: argparse.Namespace) -> int:
                 # flaky cases are what we're shaking out here, not
                 # intentional aborts.
                 result: EvalResult | None = None
+                attempt_count = 0
                 for _ in range(args.retry + 1):
+                    attempt_count += 1
                     result = await runner.run_case(
                         case,
                         repeat=repeat_idx,
@@ -373,6 +376,10 @@ async def run_cmd(args: argparse.Namespace) -> int:
                     if err.startswith("TimeoutError"):
                         break
                 assert result is not None  # retry+1 >= 1
+                if attempt_count > 1:
+                    result = dataclasses.replace(
+                        result, attempts=attempt_count
+                    )
                 if sink is not None:
                     # Newline after the last delta so the report doesn't run
                     # onto the same line as the streamed answer.

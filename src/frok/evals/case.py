@@ -125,6 +125,11 @@ class EvalResult:
     baseline_diff: dict[str, Any] | None = None
     repeat: int = 0  # 0-based index of this run within the case's repeats
     repeats: int = 1  # total repeats requested for this case
+    # Number of runner invocations that produced this result. 1 is the
+    # baseline (no retry); higher means the CLI retry loop re-ran the
+    # case (see `frok run --retry N`). Surfaced so flaky cases stay
+    # visible in the verdict doc even when retries masked the failure.
+    attempts: int = 1
 
     @property
     def failed_scores(self) -> list[Score]:
@@ -143,6 +148,8 @@ class EvalResult:
         if self.repeats > 1:
             out["repeat"] = self.repeat
             out["repeats"] = self.repeats
+        if self.attempts > 1:
+            out["attempts"] = self.attempts
         return out
 
 
@@ -201,6 +208,24 @@ class EvalReport:
     def _has_repeats(self) -> bool:
         return any(r.repeats > 1 for r in self.results)
 
+    @property
+    def _has_retries(self) -> bool:
+        """True when any result consumed more than one attempt."""
+        return any(r.attempts > 1 for r in self.results)
+
+    @property
+    def total_attempts(self) -> int:
+        return sum(r.attempts for r in self.results)
+
+    @property
+    def retried_cases(self) -> int:
+        """Count of cases where any repeat needed more than one attempt."""
+        return sum(
+            1
+            for results in self.by_case.values()
+            if any(r.attempts > 1 for r in results)
+        )
+
     def to_summary(self) -> dict[str, Any]:
         out: dict[str, Any] = {
             "passed": self.passed,
@@ -216,6 +241,9 @@ class EvalReport:
             out["failed_cases"] = self.failed_cases
             out["flaky_cases"] = self.flaky_cases
             out["case_pass_rates"] = self.case_pass_rates
+        if self._has_retries:
+            out["total_attempts"] = self.total_attempts
+            out["retried_cases"] = self.retried_cases
         return out
 
     def to_markdown(self) -> str:
@@ -224,6 +252,7 @@ class EvalReport:
         return self._to_markdown_aggregated()
 
     def _to_markdown_flat(self) -> str:
+        show_attempts = self._has_retries
         lines = [
             "# Frok Eval Report",
             "",
@@ -231,17 +260,37 @@ class EvalReport:
             f"- Failed: {self.failed}",
             f"- Total tokens: {self.total_tokens}",
             f"- Total time: {self.total_latency_ms:.1f} ms",
-            "",
-            "| Case | Result | Tokens | ms | Failed scorers |",
-            "|------|--------|--------|----|----------------|",
         ]
+        if show_attempts:
+            lines.append(
+                f"- Retried cases: {self.retried_cases} "
+                f"(total attempts {self.total_attempts})"
+            )
+        lines.append("")
+        if show_attempts:
+            lines.append(
+                "| Case | Result | Attempts | Tokens | ms | Failed scorers |"
+            )
+            lines.append(
+                "|------|--------|---------:|-------:|---:|----------------|"
+            )
+        else:
+            lines.append("| Case | Result | Tokens | ms | Failed scorers |")
+            lines.append("|------|--------|--------|----|----------------|")
         for r in self.results:
             status = "PASS" if r.passed else "FAIL"
             failed = ", ".join(s.name for s in r.failed_scores) or "-"
-            lines.append(
-                f"| {r.case} | {status} | {r.observation.total_tokens} | "
-                f"{r.observation.total_latency_ms:.1f} | {failed} |"
-            )
+            if show_attempts:
+                lines.append(
+                    f"| {r.case} | {status} | {r.attempts} | "
+                    f"{r.observation.total_tokens} | "
+                    f"{r.observation.total_latency_ms:.1f} | {failed} |"
+                )
+            else:
+                lines.append(
+                    f"| {r.case} | {status} | {r.observation.total_tokens} | "
+                    f"{r.observation.total_latency_ms:.1f} | {failed} |"
+                )
         lines.append("")
 
         for r in self.results:
@@ -259,6 +308,7 @@ class EvalReport:
 
     def _to_markdown_aggregated(self) -> str:
         rates = self.case_pass_rates
+        show_attempts = self._has_retries
         lines = [
             "# Frok Eval Report",
             "",
@@ -269,10 +319,31 @@ class EvalReport:
             f"({self.passed} passed, {self.failed} failed)",
             f"- Total tokens: {self.total_tokens}",
             f"- Total time: {self.total_latency_ms:.1f} ms",
-            "",
-            "| Case | Pass rate | Passed | Result | Tokens | ms | Failed scorers |",
-            "|------|----------:|-------:|--------|-------:|---:|----------------|",
         ]
+        if show_attempts:
+            lines.append(
+                f"- Retried cases: {self.retried_cases} "
+                f"(total attempts {self.total_attempts})"
+            )
+        lines.append("")
+        if show_attempts:
+            lines.append(
+                "| Case | Pass rate | Passed | Result | Attempts | Tokens | "
+                "ms | Failed scorers |"
+            )
+            lines.append(
+                "|------|----------:|-------:|--------|---------:|-------:|"
+                "---:|----------------|"
+            )
+        else:
+            lines.append(
+                "| Case | Pass rate | Passed | Result | Tokens | ms | "
+                "Failed scorers |"
+            )
+            lines.append(
+                "|------|----------:|-------:|--------|-------:|---:|"
+                "----------------|"
+            )
         for name, results in self.by_case.items():
             total = len(results)
             passed = sum(1 for r in results if r.passed)
@@ -289,10 +360,18 @@ class EvalReport:
             failed = ", ".join(failed_scorer_names) or "-"
             tokens = sum(r.observation.total_tokens for r in results)
             ms = sum(r.observation.total_latency_ms for r in results)
-            lines.append(
-                f"| {name} | {rate * 100:.0f}% | {passed}/{total} | "
-                f"{verdict} | {tokens} | {ms:.1f} | {failed} |"
-            )
+            attempts_total = sum(r.attempts for r in results)
+            if show_attempts:
+                lines.append(
+                    f"| {name} | {rate * 100:.0f}% | {passed}/{total} | "
+                    f"{verdict} | {attempts_total} | {tokens} | {ms:.1f} | "
+                    f"{failed} |"
+                )
+            else:
+                lines.append(
+                    f"| {name} | {rate * 100:.0f}% | {passed}/{total} | "
+                    f"{verdict} | {tokens} | {ms:.1f} | {failed} |"
+                )
         lines.append("")
 
         # Per-case detail only for non-all-passing cases.
