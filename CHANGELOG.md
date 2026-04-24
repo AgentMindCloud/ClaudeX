@@ -2,6 +2,17 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.20.0] — 2026-04-23
+### Added
+- `frok run --jobs N` — run up to N (case, repeat) units
+  concurrently under an `asyncio.Semaphore`. Default 1 (serial).
+  Silently clamped to `os.cpu_count()`. Incompatible with
+  `--seed` because Python's `random` state is process-global.
+- Result order in the `EvalReport` mirrors case-file order
+  regardless of completion order.
+- Tests: 11 new (defaults, order preservation, capture interop,
+  clamping, error paths); 363 total.
+
 ## [0.19.0] — 2026-04-23
 ### Added
 - `frok run --repeat N --seed S` — execute each case N times with

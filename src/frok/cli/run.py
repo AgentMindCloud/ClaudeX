@@ -19,6 +19,7 @@ Optional in the case file:
 from __future__ import annotations
 
 import argparse
+import asyncio
 import fnmatch
 import importlib.util
 import json
@@ -274,6 +275,17 @@ async def run_cmd(args: argparse.Namespace) -> int:
 
     if args.repeat < 1:
         raise CliError(f"--repeat must be >= 1, got {args.repeat}")
+    if args.jobs < 1:
+        raise CliError(f"--jobs must be >= 1, got {args.jobs}")
+    if args.seed is not None and args.jobs > 1:
+        raise CliError(
+            "--seed cannot be combined with --jobs > 1 "
+            "(Python's random state is process-global and can't be "
+            "isolated across parallel tasks); keep --jobs 1 when seeding"
+        )
+
+    cpu_cap = os.cpu_count() or 1
+    jobs = min(args.jobs, cpu_cap)
 
     capture_dir: Path | None = args.capture_baseline
     if capture_dir is not None:
@@ -288,30 +300,42 @@ async def run_cmd(args: argparse.Namespace) -> int:
     else:
         slugs = {}
 
-    # Run per-case (and per-repeat) so each iteration gets a fresh client +
-    # sink + optional JsonlSink. The seed is applied before every repeat so
-    # stochastic bits inside the client (retry jitter, stubs that read
-    # FROK_RUN_SEED) are reproducible.
-    results: list[EvalResult] = []
+    # One unit = one (case, repeat) coroutine. A Semaphore caps concurrency
+    # to `jobs`. Results come back from `asyncio.gather` in submission order
+    # so the EvalReport preserves case order regardless of completion order.
+    semaphore = asyncio.Semaphore(jobs)
+
+    async def _run_unit(
+        case: EvalCase,
+        repeat_idx: int,
+        jsonl: JsonlSink | None,
+        factory: ClientFactory,
+    ) -> EvalResult:
+        try:
+            async with semaphore:
+                if args.seed is not None:
+                    apply_seed(args.seed, repeat_idx)
+                runner = EvalRunner(client_factory=factory)
+                return await runner.run_case(
+                    case, repeat=repeat_idx, repeats=args.repeat
+                )
+        finally:
+            if jsonl is not None:
+                jsonl.close()
+
+    tasks: list[asyncio.Task[EvalResult]] = []
     for case in loaded.cases:
         for repeat_idx in range(args.repeat):
-            if args.seed is not None:
-                apply_seed(args.seed, repeat_idx)
             jsonl: JsonlSink | None = None
             factory = loaded.client_factory
             if capture_dir is not None:
                 jsonl = JsonlSink(capture_dir / f"{slugs[case.name]}.jsonl")
                 factory = _wrap_factory_with_extra_sink(factory, jsonl)
-            runner = EvalRunner(client_factory=factory)
-            try:
-                results.append(
-                    await runner.run_case(
-                        case, repeat=repeat_idx, repeats=args.repeat
-                    )
-                )
-            finally:
-                if jsonl is not None:
-                    jsonl.close()
+            tasks.append(
+                asyncio.create_task(_run_unit(case, repeat_idx, jsonl, factory))
+            )
+
+    results: list[EvalResult] = list(await asyncio.gather(*tasks))
 
     report = EvalReport(results=results)
 
@@ -388,6 +412,18 @@ def register(sub: "argparse._SubParsersAction") -> None:
         help=(
             "deterministic seed; applied as `random.seed(S + repeat)` and "
             "published as FROK_RUN_SEED per repeat so stubs can pick it up"
+        ),
+    )
+    run.add_argument(
+        "--jobs",
+        type=int,
+        default=1,
+        metavar="N",
+        help=(
+            "run up to N cases concurrently (default 1 = serial). Silently "
+            "clamped to os.cpu_count(). Results are still collected in case "
+            "order. Incompatible with --seed because `random`'s state is "
+            "process-global."
         ),
     )
     run.add_argument(

@@ -2,6 +2,67 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 3 §11: parallel-jobs
+
+**Shipped** ``frok run --jobs N`` — concurrent case execution
+under an `asyncio.Semaphore`. Default stays serial (N=1), so
+every existing test and operator muscle-memory run is unchanged.
+With N>1, up to N (case, repeat) units run at once; results come
+back in submission order so the `EvalReport` always reflects the
+case file's ordering regardless of which unit finished first.
+
+* **Unified unit coroutine** in `run_cmd`: each
+  `(case, repeat_idx)` pair maps to a task that acquires the
+  shared semaphore, applies the seed (if any), runs through
+  `EvalRunner.run_case`, and closes its JsonlSink in ``finally``.
+  All tasks are created up front and driven by one
+  ``asyncio.gather``; the order of the resulting list mirrors the
+  order of creation.
+* **Clamp to `os.cpu_count()`**: `jobs = min(args.jobs, cpu_cap)`.
+  Requesting 1000 workers silently becomes whatever the box can
+  actually run. `cpu_count()` returning `None` falls back to 1.
+* **Mutual-exclusion guards**:
+  * `--seed` + `--jobs > 1` raises `CliError`. Python's `random`
+    state is process-global; parallel tasks would step on each
+    other's seeding and no "determinism" would survive.
+  * `--jobs 0` (and negative) raises at the CLI layer, same
+    shape as the existing `--repeat` guard.
+  * `--capture-baseline` still works with `--jobs > 1` — each
+    case owns its own `<slug>.jsonl`; no collisions because
+    `--repeat > 1` was already excluded.
+
+**Verification.** `python3 -m pytest -q` → 363 passed in 0.97s (11
+new). Tests cover: defaults (--jobs 1 == no flag), explicit serial
+matches default, --jobs 4 preserves case order across 6 cases,
+--jobs 3 with --repeat 3 produces 18 runs (6 cases × 3 repeats),
+--jobs 4 with --capture-baseline writes all per-case JSONL files,
+silent clamping to a monkey-patched `os.cpu_count() == 2`,
+`cpu_count() is None` fallback, --jobs 0 / negative errors, --seed
++ --jobs > 1 errors, --seed + --jobs 1 still works, and a smoke
+test that a parallel run completes without deadlocking.
+
+**Decisions / trade-offs.**
+* Semaphore over task pool. `asyncio.Semaphore(jobs)` is the
+  simplest primitive that gets "at most N in flight" right. No
+  need for a worker pool; `gather` collects everything.
+* Submission-order, not completion-order, results. The Markdown
+  report reads top-to-bottom the way the case file is authored.
+* Seed + jobs are mutually exclusive rather than partially
+  compatible. Any scheme that tried to serialise just the
+  seed-touching work would either reintroduce global ordering
+  (defeating --jobs) or fragment the abstraction. Explicit
+  error is cleaner.
+* Clamp is silent. Operators who want to know actually ran `K`
+  workers can check the system's `os.cpu_count()` — surfacing it
+  on every invocation would spam CI logs.
+
+**Next suggested action:** `Begin Phase 4 with \`frok init\`:
+scaffold a new project — create a CLAUDE.md stub, a minimal
+case file, a \`frok.toml\` config template, and a
+\`.github/workflows/frok.yml\` snippet demonstrating capture /
+diff / fail-on-regression. Closes the "okay how do I actually
+start using this" gap for new users.`
+
 ## 2026-04-23 — Phase 3 §10: repeat-runs
 
 **Shipped** ``frok run --repeat N --seed S`` — executes each case

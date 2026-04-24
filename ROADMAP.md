@@ -116,5 +116,11 @@ builds on these three.
     ``FROK_RUN_SEED`` env var so stubs can pick it up. Incompatible
     with `--capture-baseline` (prevents per-case file collisions).
     *Shipped 2026-04-23.*
-11. *Sketch:* `frok serve` (long-running agent), distributed
+11. **parallel-jobs** — `frok run --jobs N` runs up to N
+    (case, repeat) units concurrently under an `asyncio.Semaphore`.
+    Results come back in case order regardless of completion
+    order. Silently clamped to `os.cpu_count()`. Incompatible
+    with `--seed` because Python's `random` state is process-
+    global. *Shipped 2026-04-23.*
+12. *Sketch:* `frok serve` (long-running agent), distributed
     inference, X-native production agents, alignment red-teaming.
