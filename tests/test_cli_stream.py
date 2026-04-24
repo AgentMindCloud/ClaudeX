@@ -242,6 +242,10 @@ CASES = [
 
 
 def test_stream_falls_back_silently_when_case_has_tools(tmp_path, capsys):
+    # The case has tools but NO streaming_transport — the orchestrator
+    # falls back to the non-stream chat path silently. The case-level
+    # header still prints (from run_cmd), but no per-turn markers or
+    # deltas should appear.
     path = tmp_path / "tools.py"
     path.write_text(_TOOLS_STREAM_CASE, encoding="utf-8")
     code = main(
@@ -256,10 +260,144 @@ def test_stream_falls_back_silently_when_case_has_tools(tmp_path, capsys):
     )
     assert code == 0
     captured = capsys.readouterr()
-    # Header still prints (runner gets stream_sink), but no delta content
-    # flows because the orchestrator path doesn't invoke the sink.
     assert ">>> tools-stream-fallback" in captured.err
+    assert ">>> turn " not in captured.err  # no per-turn markers
     assert "answer is 42" not in captured.err
+
+
+# ---------------------------------------------------------------------------
+# tools case WITH streaming_transport: --stream flows through each turn
+# ---------------------------------------------------------------------------
+_TOOLS_STREAM_CASE_WITH_STREAMING = '''
+import json
+from dataclasses import dataclass, field
+from typing import AsyncIterator
+
+from frok.clients import GrokClient, GrokMessage
+from frok.evals import AnswerContains, EvalCase, NoErrors, ToolCalled
+from frok.telemetry import Tracer
+from frok.tools import tool
+
+
+@dataclass
+class _StubTransport:
+    responses: list
+    calls: list = field(default_factory=list)
+
+    async def __call__(self, *, method, url, headers, body, timeout):
+        self.calls.append(json.loads(body.decode("utf-8")))
+        status, payload = self.responses.pop(0)
+        return status, {}, json.dumps(payload).encode("utf-8")
+
+
+def _sse(*, content=None, tool_call=None, finish_reason=None):
+    choice = {"delta": {}, "index": 0}
+    if content is not None:
+        choice["delta"]["content"] = content
+    if tool_call is not None:
+        choice["delta"]["tool_calls"] = [tool_call]
+    if finish_reason is not None:
+        choice["finish_reason"] = finish_reason
+    return f"data: {json.dumps({'choices': [choice]})}\\n".encode("utf-8")
+
+
+_TURN1 = [
+    _sse(tool_call={
+        "index": 0,
+        "id": "c1",
+        "function": {"name": "add", "arguments": json.dumps({"a": 2, "b": 40})},
+    }),
+    _sse(finish_reason="tool_calls"),
+    b"data: [DONE]\\n",
+]
+
+_TURN2 = [
+    _sse(content="The "),
+    _sse(content="answer "),
+    _sse(content="is 42."),
+    _sse(finish_reason="stop"),
+    b"data: [DONE]\\n",
+]
+
+
+async def _streaming_transport(*, method, url, headers, body, timeout):
+    turns = [_TURN1, _TURN2]
+    # Rotate by popping from a module-level cursor so consecutive calls serve
+    # subsequent turn scripts.
+    global _cursor
+    try:
+        _cursor
+    except NameError:
+        _cursor = 0
+    lines = turns[_cursor]
+    _cursor += 1
+
+    async def _iter() -> AsyncIterator[bytes]:
+        for line in lines:
+            yield line
+
+    return 200, {}, _iter()
+
+
+async def _noop_sleep(_s):
+    return None
+
+
+@tool
+def add(a: int, b: int) -> int:
+    return a + b
+
+
+def make_client(config, sink):
+    # Non-stream transport is a safety net; the streaming path takes over.
+    return GrokClient(
+        api_key="sk-t",
+        transport=_StubTransport([]),
+        streaming_transport=_streaming_transport,
+        sleep=_noop_sleep,
+        tracer=Tracer(sink=sink),
+    )
+
+
+CASES = [
+    EvalCase(
+        name="tools-stream-live",
+        messages=[GrokMessage("user", "2+40?")],
+        tools=[add],
+        scorers=[
+            AnswerContains("42"),
+            ToolCalled("add", times=1),
+            NoErrors(),
+        ],
+    ),
+]
+'''
+
+
+def test_stream_flows_through_tool_orchestrator_when_streaming_transport_set(
+    tmp_path, capsys
+):
+    path = tmp_path / "tools_stream.py"
+    path.write_text(_TOOLS_STREAM_CASE_WITH_STREAMING, encoding="utf-8")
+    code = main(
+        [
+            "run",
+            str(path),
+            "--stream",
+            "-o",
+            str(tmp_path / "r.md"),
+            "--fail-on-regression",
+        ]
+    )
+    assert code == 0
+    err = capsys.readouterr().err
+    # Case header, per-turn markers for both turns, and the turn-2 deltas.
+    assert ">>> tools-stream-live" in err
+    assert ">>> turn 1" in err
+    assert ">>> turn 2" in err
+    # Turn-1 produced no text content; turn-2 streamed the answer.
+    turn2_idx = err.index(">>> turn 2")
+    assert "The answer is 42." in err[turn2_idx:]
 
 
 # ---------------------------------------------------------------------------

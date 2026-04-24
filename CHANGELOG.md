@@ -2,6 +2,21 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.30.0] — 2026-04-23
+### Added
+- `ToolOrchestrator.run(stream_sink=callable)` — streams chat
+  turns via `chat_stream` when the client has a
+  `streaming_transport`, forwarding content deltas to the sink
+  and emitting a `>>> turn N` marker per iteration. Falls back
+  to non-stream `chat` when no streaming_transport is set.
+- `tool.run` telemetry span gained a `streamed` attr
+  (True / False).
+- `EvalRunner._execute` now forwards `stream_sink` to the tool
+  orchestrator instead of dropping it silently — `frok run
+  --stream` on a tools-enabled case now gives live feedback.
+- Tests: 7 new (orchestrator-level library tests + an end-to-end
+  CLI test proving the tools path streams); 493 total.
+
 ## [0.29.0] — 2026-04-23
 ### Added
 - `frok run --stream` — forward content deltas to stderr live

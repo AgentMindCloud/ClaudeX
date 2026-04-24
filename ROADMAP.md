@@ -83,6 +83,14 @@ builds on these three.
    factory wires `urllib_streaming_transport` so `--transport
    real` + `--stream` works out-of-the-box. Incompatible with
    `--jobs > 1` (interleaved stderr). *Shipped 2026-04-23.*
+4. **stream-tools** — `ToolOrchestrator.run(stream_sink=...)`
+   now honours streaming when the client has a
+   `streaming_transport`. Each chat turn gets a `>>> turn N`
+   marker; text deltas flow live while tool-call deltas stay
+   silent. The previous silent fallback is gone for
+   streaming-capable clients; it survives for clients without a
+   streaming transport so callers can pass `stream_sink`
+   unconditionally. *Shipped 2026-04-23.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable

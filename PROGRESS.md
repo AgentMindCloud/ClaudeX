@@ -2,6 +2,80 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 5 §4: stream-tools
+
+**Shipped** streaming through the `ToolOrchestrator` loop. `frok
+run --stream` on a tools-enabled case now gives live feedback for
+every chat turn instead of silently falling back.
+
+* **`ToolOrchestrator.run(stream_sink=...)`** — new kwarg. Each
+  loop iteration checks ``self.client.streaming_transport``:
+  * **Available.** Issues `chat_stream` for the turn, forwards
+    content deltas to the sink, and emits a ``\n>>> turn N\n``
+    marker before each call. Final answer streams token-by-
+    token; earlier tool-call turns are marker-only (their SSE
+    payload has no content).
+  * **Missing.** Falls back to non-stream `chat` silently —
+    same behaviour callers already relied on. Preserves the
+    "pass stream_sink unconditionally" contract.
+* **Runner wiring** — `EvalRunner._execute` now forwards
+  `stream_sink` into `orch.run(..., stream_sink=...)` instead of
+  dropping it on the tools path. The "tools always silently
+  fall back" comment disappears.
+* **Telemetry** — `tool.run` span gains a ``streamed`` attr
+  (True when the orchestrator used `chat_stream`, else False).
+  Operators grepping the JsonlSink can now spot which runs
+  streamed without replaying.
+* **Helper extracted** — `ToolOrchestrator._streamed_turn`
+  consumes `chat_stream`, forwards deltas, returns the final
+  `GrokResponse`. Keeps the loop body readable and fails loudly
+  (`ToolError`) if the stream ends before a final chunk
+  arrives.
+
+**Verification.** `python3 -m pytest -q` → 493 passed in 1.55s (7
+new). Library tests cover: two-turn stream emits per-turn
+markers + final-answer deltas in the right order + both turns
+sent `stream=true`, fallback when `streaming_transport` is
+missing (non-stream transport serves both turns, sink stays
+empty), backward-compat path where `stream_sink` is None
+continues to use `chat()` even when `streaming_transport`
+exists, `tool.run.streamed` attr is True under streaming and
+False without it, and short-stream (no explicit `[DONE]`) still
+produces a clean final. CLI test
+``test_stream_flows_through_tool_orchestrator_when_streaming_transport_set``
+closes the end-to-end loop: a case with `tools=[add]` +
+`streaming_transport` + `--stream` actually emits the turn
+markers + streamed final answer via `frok run`.
+
+**Decisions / trade-offs.**
+* Per-turn markers (``>>> turn N``) rather than silent
+  streaming. Tool-use cases have natural turn boundaries; the
+  marker gives operators something to anchor on when scanning
+  live output.
+* Marker printed even for tool-call turns that produce no text
+  content. Without it, the operator would see "nothing" for
+  the first N-1 turns — indistinguishable from a hung process.
+* Streaming capability is detected via `streaming_transport`
+  presence, not a separate flag. One knob per concept;
+  operators who configure a streaming transport implicitly
+  opt into per-turn streaming.
+* Telemetry gets a `streamed=bool` attr rather than a
+  separate span name. Eval-harness scorers and trace-inspect
+  renderers can already filter on span data; splitting the
+  span into `tool.run.streamed` vs `tool.run.chat` would
+  fragment the trace tree for no payoff.
+* Kept the orchestrator non-stream path untouched when
+  `stream_sink is None`. Existing callers (and the 74 tests
+  covering them) continue to exercise the same code they did.
+
+**Next suggested action:** `Extend Phase 5 §5 with
+GrokClient.chat(..., tool_choice=) and a matching config knob:
+expose "force call tool X" / "forbid tool use" semantics so
+cases can assert that the model either uses a specific tool or
+stays free-form. The orchestrator currently hard-codes
+tool_choice="auto" — graduating it to a configurable argument
+unlocks tests that pin tool-selection behaviour.`
+
 ## 2026-04-23 — Phase 5 §3: stream-cli
 
 **Shipped** ``frok run --stream`` — live progress at the CLI. Long

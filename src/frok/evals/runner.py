@@ -99,9 +99,6 @@ async def _execute(
 ) -> Observation:
     try:
         if case.tools:
-            # Streaming is not wired through the tool orchestrator yet; fall
-            # back to the non-stream loop so callers can pass stream_sink
-            # unconditionally.
             reg = ToolRegistry().add(*case.tools)
             orch = ToolOrchestrator(
                 client=client,
@@ -109,7 +106,15 @@ async def _execute(
                 max_steps=case.max_steps,
                 dry_run=case.dry_run,
             )
-            run = await orch.run(list(case.messages), system=case.system)
+            # The orchestrator honours stream_sink when the client has a
+            # streaming_transport; otherwise it silently falls back to the
+            # non-stream chat path — so callers can pass stream_sink
+            # unconditionally.
+            run = await orch.run(
+                list(case.messages),
+                system=case.system,
+                stream_sink=stream_sink,
+            )
             return Observation(
                 final_response=run.final,
                 messages=run.messages,

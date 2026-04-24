@@ -13,10 +13,13 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from typing import Any, Sequence
+from typing import Any, Callable, Sequence
 
 from ..clients.grok import GrokClient, GrokMessage, GrokResponse, ToolCall
 from .registry import ToolArgumentError, ToolError, ToolRegistry
+
+
+StreamSink = Callable[[str], None]
 
 
 @dataclass
@@ -51,12 +54,27 @@ class ToolOrchestrator:
         messages: Sequence[GrokMessage],
         *,
         system: str | None = None,
+        stream_sink: StreamSink | None = None,
     ) -> ToolRun:
+        """Drive the tool-use loop.
+
+        ``stream_sink``: if set AND the underlying client has a
+        ``streaming_transport``, each turn is issued via
+        ``chat_stream`` and its content deltas are forwarded to the
+        sink, prefixed with a ``>>> turn N`` marker. Without a
+        streaming transport we fall back to the non-stream
+        ``chat()`` path silently — the sink caller can pass it
+        unconditionally without probing the client first.
+        """
+        use_stream = (
+            stream_sink is not None and self.client.streaming_transport is not None
+        )
         async with self.client.tracer.span(
             "tool.run",
             max_steps=self.max_steps,
             dry_run=self.dry_run,
             tool_count=len(self.registry.tools),
+            streamed=use_stream,
         ) as run_span:
             convo: list[GrokMessage] = []
             if system:
@@ -70,13 +88,20 @@ class ToolOrchestrator:
                 extra["tool_choice"] = self.tool_choice
 
             for step in range(1, self.max_steps + 1):
-                resp = await self.client.chat(
-                    convo,
-                    tools=tools_spec,
-                    temperature=self.temperature,
-                    max_tokens=self.max_tokens,
-                    extra=extra or None,
-                )
+                if use_stream:
+                    assert stream_sink is not None
+                    stream_sink(f"\n>>> turn {step}\n")
+                    resp = await self._streamed_turn(
+                        convo, tools_spec, extra, stream_sink
+                    )
+                else:
+                    resp = await self.client.chat(
+                        convo,
+                        tools=tools_spec,
+                        temperature=self.temperature,
+                        max_tokens=self.max_tokens,
+                        extra=extra or None,
+                    )
                 if not resp.has_tool_calls:
                     run_span.set(
                         steps=step,
@@ -119,6 +144,32 @@ class ToolOrchestrator:
                 f"tool loop exceeded max_steps={self.max_steps}; "
                 f"last invocations={[i.name for i in invocations[-self.max_steps:]]}"
             )
+
+    async def _streamed_turn(
+        self,
+        convo: Sequence[GrokMessage],
+        tools_spec: list[dict[str, Any]],
+        extra: dict[str, Any],
+        stream_sink: StreamSink,
+    ) -> GrokResponse:
+        final: GrokResponse | None = None
+        async for chunk in self.client.chat_stream(
+            list(convo),
+            tools=tools_spec,
+            temperature=self.temperature,
+            max_tokens=self.max_tokens,
+            extra=extra or None,
+        ):
+            if chunk.delta:
+                stream_sink(chunk.delta)
+            if chunk.is_final:
+                final = chunk.response
+        if final is None:
+            raise ToolError(
+                "chat_stream ended without yielding a final chunk during "
+                "the tool-use loop"
+            )
+        return final
 
     async def _invoke(self, call: ToolCall) -> ToolInvocation:
         async with self.client.tracer.span(
