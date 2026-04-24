@@ -2,6 +2,23 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.49.0] — 2026-04-24
+### Added
+- `frok retry diff A B` — new CLI subcommand that diffs
+  two retry-report JSONs and surfaces attempts drift,
+  error-shape changes, newly-failing / newly-passing
+  cases, and slugs only in one side. Flags: `-o OUT`,
+  `--json`, `--a-label LABEL`, `--b-label LABEL`,
+  `--fail-on-regression`.
+- `frok.evals.diff_retry_reports(a, b)` and
+  `frok.evals.retry_diff_to_markdown(diff)` — new public
+  API. Matches entries by `(case, repeat)` tuple.
+- `frok` root parser epilog now lists the new command
+  alongside `eval diff` / `eval summarize` / `trace
+  inspect`.
+- Tests: 19 new (10 differ unit + 9 CLI end-to-end); 736
+  total.
+
 ## [0.48.0] — 2026-04-24
 ### Added
 - `frok run --retry-report PATH` — writes a per-case per-

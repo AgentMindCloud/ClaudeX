@@ -2,6 +2,108 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-24 — Phase 5 §23: retry-diff
+
+**Shipped** ``frok retry diff A B`` — a new CLI subcommand
+that diffs two retry-report JSONs and surfaces the
+creeping-flake signals the budget-relative summary would
+miss. Closes the loop opened by §22: the per-attempt
+timeline is diff-able now, not just introspectable.
+
+* **Differ** (`src/frok/evals/retry_diff.py`) — two
+  functions: `diff_retry_reports(a, b)` and
+  `retry_diff_to_markdown(diff)`. Matches entries by
+  `(case, repeat)` tuple so `--repeat` runs diff coherently
+  without collapsing independent repeats. Returns a dict
+  with `matched`, `only_in_a`, `only_in_b`, plus four
+  subset lists (`attempts_grew`, `attempts_shrank`,
+  `error_changed`, `newly_failing`, `newly_passing`) and a
+  `regressed` bool.
+* **Regression heuristic** — `regressed = True` iff any
+  of: attempts grew, a case newly failed, the last-attempt
+  error drifted between two non-null strings (new failure
+  shape), or a new failing case appeared in B. Explicitly
+  NOT regressed: attempts shrank, pass-flipped from fail
+  to pass, error resolved from non-null to null, or a new
+  passing case appeared. These are all improvements or
+  neutral changes.
+* **CLI subcommand** (`src/frok/cli/retry.py`) — follows
+  the `frok eval diff`/`frok eval summarize` pattern:
+  `frok retry diff A B [-o OUT] [--json]
+  [--a-label LABEL] [--b-label LABEL]
+  [--fail-on-regression]`. Subcommand group (`retry`) with
+  sub-subcommand (`diff`) so future retry CLI operations
+  (summarize, report-show) slot in naturally.
+* **Epilog entry** — root parser's help epilog now lists
+  `frok retry diff A B` alongside the other everyday-
+  operations commands (eval diff, eval summarize, trace
+  inspect).
+* **Error handling** — missing report file → `CliError`
+  ("`retry report not found`"); malformed JSON → `CliError`
+  ("`retry report is not valid JSON`"); payload without a
+  `cases` key → `CliError` ("`missing 'cases' list`").
+  Each gives the file path inline so operators can re-run
+  the producer.
+
+**Verification.** `python3 -m pytest -q` → 736 passed in 2.86s
+(19 new: 10 differ + 9 CLI). Differ tests cover: identical
+clean, attempts grew/shrank, error drift between two non-
+null strings, error resolved (non-null → null), newly
+failing, only-in-A, only-in-B pass vs fail, (case, repeat)
+tuple matching, markdown summary + section rendering. CLI
+tests cover: parser registration, clean identical exits 0,
+attempts-grew under `--fail-on-regression` exits 1, `--json`
+emits structured payload, missing file + malformed JSON +
+missing-`cases` all hard-error, custom labels surface in
+markdown.
+
+**Decisions / trade-offs.**
+* Match by `(case, repeat)` tuple rather than collapsing
+  repeats. Under `--repeat N`, repeat 0 and repeat 2
+  legitimately have different attempt counts and error
+  shapes; collapsing would hide that. Operators who want a
+  case-level rollup can post-process the matched list.
+* Error-drift regression only when both sides are non-null.
+  `null → "RuntimeError"` is already caught by
+  `newly_failing`; `"RuntimeError" → null` is an
+  improvement. Only two non-null strings differing is a
+  true shape drift — same failure mode → different failure
+  mode signals that the problem moved, which is a
+  regression worth surfacing.
+* New subcommand group (`retry`) rather than
+  `frok eval retry-diff`. `eval` holds capture-based
+  operations (summarize, diff of JsonlSink directories);
+  retry reports are a different object with different
+  shape. Keeping `retry` separate leaves room to grow
+  (`frok retry summarize`, `frok retry show`) without
+  cramming unrelated noun-verbs under `eval`.
+* CLI reads JSON directly rather than going through a
+  `RetryReport` dataclass. The report is a pure JSON dump;
+  introducing a dataclass would add a schema-validation
+  layer with no callers — the differ already treats the
+  input as `dict[str, Any]` and fails cleanly on missing
+  keys.
+* Kept the three filter lists (`attempts_grew`,
+  `error_changed`, `newly_failing`) as separate markdown
+  sections instead of one mega-table. Each tells a
+  different story, and a single cramped table makes the
+  "what's the actual problem" harder to scan.
+* `--a-label` / `--b-label` default to "a" / "b" rather
+  than inferring from paths. Path-based labels are
+  distracting when paths are long; explicit labels keep
+  the markdown scannable ("monday vs today" vs the full
+  `reports/2026-04-22/retry.json` path).
+
+**Next suggested action:** `Extend Phase 5 §24 with a
+\`frok retry summarize DIR\` subcommand that walks a
+directory of retry-report JSONs (one per run, typically
+named by date) and produces a trend table: per-case, the
+attempts timeline across every report. Catches slow creep
+that pairwise diffs would miss — "case X attempts went 1
+→ 1 → 2 → 3 → 4 over two weeks" is only visible when
+you look at the whole series. Complements §23's point-in-
+time diff with a longitudinal view.`
+
 ## 2026-04-24 — Phase 5 §22: retry-report
 
 **Shipped** ``frok run --retry-report PATH`` — a sibling

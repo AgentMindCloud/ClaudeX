@@ -1,0 +1,127 @@
+"""Retry-report CLI — ``frok retry diff A B``.
+
+Loads two retry-report JSONs produced by ``frok run --retry-report
+PATH`` and surfaces attempts drift, error-shape changes, and
+newly-failing / newly-passing cases. Pairs with the summary JSON's
+coarse "attempts / budget" rollup: the diff catches creeping flake
+patterns the budget-relative view would miss.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+from ..evals import diff_retry_reports, retry_diff_to_markdown
+from .common import CliError
+
+
+def _load_report(path: Path) -> dict:
+    if not path.exists():
+        raise CliError(f"retry report not found: {path}")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise CliError(f"retry report is not valid JSON: {path}: {exc}") from exc
+    if not isinstance(payload, dict) or "cases" not in payload:
+        raise CliError(
+            f"retry report is missing 'cases' list: {path}"
+        )
+    return payload
+
+
+async def diff_cmd(args: argparse.Namespace) -> int:
+    a_payload = _load_report(args.a)
+    b_payload = _load_report(args.b)
+
+    diff = diff_retry_reports(a_payload, b_payload)
+
+    if args.json:
+        out = json.dumps(
+            {
+                "a_path": str(args.a),
+                "b_path": str(args.b),
+                **diff,
+            },
+            indent=2,
+            default=str,
+        )
+    else:
+        out = retry_diff_to_markdown(
+            diff,
+            a_label=args.a_label or "a",
+            b_label=args.b_label or "b",
+            a_path=args.a,
+            b_path=args.b,
+        )
+
+    if args.output is not None:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(out, encoding="utf-8")
+    else:
+        print(out)
+
+    if args.fail_on_regression and diff["regressed"]:
+        return 1
+    return 0
+
+
+def register(sub: "argparse._SubParsersAction") -> None:
+    retry = sub.add_parser(
+        "retry",
+        help="Retry-report utilities.",
+        description="Operations over --retry-report JSON dumps.",
+    )
+    retry_sub = retry.add_subparsers(dest="retry_command", required=True)
+
+    diff = retry_sub.add_parser(
+        "diff",
+        help="Diff two retry-report JSON files (A vs B).",
+        description=(
+            "Compare two retry-report JSON dumps from "
+            "`frok run --retry-report PATH`. Surfaces attempts drift, "
+            "error-shape changes, newly-failing / newly-passing cases, "
+            "and slugs only in one side. Catches creeping flake that "
+            "the budget-relative summary would miss."
+        ),
+    )
+    diff.add_argument(
+        "a", type=Path, help="reference retry report (before / baseline)"
+    )
+    diff.add_argument(
+        "b", type=Path, help="candidate retry report (after / today)"
+    )
+    diff.add_argument(
+        "-o",
+        "--output",
+        type=Path,
+        help="write diff to this file instead of stdout",
+    )
+    diff.add_argument(
+        "--json",
+        action="store_true",
+        help="emit machine-readable JSON instead of Markdown",
+    )
+    diff.add_argument(
+        "--a-label",
+        default=None,
+        metavar="LABEL",
+        help="label for side A in the markdown (default 'a')",
+    )
+    diff.add_argument(
+        "--b-label",
+        default=None,
+        metavar="LABEL",
+        help="label for side B in the markdown (default 'b')",
+    )
+    diff.add_argument(
+        "--fail-on-regression",
+        action="store_true",
+        help=(
+            "exit non-zero when attempts grew, a case newly failed, the "
+            "last-attempt error shape drifted between two non-null "
+            "strings, or a new failing case appeared in B"
+        ),
+    )
+    diff.set_defaults(fn=diff_cmd)

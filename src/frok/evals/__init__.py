@@ -16,6 +16,7 @@ from .case import (
     Score,
     Scorer,
 )
+from .retry_diff import diff_retry_reports, retry_diff_to_markdown
 from .runner import ClientFactory, EvalRunner
 from .scorers import (
     AnswerAbsent,
@@ -68,7 +69,9 @@ __all__ = [
     "diff_against_baseline",
     "diff_directories",
     "diff_event_streams",
+    "diff_retry_reports",
     "diff_to_markdown",
     "directory_diff_to_json",
     "directory_diff_to_markdown",
+    "retry_diff_to_markdown",
 ]

@@ -240,6 +240,16 @@ builds on these three.
     would flag it. Always written when the flag is set,
     regardless of `--retry` value; parent dir created if
     missing. *Shipped 2026-04-24.*
+23. **retry-diff** — `frok retry diff A B` loads two
+    retry-report JSONs, matches `(case, repeat)` pairs,
+    and surfaces attempts drift, error-shape changes,
+    and newly-failing / newly-passing cases. Regression
+    heuristic: attempts grew, newly failing, error
+    drifted between two non-null strings, or a new
+    failing case appeared in B. `--fail-on-regression`
+    gates CI; `--json` emits structured output;
+    `--a-label` / `--b-label` rename the columns in
+    markdown. *Shipped 2026-04-24.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable

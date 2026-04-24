@@ -18,6 +18,8 @@ from .init import init_cmd
 from .init import register as _register_init
 from .version import version_cmd
 from .version import register as _register_version
+from .retry import diff_cmd as retry_diff_cmd
+from .retry import register as _register_retry
 from .run import (
     ClientFactory,
     LoadedCaseFile,
@@ -39,6 +41,7 @@ __all__ = [
     "inspect_cmd",
     "load_case_file",
     "main",
+    "retry_diff_cmd",
     "run_cmd",
     "show_cmd",
     "summarize_cmd",
@@ -67,6 +70,7 @@ _EPILOG = (
     "  frok trace inspect FILE    summarize a JsonlSink capture\n"
     "  frok eval diff A B         diff two captures side-by-side\n"
     "  frok eval summarize DIR    roll up a baseline directory\n"
+    "  frok retry diff A B        diff two --retry-report JSONs\n"
     "\n"
     "Reporting bugs: include the output of `frok version`."
 )
@@ -88,6 +92,7 @@ def build_parser() -> argparse.ArgumentParser:
     _register_config(sub)
     _register_eval(sub)
     _register_trace(sub)
+    _register_retry(sub)
     _register_version(sub)
     return p
 
