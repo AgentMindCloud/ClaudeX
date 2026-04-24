@@ -2,6 +2,107 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-24 — Phase 5 §27: retry-show-limit
+
+**Shipped** ``frok retry show --limit N`` — a truncation
+knob for the single-report triage view. Closes the "wall
+of text" problem on large suites: when a transient
+outage makes 40 cases fail with the same `429`
+`RuntimeError`, operators want to see the 5 worst and
+decide, not scroll through 40 nearly-identical tables.
+
+* **Sort key** — `_worst_first_key(case)` returns
+  `(passed, -ratio, -attempts, name)`. Failing cases
+  come first (False < True in Python), then highest
+  attempts/budget ratio (most retry pressure), then
+  most raw attempts (tiebreaks identical ratios —
+  5/5 outranks 1/1), then case name (deterministic
+  across runs, stable ordering for diff-friendliness).
+* **API extension** — `format_retry_report(..., limit=N)`.
+  When `limit < total_detailed`, sorts retried-or-
+  failed cases and truncates to the top N. Single-
+  attempt passes ("Clean passes" list) and "Only in
+  previous" are untouched — both are already terse and
+  operators may want the full picture there.
+* **Truncation indicator** — a single italicised line
+  `_Showing N of M retried/failing cases (worst-first)._`
+  sits between the summary bloc and the first detail
+  section when truncation fires. Operators immediately
+  know the detail list isn't complete.
+* **`--limit 0`** is allowed (surfaces just the summary
+  + indicator, no detail tables). Useful for a "quick
+  glance" invocation where operators want the counts
+  but not the tables. Negative values are rejected as
+  `CliError`, matching the §16/§18 validation shape.
+* **CLI flag** — `--limit N` on `show`. `--json` passes
+  through verbatim (markdown-only feature, same as
+  `--compare-to`). Composes cleanly with `--compare-to`:
+  the sort key works on the primary report's attempts,
+  so "worst 5 since yesterday" shows the 5 cases most
+  in need of attention right now, independent of the
+  previous run's shape.
+
+**Verification.** `python3 -m pytest -q` → 807 passed in 2.92s
+(16 new). Unit tests cover: sort key failing-before-
+passing, higher-ratio-first-among-same-passed, more-
+attempts-tiebreaks-equal-ratios, name-is-final-
+tiebreak, limit<total shows indicator, limit==total
+/ limit>total no indicator, limit=0 suppresses detail
+tables but keeps summary + clean passes, truncation
+picks the worst case (failing) when limit=1 over
+retried passes, limit+compare-to preserves Only-in-
+previous. CLI tests cover: parser default None,
+end-to-end truncation indicator, negative CliError,
+--json + --limit passes through primary verbatim,
+--limit + --compare-to composition.
+
+**Decisions / trade-offs.**
+* Failing cases always first, regardless of ratio. A
+  failing 1/1 is more important than a passing 5/5 —
+  the terminal verdict wins. Ratio-only sort would
+  have buried the actual failures under caught-late
+  retries.
+* Attempts/budget ratio over raw attempts as the
+  primary tiebreaker. A case using 5/5 of its budget
+  is in more trouble than a case using 5/10 even if
+  the absolute numbers match — ratio normalises
+  against the budget operators actually allocated.
+* Raw attempts as secondary tiebreaker. When two
+  cases hit 100% (exhausted budget), the one with the
+  bigger budget tried harder and is more diagnostic.
+* Name as final tiebreaker, not undefined order.
+  Deterministic ordering means two runs with the
+  same data produce byte-identical markdown — useful
+  for text diffs and snapshot tests.
+* Clean passes NOT truncated. Operators scanning a
+  green suite may still want to confirm every case
+  ran; the bulleted list is already terse enough that
+  40 bullets isn't a problem (compared to 40 full
+  tables).
+* "Only in previous" NOT truncated. The vanished-case
+  list is diagnostic gold ("wait, which case did we
+  delete?"); truncating it would hide data operators
+  rarely see and always care about.
+* `--limit 0` is valid. Symmetric with `--retry 0`,
+  `--timeout-s 0`, `--jobs 0`-adjacent flags
+  throughout Phase 5. Negatives are always bugs.
+* Markdown-only. `--json` is passthrough of the raw
+  payload; operators wanting truncated structured
+  data should post-process the full JSON (every row
+  is already tagged with the data the sort key needs).
+
+**Next suggested action:** `Extend Phase 5 §28 with a
+\`frok retry show --group-by-error\` flag that
+collapses retried/failing cases sharing the same last-
+attempt error string into a single "## Error: <error>"
+section listing the affected cases. Mainly for large-
+suite outages where 40 cases fail with the same
+"RuntimeError: 429 Too Many Requests" — right now
+each gets its own table; grouped, the operator sees
+"429 affected 40 cases" as one line + the case names.
+Composes with --limit: "show me the 3 biggest error
+clusters."`
+
 ## 2026-04-24 — Phase 5 §26: retry-show-compare
 
 **Shipped** ``frok retry show --compare-to PATH2`` — the

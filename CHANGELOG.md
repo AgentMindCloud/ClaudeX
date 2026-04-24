@@ -2,6 +2,25 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.53.0] — 2026-04-24
+### Added
+- `frok retry show --limit N` — truncate per-case
+  detail sections to the N most-attention-worthy
+  retried/failing cases. Sort key: failing first →
+  highest attempts/budget ratio → most raw attempts
+  → case name (deterministic). A
+  `_Showing N of M retried/failing cases (worst-first)._`
+  indicator marks the truncation. `--limit 0` suppresses
+  all detail but keeps the summary + clean passes.
+  Clean passes and "Only in previous" sections are
+  NOT truncated. Rejects negative values as CliError.
+- `format_retry_report(..., limit=N)` — new keyword-
+  only param. Defaults `None` (no truncation); §26
+  callers unchanged.
+- Tests: 16 new (4 sort-key unit, 8 format behaviour,
+  4 CLI end-to-end / validation / --json passthrough
+  / --compare-to composition); 807 total.
+
 ## [0.52.0] — 2026-04-24
 ### Added
 - `frok retry show --compare-to PATH2` — inline pairwise

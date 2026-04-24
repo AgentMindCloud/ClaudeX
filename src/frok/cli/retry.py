@@ -74,6 +74,9 @@ async def diff_cmd(args: argparse.Namespace) -> int:
 
 
 async def show_cmd(args: argparse.Namespace) -> int:
+    if args.limit is not None and args.limit < 0:
+        raise CliError(f"--limit must be >= 0, got {args.limit}")
+
     payload = _load_report(args.path)
 
     compare_payload = None
@@ -81,9 +84,9 @@ async def show_cmd(args: argparse.Namespace) -> int:
         compare_payload = _load_report(args.compare_to)
 
     if args.json:
-        # Passthrough of the primary payload. --compare-to is a
-        # markdown-only enrichment; operators wanting structured pair
-        # diff should use `frok retry diff` instead.
+        # Passthrough of the primary payload. --compare-to and --limit
+        # are markdown-only enrichments; operators wanting structured
+        # pair diff should use `frok retry diff` instead.
         out = json.dumps(payload, indent=2, default=str)
     else:
         out = format_retry_report(
@@ -91,6 +94,7 @@ async def show_cmd(args: argparse.Namespace) -> int:
             path=args.path,
             compare_to=compare_payload,
             compare_to_path=args.compare_to,
+            limit=args.limit,
         )
 
     if args.output is not None:
@@ -287,6 +291,20 @@ def register(sub: "argparse._SubParsersAction") -> None:
             "section lists cases that vanished. Markdown-only — "
             "`--json` still passes through the primary payload "
             "verbatim; use `frok retry diff` for structured diff data."
+        ),
+    )
+    show.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "truncate the per-case detail to the N most-attention-"
+            "worthy retried/failing cases (failing first, then "
+            "highest attempts/budget ratio, then most raw attempts, "
+            "then case name). Clean passes and 'Only in previous' "
+            "are NOT truncated. A '(showing N of M)' indicator marks "
+            "the truncation. Markdown-only."
         ),
     )
     show.set_defaults(fn=show_cmd)

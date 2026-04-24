@@ -285,6 +285,19 @@ builds on these three.
     only — `--json` passes through the primary verbatim
     (structured diff data is `retry diff`'s job).
     *Shipped 2026-04-24.*
+27. **retry-show-limit** — `frok retry show --limit N`
+    truncates per-case detail sections to the N most-
+    attention-worthy retried/failing cases. Sort key:
+    failing first → highest attempts/budget ratio →
+    most raw attempts → case name (deterministic
+    tiebreak). Adds a `_Showing N of M_` indicator
+    when truncation happens. Clean passes and "Only
+    in previous" sections are NOT truncated — both
+    already terse. `--limit 0` surfaces just the
+    summary + indicator. Rejects negative values.
+    Markdown-only. Pairs with `--compare-to`:
+    "show me the 5 cases that got worst since
+    yesterday". *Shipped 2026-04-24.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable

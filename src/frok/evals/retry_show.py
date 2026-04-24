@@ -34,12 +34,26 @@ def _key_lookup(payload: dict[str, Any]) -> dict[tuple[str, int], dict[str, Any]
     }
 
 
+def _worst_first_key(case: dict[str, Any]) -> tuple[bool, float, int, str]:
+    """Sort key putting the most-attention-worthy cases first.
+
+    Order: failing before passing → highest attempts/budget ratio →
+    most raw attempts → case name (deterministic tiebreak).
+    """
+    attempts = len(case.get("attempts") or [])
+    budget = max(int(case.get("retry_budget", 1) or 1), 1)
+    ratio = attempts / budget
+    passed = bool(case.get("passed"))
+    return (passed, -ratio, -attempts, case.get("case", ""))
+
+
 def format_retry_report(
     payload: dict[str, Any],
     *,
     path: Path | str | None = None,
     compare_to: dict[str, Any] | None = None,
     compare_to_path: Path | str | None = None,
+    limit: int | None = None,
 ) -> str:
     cases = payload.get("cases", [])
     total_attempts = sum(len(c.get("attempts") or []) for c in cases)
@@ -100,6 +114,26 @@ def format_retry_report(
         for c in cases
         if len(c.get("attempts") or []) == 1 and c.get("passed")
     ]
+
+    # `--limit N` truncates the per-case detail to the N most-attention-
+    # worthy cases (failing first → highest attempts/budget ratio → most
+    # raw attempts → name). Clean passes and the "Only in previous"
+    # section are NOT truncated; they're already terse and operators
+    # may still want the full picture there.
+    total_detailed = len(retried_or_failed)
+    truncated = False
+    if limit is not None and limit < total_detailed:
+        retried_or_failed = sorted(retried_or_failed, key=_worst_first_key)[
+            : max(limit, 0)
+        ]
+        truncated = True
+
+    if truncated:
+        lines.append(
+            f"_Showing {len(retried_or_failed)} of {total_detailed} "
+            f"retried/failing cases (worst-first)._"
+        )
+        lines.append("")
 
     for c in retried_or_failed:
         verdict = "PASS" if c.get("passed") else "FAIL"
