@@ -2,6 +2,26 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.55.0] — 2026-04-24
+### Added
+- `frok retry show --min-attempts N` — drops cases
+  whose attempt count is below N from both the detail
+  sections and the Clean passes list. Applies BEFORE
+  `--group-by-error` and `--limit`; "Only in previous"
+  is left untouched (different-run attempt counts).
+  Indicator line "_Filtered to cases with >= N
+  attempts._" always fires when the filter is active.
+  N=1 is a no-op; N < 1 is CliError. Markdown-only.
+- `format_retry_report(..., min_attempts=N)` — new
+  keyword-only param; default `None` preserves §28
+  behaviour.
+- Tests: 11 new (6 format behaviour + 5 CLI): N=2
+  drops 1-attempt from both buckets, N=1 byte-
+  identical to default, high-threshold empties detail,
+  filter-before-group + filter-before-limit ordering,
+  Only-in-previous untouched, parser default, end-to-
+  end, N=0 rejected, --json passthrough; 835 total.
+
 ## [0.54.0] — 2026-04-24
 ### Added
 - `frok retry show --group-by-error` — collapse

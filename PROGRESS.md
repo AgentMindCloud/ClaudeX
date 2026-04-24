@@ -2,6 +2,113 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-24 — Phase 5 §29: retry-show-min-attempts
+
+**Shipped** ``frok retry show --min-attempts N`` — an
+attempt-count filter that drops cases below the
+threshold from the detail sections. Closes a specific
+signal/noise problem: when operators allocate a generous
+retry budget (e.g. `--retry 10`) but only a handful of
+cases actually use it, the Clean passes list balloons
+with "passed first try, budget irrelevant" entries that
+dilute the interesting retry activity.
+
+* **API extension** — `format_retry_report(...,
+  min_attempts=N)`. When set and > 1, drops any case
+  (from both `retried_or_failed` and `clean_passes`)
+  whose attempt count is below N, then proceeds to
+  grouping / limiting with the filtered lists. N=1 is
+  explicitly a no-op (matches "no filter") to make
+  the flag idempotent against the default.
+* **Indicator line** — when the filter is active
+  (`min_attempts > 1`), an italicised
+  `_Filtered to cases with >= N attempts._` line sits
+  between the summary bloc and the first detail
+  section. Unlike the `--limit` indicator (which only
+  fires when truncation actually drops content), the
+  filter indicator always fires when set — operators
+  need to know the filter applied, even on runs where
+  every case happened to survive.
+* **Precedence** — filter runs BEFORE grouping and
+  BEFORE limiting. A group count from `--group-by-
+  error --min-attempts 3` reflects "clusters of cases
+  that actually retried", which is what operators
+  want; running the filter after would mean the group
+  sizes include cases that aren't even displayed.
+* **"Only in previous" untouched** — the diff-derived
+  section's per-case attempt counts come from a
+  DIFFERENT run (the comparison side). Filtering them
+  by the current-run threshold would cross-contaminate
+  two different run shapes. Keeping that section
+  unfiltered is the right move; operators who want to
+  filter the previous run can run `retry show` on it
+  directly with the same flag.
+* **Summary bloc unchanged** — totals (Cases, Passed,
+  Failed, Retried cases, Attempts/Budget) still
+  reflect the FULL run, not the filtered subset. The
+  filter is a display concern; the summary is a run-
+  state truth. Operators see "50 cases, 48 passed"
+  even if only 5 are detailed.
+* **CLI validation** — `--min-attempts < 1` →
+  `CliError` ("must be >= 1"). N=0 would be a no-op
+  (every case has at least 1 attempt if it has an
+  entry) but operators typing `0` almost always meant
+  `1`; hard-erroring catches the confusion.
+
+**Verification.** `python3 -m pytest -q` → 835 passed in 3.16s
+(11 new). Unit tests cover: N=2 drops 1-attempt cases
+from both retried_or_failed and clean_passes, N=1 is
+byte-identical to default, N=5 empties detail but
+preserves summary, filter-before-grouping (group sizes
+reflect filtered cases), filter-before-limit ("X of Y"
+indicator matches filtered total), Only-in-previous
+untouched under --compare-to. CLI: parser default
+None, end-to-end filtered markdown, N=0 rejected,
+--json passthrough preserves raw payload.
+
+**Decisions / trade-offs.**
+* Filter applies to Clean passes too. An operator
+  running `--min-attempts 3` is saying "don't show me
+  anything with < 3 attempts"; keeping Clean passes
+  (which are always 1-attempt) visible would
+  undermine the flag's intent.
+* `--min-attempts 1` is a no-op rather than an error.
+  1 is the default-like value; treating it as a bug
+  would surprise operators who pass it explicitly
+  (e.g. from a script that always sets the flag).
+* Summary reflects the full run, not filtered totals.
+  The report's top bloc is a truth-claim about what
+  happened; filtering is a view concern. Two
+  different lenses on the same data.
+* Indicator fires always-when-active, not just when
+  cases got dropped. Operators looking at a filtered
+  report need to know the filter applied even when
+  the data happened to all pass through —
+  silently-no-op behaviour would let filtered views
+  masquerade as unfiltered.
+* N=0 is a hard error. Every case has >= 1 attempt
+  (otherwise it wouldn't be in the report), so N=0
+  is identical to N=1 in effect. The ambiguity
+  isn't worth allowing; operators who typed 0 almost
+  always meant 1 and the error catches the fat-finger.
+* Filter precedence is filter → group → limit. The
+  clustering / truncation logic should see a coherent
+  view of the filtered data; running filter AFTER
+  grouping would mean group sizes mismatch the
+  displayed rows, which is confusing.
+
+**Next suggested action:** `Extend Phase 5 §30 with a
+\`frok retry show --only-errors\` flag (shorthand for
+\`--min-attempts 2\` restricted to failing-or-retried
+cases only — drops Clean passes regardless of attempt
+count). Useful when operators just want the
+"what's broken right now" view without the bulleted
+pass list noise. Composes with --group-by-error
+(groups only the failing-or-retried subset), --limit
+(truncates the still-interesting cases), and
+--compare-to (per-case suffixes still apply).
+Markdown-only.`
+
 ## 2026-04-24 — Phase 5 §28: retry-show-group-by-error
 
 **Shipped** ``frok retry show --group-by-error`` — a

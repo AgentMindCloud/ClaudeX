@@ -68,6 +68,7 @@ def format_retry_report(
     compare_to_path: Path | str | None = None,
     limit: int | None = None,
     group_by_error: bool = False,
+    min_attempts: int | None = None,
 ) -> str:
     cases = payload.get("cases", [])
     total_attempts = sum(len(c.get("attempts") or []) for c in cases)
@@ -128,6 +129,29 @@ def format_retry_report(
         for c in cases
         if len(c.get("attempts") or []) == 1 and c.get("passed")
     ]
+
+    # `--min-attempts N` filter — drops any case whose attempt count is
+    # below N from both detail buckets. Applies BEFORE grouping and
+    # BEFORE `--limit` so the clustering / truncation logic sees only
+    # the still-interesting cases. "Only in previous" is untouched —
+    # it's a diff-derived view where the per-case attempt count is
+    # from a *different run* and filtering on it would be misleading.
+    filter_active = min_attempts is not None and min_attempts > 1
+    if filter_active:
+        retried_or_failed = [
+            c
+            for c in retried_or_failed
+            if len(c.get("attempts") or []) >= min_attempts
+        ]
+        clean_passes = [
+            c
+            for c in clean_passes
+            if len(c.get("attempts") or []) >= min_attempts
+        ]
+        lines.append(
+            f"_Filtered to cases with >= {min_attempts} attempts._"
+        )
+        lines.append("")
 
     # `--limit N` meaning depends on --group-by-error:
     #   * plain mode: truncate to the N most-attention-worthy cases

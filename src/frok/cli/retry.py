@@ -76,6 +76,10 @@ async def diff_cmd(args: argparse.Namespace) -> int:
 async def show_cmd(args: argparse.Namespace) -> int:
     if args.limit is not None and args.limit < 0:
         raise CliError(f"--limit must be >= 0, got {args.limit}")
+    if args.min_attempts is not None and args.min_attempts < 1:
+        raise CliError(
+            f"--min-attempts must be >= 1, got {args.min_attempts}"
+        )
 
     payload = _load_report(args.path)
 
@@ -85,8 +89,9 @@ async def show_cmd(args: argparse.Namespace) -> int:
 
     if args.json:
         # Passthrough of the primary payload. --compare-to, --limit,
-        # and --group-by-error are markdown-only enrichments; operators
-        # wanting structured pair diff should use `frok retry diff`.
+        # --group-by-error, and --min-attempts are markdown-only
+        # enrichments; operators wanting structured pair diff should
+        # use `frok retry diff`.
         out = json.dumps(payload, indent=2, default=str)
     else:
         out = format_retry_report(
@@ -96,6 +101,7 @@ async def show_cmd(args: argparse.Namespace) -> int:
             compare_to_path=args.compare_to,
             limit=args.limit,
             group_by_error=args.group_by_error,
+            min_attempts=args.min_attempts,
         )
 
     if args.output is not None:
@@ -321,6 +327,22 @@ def register(sub: "argparse._SubParsersAction") -> None:
             "failures) group under a dedicated 'no error' bucket. "
             "Useful on large-suite outages where dozens of cases "
             "fail with the same transient error. Markdown-only."
+        ),
+    )
+    show.add_argument(
+        "--min-attempts",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "drop cases whose attempt count is below N from both the "
+            "detail sections and the Clean passes list. Useful to "
+            "hide the 'passed first try but budget was > 1' noise "
+            "when a generous retry budget was allocated but most "
+            "cases didn't need it. Applies BEFORE --group-by-error "
+            "and --limit. 'Only in previous' is not filtered (those "
+            "attempt counts come from a different run). N must be "
+            ">= 1; N=1 is a no-op. Markdown-only."
         ),
     )
     show.set_defaults(fn=show_cmd)

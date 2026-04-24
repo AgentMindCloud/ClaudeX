@@ -311,6 +311,19 @@ builds on these three.
     instead of the case count — "show me the 3
     biggest error clusters". Markdown-only.
     *Shipped 2026-04-24.*
+29. **retry-show-min-attempts** — `frok retry show
+    --min-attempts N` drops cases whose attempt count
+    is below N from both the detail sections and the
+    "Clean passes" bucket. Applies BEFORE
+    `--group-by-error` and `--limit` so the clustering
+    / truncation logic sees only the still-interesting
+    cases. "Only in previous" is NOT filtered (those
+    attempt counts come from a different run). An
+    indicator line surfaces the filter. N must be >=
+    1; N=1 is a no-op; negative rejected as CliError.
+    Markdown-only. Use case: "we allocated --retry 10
+    but 45 of 50 cases passed first try — show me only
+    the 5 that needed retries." *Shipped 2026-04-24.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable
