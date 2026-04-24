@@ -2,6 +2,67 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 4 §1: init-scaffold
+
+**Shipped** ``frok init [PATH]`` — the onboarding command that
+closes the "okay how do I actually start using this" gap.
+Writes four files; the generated project runs end-to-end with no
+further setup because the smoke case uses a stub transport.
+
+* **Templates** (`frok/cli/init.py`, inline constants)
+  * ``CLAUDE.md`` — project-scoped instructions linking the
+    operator to the key subcommands and the baseline workflow.
+  * ``frok.toml`` — every `FrokConfig` section populated, with a
+    ``[profiles.prod.telemetry]`` override showing how profile
+    merging works.
+  * ``cases/smoke.py`` — one `EvalCase` + a ``make_client`` that
+    returns a `GrokClient` wired to a stub transport. Replacing
+    the transport with `urllib_transport` is the documented next
+    step.
+  * ``.github/workflows/frok.yml`` — PR-gating workflow using
+    ``--fail-on-regression`` + an artifact upload, with a
+    commented-out baseline-capture job on `main`.
+* **`frok init`** — abort-if-any-exists by default
+  (``CliError`` listing the offending files); ``--force`` to
+  overwrite. Directories are `mkdir -p`'d. Writes a Next-steps
+  block to stdout so the operator sees the three commands they
+  should run next. ``path`` defaults to ``.``.
+
+**Verification.** `python3 -m pytest -q` → 377 passed in 1.10s (14
+new). Tests cover: argparse shape + default path, full-scaffold
+write, nested path creation, existing-files abort + file
+preservation, `--force` overwrite behaviour, generated
+``frok.toml`` loading via `load_config` (base + `prod` profile),
+``tomllib.loads`` round-trip of the template, the generated
+smoke case running green via `frok run --fail-on-regression`,
+``frok run --list`` over the generated case, the generated
+``CLAUDE.md`` and workflow containing their promised references,
+and an all-or-nothing guarantee (a partial existing tree doesn't
+get half-scaffolded).
+
+**Decisions / trade-offs.**
+* Templates live as inline string constants rather than package-
+  data files. No MANIFEST / package_data / importlib.resources
+  ceremony; edits to the templates are an ordinary Python
+  commit.
+* The smoke case uses a stub transport, not real xAI. ``frok
+  init && frok run cases/smoke.py`` passing out-of-the-box is
+  the single best signal that the install works.
+* Abort-if-any-exists is stricter than "skip if exists" — a
+  partial scaffold is more confusing than a loud ``--force``
+  requirement.
+* The workflow comments out the baseline-capture job. It's a
+  real pattern but requires a decision about where baselines
+  live; better to enable it consciously than have a workflow
+  fail on the first run because a secret's unset.
+
+**Next suggested action:** `Extend Phase 4 with \`frok init
+--example tools\` / \`--example multimodal\` / \`--example
+memory\`: the basic smoke scaffold plus a second case file
+showcasing the ToolOrchestrator / MultimodalAdapter / MemoryAgent
+respectively. Closes the "great, now how do I wire up more of the
+stack?" gap with working, runnable reference cases.`
+
 ## 2026-04-23 — Phase 3 §11: parallel-jobs
 
 **Shipped** ``frok run --jobs N`` — concurrent case execution

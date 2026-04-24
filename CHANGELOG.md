@@ -2,6 +2,16 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.21.0] — 2026-04-23
+### Added
+- `frok init [PATH] [--force]` — scaffold a new Frok project.
+  Writes `CLAUDE.md`, `frok.toml` (with prod profile),
+  `cases/smoke.py` (stub transport so it runs out of the box),
+  and `.github/workflows/frok.yml`. Aborts if any target exists
+  unless `--force`; prints a Next-steps block.
+- Tests: 14 new (scaffold + --force + validity of generated
+  files); 377 total.
+
 ## [0.20.0] — 2026-04-23
 ### Added
 - `frok run --jobs N` — run up to N (case, repeat) units

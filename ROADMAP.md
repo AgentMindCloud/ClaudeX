@@ -62,6 +62,14 @@ builds on these three.
     reason over. (Interpretation chosen on this branch; see PROGRESS.md.
     Narrow to rename if a different #10 was intended.)
 
+## Phase 4 — Onboarding
+1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable
+   skeleton: `CLAUDE.md`, `frok.toml` (with a prod profile),
+   `cases/smoke.py` (stub transport so `frok run` passes with no
+   api_key), and `.github/workflows/frok.yml` demoing the
+   capture/diff loop. Aborts if any target exists unless `--force`.
+   *Shipped 2026-04-23.*
+
 ## Phase 3 — Wiring + operations
 1. **cli-runner** — `frok run <case-file>` entry point wiring
    `load_default_config` → full-stack build → `EvalRunner` →

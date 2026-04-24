@@ -12,6 +12,8 @@ from .config import register as _register_config
 from .config import show_cmd
 from .eval import diff_cmd, summarize_cmd
 from .eval import register as _register_eval
+from .init import init_cmd
+from .init import register as _register_init
 from .run import (
     ClientFactory,
     LoadedCaseFile,
@@ -28,6 +30,7 @@ __all__ = [
     "LoadedCaseFile",
     "build_parser",
     "diff_cmd",
+    "init_cmd",
     "inspect_cmd",
     "load_case_file",
     "main",
@@ -44,6 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
     _register_trace(sub)
     _register_config(sub)
     _register_eval(sub)
+    _register_init(sub)
     return p
 
 
