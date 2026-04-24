@@ -2,6 +2,83 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 5 §13: latency-delta
+
+**Shipped** ``LatencyDeltaWithin(max_ms)`` — the wall-clock
+twin of §12's ``TokenDeltaWithin``. Operators regression-testing
+a prompt change now have one scorer stack that asserts both
+"tokens didn't drift by more than N" and "wall-clock didn't
+drift by more than M", both anchored to the same captured
+baseline.
+
+* **`diff_event_streams` extension** — added a
+  ``_root_duration_ms(events)`` helper matching
+  ``Observation.total_latency_ms`` semantics (first root span's
+  `duration_ms`), plus three new keys on the diff dict:
+  ``{a_label}_latency_ms``, ``{b_label}_latency_ms``,
+  ``latency_delta_ms``. Existing callers and tests aren't
+  affected — they check specific keys, not shape equality.
+* **`LatencyDeltaWithin`** (`frok/evals/scorers.py`) — frozen
+  dataclass mirroring ``TokenDeltaWithin`` line-for-line.
+  `__post_init__` rejects negative `max_ms`; zero is allowed as
+  exact-parity.
+* **Shared baseline loader** — pulled out a private
+  ``_load_baseline_diff(case, sname, obs)`` helper that both
+  baseline-aware scorers call. Returns a `Score` on error
+  paths (no baseline attached / missing file / unreadable) or
+  the diff dict on success. Keeps the two scorers from
+  drifting on error messages.
+* **Failure detail** surfaces baseline + observed + signed
+  delta, same shape as the token scorer; ``measure`` carries
+  the signed latency delta as a float.
+
+**Verification.** `python3 -m pytest -q` → 616 passed in 1.45s
+(21 new). Library tests cover the five new diff-field paths
+(identical streams → zero latency delta, root span only (nested
+spans don't contribute), signed delta direction preserved,
+custom labels rename the keys, missing root span → 0.0), plus
+16 scorer tests mirroring ``TokenDeltaWithin``'s coverage:
+construction rejects negative / zero allowed, no-baseline +
+missing-file fail cleanly, zero delta passes, small positive +
+small negative deltas pass, inclusive at-threshold in both
+directions, over-threshold positive + negative both fail with
+baseline + observed + signed delta in detail, ``max_ms=0``
+enforces exact parity, scorer name reflects the cap, measure
+preserves direction. Two integration tests use a deterministic
+clock injected into `Tracer(clock=...)` so wall-clock noise
+doesn't flake: the parity case passes, the drift case fails
+with ``+990.0`` in the detail.
+
+**Decisions / trade-offs.**
+* Extended `diff_event_streams` rather than duplicating the
+  root-span lookup in the scorer. One canonical helper keeps
+  the live-vs-captured differ and the scorer in lockstep —
+  exactly the parity ``diff_against_baseline`` already
+  delegates through.
+* Root-span duration, not sum-of-all-spans. Matches
+  ``Observation.total_latency_ms`` semantics so a case's
+  runtime wall-clock and the captured baseline compare
+  apples-to-apples.
+* Symmetric `abs(delta_ms)` gate. A sudden latency collapse
+  is as much a regression signal as a latency spike (usually
+  means the model bailed early); operators who want one-sided
+  can layer a future variant.
+* Shared `_load_baseline_diff` helper is module-private.
+  Public API is the two scorer classes; operators don't need
+  to know they share plumbing.
+* Integration tests inject a deterministic `Tracer(clock=)`
+  rather than relying on `asyncio.sleep` timing. Wall-clock
+  tests on CI are flaky; synthetic clocks are the way.
+
+**Next suggested action:** `Extend Phase 5 §14 with an
+\`EvalCase.timeout_s\` field + runner enforcement:
+asyncio.wait_for wraps each case execution, failing the case
+with a clean \`TimeoutError\` observation.error when it
+exceeds timeout_s. Closes the gap that today's
+LatencyWithin / LatencyDeltaWithin close only after the run
+completes — a truly-stuck case hangs the whole suite until
+the operator hits Ctrl+C.`
+
 ## 2026-04-23 — Phase 5 §12: token-delta
 
 **Shipped** ``TokenDeltaWithin(max_delta)`` — the first

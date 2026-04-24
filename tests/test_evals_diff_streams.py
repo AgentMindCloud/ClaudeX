@@ -131,3 +131,62 @@ def test_markdown_renders_clean_diff():
     md = diff_to_markdown(diff_event_streams(same, same), a_path="a", b_path="b")
     assert "Regressed: no" in md
     assert "Delta" in md  # section present
+
+
+# ---------------------------------------------------------------------------
+# latency fields
+# ---------------------------------------------------------------------------
+def test_identical_streams_have_zero_latency_delta():
+    events = [_chat("c", duration=42.0)]
+    diff = diff_event_streams(events, list(events))
+    assert diff["a_latency_ms"] == 42.0
+    assert diff["b_latency_ms"] == 42.0
+    assert diff["latency_delta_ms"] == 0.0
+
+
+def test_latency_delta_tracks_root_span_only():
+    # Root span is "grok.chat" (parent None); nested spans (parent set)
+    # should NOT contribute to the reported latency.
+    nested = Event(
+        ts=0.0,
+        trace_id="t1",
+        span_id="child",
+        parent_span_id="c",  # has a parent -> not a root
+        kind=SPAN_END,
+        name="tool.invoke",
+        duration_ms=999.0,  # big, but not counted
+        data={"tool": "x"},
+    )
+    a_events = [_chat("c", duration=10.0), nested]
+    b_events = [_chat("c", duration=30.0), nested]
+    diff = diff_event_streams(a_events, b_events)
+    assert diff["a_latency_ms"] == 10.0
+    assert diff["b_latency_ms"] == 30.0
+    assert diff["latency_delta_ms"] == 20.0
+
+
+def test_latency_delta_is_signed():
+    # b slower -> positive; b faster -> negative.
+    a = [_chat("c", duration=100.0)]
+    b_slower = [_chat("c", duration=150.0)]
+    assert diff_event_streams(a, b_slower)["latency_delta_ms"] == 50.0
+    b_faster = [_chat("c", duration=25.0)]
+    assert diff_event_streams(a, b_faster)["latency_delta_ms"] == -75.0
+
+
+def test_latency_custom_labels_rename_keys():
+    a = [_chat("c", duration=10.0)]
+    b = [_chat("c", duration=20.0)]
+    diff = diff_event_streams(a, b, a_label="baseline", b_label="observed")
+    assert diff["baseline_latency_ms"] == 10.0
+    assert diff["observed_latency_ms"] == 20.0
+    # Neutral delta key is unaffected by labels.
+    assert diff["latency_delta_ms"] == 10.0
+
+
+def test_missing_root_span_reports_zero_latency():
+    # No events at all -> 0.0 ms reported for both sides.
+    diff = diff_event_streams([], [])
+    assert diff["a_latency_ms"] == 0.0
+    assert diff["b_latency_ms"] == 0.0
+    assert diff["latency_delta_ms"] == 0.0

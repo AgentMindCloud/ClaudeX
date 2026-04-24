@@ -54,6 +54,17 @@ def _span_count(events: Iterable[Event]) -> int:
     return sum(1 for e in events if e.kind == SPAN_END)
 
 
+def _root_duration_ms(events: Iterable[Event]) -> float:
+    """Duration of the first root span (``parent_span_id is None``),
+    matching `Observation.total_latency_ms` semantics so live + captured
+    runs compare apples-to-apples.
+    """
+    for e in events:
+        if e.kind == SPAN_END and e.parent_span_id is None:
+            return float(e.duration_ms or 0.0)
+    return 0.0
+
+
 def diff_event_streams(
     a_events: Iterable[Event],
     b_events: Iterable[Event],
@@ -82,6 +93,9 @@ def diff_event_streams(
     a_spans = _span_count(a_list)
     b_spans = _span_count(b_list)
 
+    a_latency = _root_duration_ms(a_list)
+    b_latency = _root_duration_ms(b_list)
+
     tool_order_match = a_tools == b_tools
     new_errors = max(0, b_errors - a_errors)
 
@@ -98,6 +112,9 @@ def diff_event_streams(
         f"{a_label}_spans": a_spans,
         f"{b_label}_spans": b_spans,
         "span_delta": b_spans - a_spans,
+        f"{a_label}_latency_ms": a_latency,
+        f"{b_label}_latency_ms": b_latency,
+        "latency_delta_ms": b_latency - a_latency,
         "regressed": (not tool_order_match) or new_errors > 0,
     }
 

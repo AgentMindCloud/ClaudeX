@@ -146,6 +146,13 @@ builds on these three.
     failure detail surfaces baseline + observed + signed
     delta; measure carries the signed delta for trend-
     scanning. *Shipped 2026-04-23.*
+13. **latency-delta** — `LatencyDeltaWithin(max_ms)` mirrors
+    `TokenDeltaWithin` but on root-span `duration_ms`, via a
+    new `latency_delta_ms` key on `diff_event_streams`.
+    Completes the baseline-drift gate: cost + wall-clock
+    now both assertable in one scorer stack. Shared
+    `_load_baseline_diff` helper keeps the two scorers in
+    lockstep. *Shipped 2026-04-23.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable

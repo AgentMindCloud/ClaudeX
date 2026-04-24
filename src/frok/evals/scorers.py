@@ -325,6 +325,31 @@ class InvocationsWithin:
         )
 
 
+def _load_baseline_diff(
+    case: EvalCase, sname: str, obs: Observation
+) -> "Score | dict[str, Any]":
+    """Shared loader for baseline-aware scorers. Returns a Score on
+    error / missing-baseline paths, or the diff dict on success."""
+    if case.baseline is None:
+        return Score.fail(
+            sname,
+            "no baseline attached to case; set case.baseline (or pass "
+            "--use-baseline on the CLI) to use this scorer",
+        )
+    try:
+        baseline_events = list(read_jsonl(case.baseline))
+    except FileNotFoundError:
+        return Score.fail(sname, f"baseline file not found: {case.baseline}")
+    except Exception as exc:  # pragma: no cover — defensive
+        return Score.fail(sname, f"cannot load baseline {case.baseline}: {exc}")
+    return diff_event_streams(
+        baseline_events,
+        obs.events,
+        a_label="baseline",
+        b_label="observed",
+    )
+
+
 @dataclass(frozen=True)
 class TokenDeltaWithin:
     """Baseline-aware token-drift gate.
@@ -351,25 +376,10 @@ class TokenDeltaWithin:
 
     def __call__(self, case: EvalCase, obs: Observation) -> Score:
         sname = f"token_delta_within[{self.max_delta}]"
-        if case.baseline is None:
-            return Score.fail(
-                sname,
-                "no baseline attached to case; set case.baseline (or pass "
-                "--use-baseline on the CLI) to use this scorer",
-            )
-        try:
-            baseline_events = list(read_jsonl(case.baseline))
-        except FileNotFoundError:
-            return Score.fail(sname, f"baseline file not found: {case.baseline}")
-        except Exception as exc:  # pragma: no cover — defensive
-            return Score.fail(sname, f"cannot load baseline {case.baseline}: {exc}")
-
-        diff = diff_event_streams(
-            baseline_events,
-            obs.events,
-            a_label="baseline",
-            b_label="observed",
-        )
+        result = _load_baseline_diff(case, sname, obs)
+        if isinstance(result, Score):
+            return result
+        diff = result
         delta = int(diff["token_delta"])
         if abs(delta) <= self.max_delta:
             return Score.ok(sname, measure=delta)
@@ -377,6 +387,44 @@ class TokenDeltaWithin:
             sname,
             f"token delta {delta:+d} exceeds max ±{self.max_delta} "
             f"(baseline={diff['baseline_tokens']}, observed={diff['observed_tokens']})",
+            measure=delta,
+        )
+
+
+@dataclass(frozen=True)
+class LatencyDeltaWithin:
+    """Baseline-aware wall-clock-drift gate. Mirrors ``TokenDeltaWithin``
+    but on the case's root-span ``duration_ms``.
+
+    Requires ``case.baseline``. Computes
+    ``observed_latency_ms - baseline_latency_ms`` from the root span of
+    each side (matching `Observation.total_latency_ms` semantics).
+    Passes iff ``abs(delta_ms) <= max_ms``.
+
+    Symmetric: catches prompts that slow down *and* prompts that
+    finish suspiciously fast (often a sign the model bailed early).
+    """
+
+    max_ms: float
+
+    def __post_init__(self) -> None:
+        if self.max_ms < 0:
+            raise ValueError(f"max_ms must be >= 0, got {self.max_ms}")
+
+    def __call__(self, case: EvalCase, obs: Observation) -> Score:
+        sname = f"latency_delta_within[{self.max_ms}]"
+        result = _load_baseline_diff(case, sname, obs)
+        if isinstance(result, Score):
+            return result
+        diff = result
+        delta = float(diff["latency_delta_ms"])
+        if abs(delta) <= self.max_ms:
+            return Score.ok(sname, measure=delta)
+        return Score.fail(
+            sname,
+            f"latency delta {delta:+.1f} ms exceeds max ±{self.max_ms} ms "
+            f"(baseline={diff['baseline_latency_ms']:.1f}, "
+            f"observed={diff['observed_latency_ms']:.1f})",
             measure=delta,
         )
 

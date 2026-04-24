@@ -2,6 +2,20 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.39.0] — 2026-04-23
+### Added
+- `frok.evals.LatencyDeltaWithin(max_ms)` — second baseline-
+  aware scorer, mirroring `TokenDeltaWithin` but on root-span
+  `duration_ms`. Symmetric; construction rejects negative
+  `max_ms`; `max_ms=0` is exact-parity.
+- `diff_event_streams` output gained three keys:
+  `{a_label}_latency_ms`, `{b_label}_latency_ms`,
+  `latency_delta_ms`. Backwards-compatible — existing key
+  assertions unchanged.
+- Shared private `_load_baseline_diff` helper keeps the two
+  baseline-aware scorers in lockstep on error paths.
+- Tests: 21 new (5 diff-field + 16 scorer); 616 total.
+
 ## [0.38.0] — 2026-04-23
 ### Added
 - `frok.evals.TokenDeltaWithin(max_delta)` — first baseline-
