@@ -8,7 +8,7 @@ needs to know about ``FrokConfig``.
 
 from __future__ import annotations
 
-from ..clients.grok import DEFAULT_BASE_URL, GrokClient, Transport
+from ..clients.grok import DEFAULT_BASE_URL, GrokClient, StreamingTransport, Transport
 from ..memory.embedder import HashEmbedder
 from ..memory.store import MemoryStore
 from ..multimodal.adapter import AdapterConfig, MultimodalAdapter
@@ -58,6 +58,7 @@ def build_client(
     config: FrokConfig,
     *,
     transport: Transport | None = None,
+    streaming_transport: StreamingTransport | None = None,
     tracer: Tracer | None = None,
 ) -> GrokClient:
     c = config.client
@@ -72,6 +73,7 @@ def build_client(
         timeout_s=c.timeout_s,
         max_retries=c.max_retries,
         transport=transport,
+        streaming_transport=streaming_transport,
         safety=build_safety_ruleset(config),
         tracer=tracer or build_tracer(config),
     )

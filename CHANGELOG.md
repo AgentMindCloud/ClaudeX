@@ -2,6 +2,23 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.29.0] — 2026-04-23
+### Added
+- `frok run --stream` — forward content deltas to stderr live
+  (per-case `>>> <name>` header + raw tokens). The final
+  `GrokResponse` still flows to scorers / report / baseline
+  diff. Cases with tools silently fall back to the non-stream
+  path. Incompatible with `--jobs > 1`.
+- `EvalRunner.run_case(..., stream_sink=callable)` threads a
+  per-delta callback; no-tools path uses `client.chat_stream`,
+  tools path ignores it (for now).
+- `build_client(..., streaming_transport=)` kwarg; default
+  factory now wires `urllib_streaming_transport` so
+  `--transport real` + `--stream` works out-of-the-box.
+- Tests: 8 new (parser, deltas + header to stderr, scorers see
+  final, tools fallback, `--jobs` guard, missing-streaming-
+  transport as case error); 486 total.
+
 ## [0.28.0] — 2026-04-23
 ### Added
 - `GrokClient.chat_stream(messages, …)` — async generator yielding

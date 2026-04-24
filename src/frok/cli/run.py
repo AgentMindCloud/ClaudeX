@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import Any, Callable, Sequence
 
 from ..clients.grok import GrokClient
-from ..clients.transports import urllib_transport
+from ..clients.transports import urllib_streaming_transport, urllib_transport
 from ..config import (
     FrokConfig,
     build_client,
@@ -92,6 +92,7 @@ def _default_client_factory(config: FrokConfig) -> ClientFactory:
         return build_client(
             config,
             transport=urllib_transport,
+            streaming_transport=urllib_streaming_transport,
             tracer=tracer,
         )
 
@@ -283,6 +284,12 @@ async def run_cmd(args: argparse.Namespace) -> int:
             "(Python's random state is process-global and can't be "
             "isolated across parallel tasks); keep --jobs 1 when seeding"
         )
+    if args.stream and args.jobs > 1:
+        raise CliError(
+            "--stream cannot be combined with --jobs > 1 "
+            "(stderr deltas from concurrent cases would interleave "
+            "unreadably); keep --jobs 1 when streaming"
+        )
 
     cpu_cap = os.cpu_count() or 1
     jobs = min(args.jobs, cpu_cap)
@@ -305,6 +312,18 @@ async def run_cmd(args: argparse.Namespace) -> int:
     # so the EvalReport preserves case order regardless of completion order.
     semaphore = asyncio.Semaphore(jobs)
 
+    def _stream_sink_for(case: EvalCase) -> Callable[[str], None] | None:
+        if not args.stream:
+            return None
+        sys.stderr.write(f"\n>>> {case.name}\n")
+        sys.stderr.flush()
+
+        def _write(delta: str) -> None:
+            sys.stderr.write(delta)
+            sys.stderr.flush()
+
+        return _write
+
     async def _run_unit(
         case: EvalCase,
         repeat_idx: int,
@@ -316,9 +335,19 @@ async def run_cmd(args: argparse.Namespace) -> int:
                 if args.seed is not None:
                     apply_seed(args.seed, repeat_idx)
                 runner = EvalRunner(client_factory=factory)
-                return await runner.run_case(
-                    case, repeat=repeat_idx, repeats=args.repeat
+                sink = _stream_sink_for(case)
+                result = await runner.run_case(
+                    case,
+                    repeat=repeat_idx,
+                    repeats=args.repeat,
+                    stream_sink=sink,
                 )
+                if sink is not None:
+                    # Newline after the last delta so the report doesn't run
+                    # onto the same line as the streamed answer.
+                    sys.stderr.write("\n")
+                    sys.stderr.flush()
+                return result
         finally:
             if jsonl is not None:
                 jsonl.close()
@@ -424,6 +453,17 @@ def register(sub: "argparse._SubParsersAction") -> None:
             "clamped to os.cpu_count(). Results are still collected in case "
             "order. Incompatible with --seed because `random`'s state is "
             "process-global."
+        ),
+    )
+    run.add_argument(
+        "--stream",
+        action="store_true",
+        help=(
+            "stream model deltas to stderr as they arrive (per-case header "
+            "+ live tokens). Cases with tools fall back to non-stream "
+            "silently. Requires a streaming_transport on the client (the "
+            "default factory wires urllib_streaming_transport). "
+            "Incompatible with --jobs > 1 (interleaved output)."
         ),
     )
     run.add_argument(

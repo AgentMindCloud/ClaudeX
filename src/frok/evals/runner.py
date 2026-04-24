@@ -4,6 +4,12 @@ Each case gets a fresh `InMemorySink` via the user-supplied factory, so
 runs are independent and evaluable in isolation. The runner always
 installs the sink on the client's tracer before dispatching, then
 collects the full event stream into an `Observation` for the scorers.
+
+Streaming: pass ``stream_sink=callable`` to forward each content delta
+as it arrives (used by ``frok run --stream``). Streaming is honoured
+only on cases without tools — the orchestrator loop is its own beast.
+Tools-enabled cases silently fall back to the non-stream path so
+callers can pass ``stream_sink`` unconditionally.
 """
 
 from __future__ import annotations
@@ -12,7 +18,7 @@ import inspect
 from dataclasses import dataclass, field
 from typing import Callable, Sequence
 
-from ..clients.grok import GrokClient, GrokMessage
+from ..clients.grok import GrokClient, GrokMessage, GrokResponse
 from ..telemetry import InMemorySink
 from ..tools.orchestrator import ToolOrchestrator
 from ..tools.registry import ToolRegistry
@@ -26,6 +32,7 @@ from .case import (
 )
 
 ClientFactory = Callable[[InMemorySink], GrokClient]
+StreamSink = Callable[[str], None]
 
 
 @dataclass
@@ -50,10 +57,11 @@ class EvalRunner:
         *,
         repeat: int = 0,
         repeats: int = 1,
+        stream_sink: StreamSink | None = None,
     ) -> EvalResult:
         sink = InMemorySink()
         client = self.client_factory(sink)
-        obs = await _execute(case, client, sink)
+        obs = await _execute(case, client, sink, stream_sink=stream_sink)
 
         scores: list[Score] = []
         for scorer in case.scorers:
@@ -82,9 +90,18 @@ class EvalRunner:
         )
 
 
-async def _execute(case: EvalCase, client: GrokClient, sink: InMemorySink) -> Observation:
+async def _execute(
+    case: EvalCase,
+    client: GrokClient,
+    sink: InMemorySink,
+    *,
+    stream_sink: StreamSink | None = None,
+) -> Observation:
     try:
         if case.tools:
+            # Streaming is not wired through the tool orchestrator yet; fall
+            # back to the non-stream loop so callers can pass stream_sink
+            # unconditionally.
             reg = ToolRegistry().add(*case.tools)
             orch = ToolOrchestrator(
                 client=client,
@@ -105,6 +122,25 @@ async def _execute(case: EvalCase, client: GrokClient, sink: InMemorySink) -> Ob
         if case.system:
             msgs.append(GrokMessage("system", case.system))
         msgs.extend(case.messages)
+
+        if stream_sink is not None:
+            final: GrokResponse | None = None
+            async for chunk in client.chat_stream(msgs):
+                if chunk.delta:
+                    stream_sink(chunk.delta)
+                if chunk.is_final:
+                    final = chunk.response
+            if final is None:
+                raise RuntimeError(
+                    "chat_stream ended without yielding a final chunk"
+                )
+            return Observation(
+                final_response=final,
+                messages=msgs,
+                invocations=[],
+                events=list(sink.events),
+            )
+
         resp = await client.chat(msgs)
         return Observation(
             final_response=resp,

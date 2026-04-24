@@ -2,6 +2,78 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 5 §3: stream-cli
+
+**Shipped** ``frok run --stream`` — live progress at the CLI. Long
+answers no longer look hung; operators see tokens as the model
+produces them while the `EvalReport` and scorers still get the
+same assembled `GrokResponse` they did before.
+
+* **`EvalRunner.run_case(..., stream_sink=callable)`** threads a
+  per-delta callback into `_execute`. No tools: the runner uses
+  ``client.chat_stream`` and forwards each content delta to
+  `stream_sink` as it arrives, finalising into the same
+  `GrokResponse` shape the non-stream path produces. Tools
+  present: silently falls back to the non-stream orchestrator
+  loop so callers can pass `stream_sink` unconditionally.
+* **`build_client`** learned a `streaming_transport` kwarg; the
+  `_default_client_factory` wires
+  ``frok.clients.transports.urllib_streaming_transport`` so
+  `--transport real` + `--stream` works out of the box.
+* **`frok run --stream`** CLI flag
+  * Per-case stderr header: ``\n>>> <case-name>\n``; each delta
+    flushes to stderr raw; a trailing newline separates the
+    stream from the report.
+  * Incompatible with ``--jobs > 1`` — raises `CliError`.
+    Interleaved stderr from concurrent tasks would be useless;
+    operators who want both should use ``--summary-json`` and
+    parse the machine-readable output instead.
+  * Compatible with ``--repeat`` (serial stream per repeat),
+    ``--capture-baseline``, ``--use-baseline``,
+    ``--fail-on-regression``.
+
+**Verification.** `python3 -m pytest -q` → 486 passed in 1.52s (8
+new). Tests cover: argparse default + flag recognition,
+``--stream`` writes the per-case header + every delta to stderr
+(stub streaming transport scripts "Hello", ", ", "stream!"),
+scorers still see the assembled final (case passes under
+``--fail-on-regression``), tools-enabled case silently falls back
+(header still prints, no deltas, non-stream transport fires),
+``--stream`` + ``--jobs 2`` rejected with a specific error,
+``--stream --jobs 1`` allowed, and a case whose `make_client`
+omits `streaming_transport` surfaces the client's "no
+streaming_transport" error as a case-level failure (not a CLI
+crash).
+
+**Decisions / trade-offs.**
+* Output lands on stderr, not stdout. The Markdown report is
+  stdout's job; streaming deltas are operator feedback that
+  should survive pipes redirecting stdout.
+* Tools-enabled cases silently fall back rather than streaming
+  through the orchestrator loop. Each orchestrator iteration
+  is its own chat call with its own streamed deltas —
+  merging those into a coherent single-case display would need
+  per-iteration headers / markers, which is design-work we
+  haven't done yet. Fall-back keeps the flag usable now.
+* ``--jobs > 1`` is a hard error, not a soft one. We could have
+  serialised the stderr writes with a lock, but the result
+  would be a jumble of "case A token / case B token" that
+  nobody could read. Two concurrent cases can still run under
+  ``--jobs 2`` — they just can't both stream.
+* `streaming_transport` kwarg on `build_client` rather than a
+  second factory. One config, one builder; the extra parameter
+  defaults to None so existing callers are unchanged.
+* Newline after every stream. The Markdown report starts on a
+  fresh line regardless of whether the last delta ended with
+  one.
+
+**Next suggested action:** `Extend Phase 5 §4 with streaming
+through the ToolOrchestrator loop: when --stream is set on a
+tools-enabled case, yield deltas from each chat turn prefixed
+with a per-turn marker (e.g. >>> turn 1, >>> turn 2), so tool-
+use runs get the same live feedback as no-tools runs. Removes the
+current silent fallback.`
+
 ## 2026-04-23 — Phase 5 §2: streaming
 
 **Shipped** ``GrokClient.chat_stream`` — an async generator that

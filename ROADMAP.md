@@ -76,6 +76,13 @@ builds on these three.
    post-flight safety. Tool-call deltas are reassembled.
    Telemetry: `grok.chat_stream` span. Ships with a stdlib
    `urllib_streaming_transport`. *Shipped 2026-04-23.*
+3. **stream-cli** — `frok run --stream` forwards each content
+   delta to stderr live with a `>>> <case-name>` header while
+   the final `GrokResponse` still flows to the scorers and
+   report. Tools-enabled cases silently fall back; default
+   factory wires `urllib_streaming_transport` so `--transport
+   real` + `--stream` works out-of-the-box. Incompatible with
+   `--jobs > 1` (interleaved stderr). *Shipped 2026-04-23.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable
