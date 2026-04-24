@@ -19,6 +19,7 @@ Optional in the case file:
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import importlib.util
 import json
 import re
@@ -26,7 +27,7 @@ import sys
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Sequence
 
 from ..clients.grok import GrokClient
 from ..clients.transports import urllib_transport
@@ -121,6 +122,50 @@ def load_case_file(path: Path, config: FrokConfig) -> LoadedCaseFile:
 
 
 # ---------------------------------------------------------------------------
+# pattern-based filtering (--filter / --exclude)
+# ---------------------------------------------------------------------------
+# Patterns default to fnmatch globs. Prefix with ``re:`` for a regex.
+_REGEX_PREFIX = "re:"
+
+
+def _compile_pattern(raw: str) -> tuple[str, Any]:
+    if raw.startswith(_REGEX_PREFIX):
+        body = raw[len(_REGEX_PREFIX):]
+        try:
+            return ("regex", re.compile(body))
+        except re.error as exc:
+            raise CliError(f"invalid regex in pattern {raw!r}: {exc}")
+    return ("glob", raw)
+
+
+def _pattern_matches(compiled: tuple[str, Any], name: str) -> bool:
+    kind, pattern = compiled
+    if kind == "glob":
+        return fnmatch.fnmatchcase(name, pattern)
+    return bool(pattern.search(name))
+
+
+def filter_cases(
+    cases: Sequence[EvalCase],
+    *,
+    includes: Sequence[str] = (),
+    excludes: Sequence[str] = (),
+) -> list[EvalCase]:
+    """Return the subset of ``cases`` that matches any include and no
+    exclude. With no includes, every case is considered a match."""
+    inc = [_compile_pattern(p) for p in includes]
+    exc = [_compile_pattern(p) for p in excludes]
+    out: list[EvalCase] = []
+    for case in cases:
+        if inc and not any(_pattern_matches(c, case.name) for c in inc):
+            continue
+        if any(_pattern_matches(c, case.name) for c in exc):
+            continue
+        out.append(case)
+    return out
+
+
+# ---------------------------------------------------------------------------
 # baseline capture / injection helpers
 # ---------------------------------------------------------------------------
 _SLUG_RE = re.compile(r"[^A-Za-z0-9._-]+")
@@ -183,6 +228,18 @@ async def run_cmd(args: argparse.Namespace) -> int:
         raise CliError(f"config load failed: {exc}") from exc
 
     loaded = load_case_file(args.case_file, config)
+
+    if args.filter or args.exclude:
+        original = list(loaded.cases)
+        loaded.cases = filter_cases(
+            original, includes=args.filter, excludes=args.exclude
+        )
+        if not loaded.cases:
+            raise CliError(
+                "no cases matched the filters "
+                f"(filter={list(args.filter)!r}, exclude={list(args.exclude)!r}); "
+                f"available: {[c.name for c in original]!r}"
+            )
 
     if args.use_baseline is not None:
         if not args.use_baseline.is_dir():
@@ -268,6 +325,24 @@ def register(sub: "argparse._SubParsersAction") -> None:
         "--fail-on-regression",
         action="store_true",
         help="exit non-zero when any case fails; default: always 0",
+    )
+    run.add_argument(
+        "--filter",
+        action="append",
+        default=[],
+        metavar="PATTERN",
+        help=(
+            "keep only cases whose name matches PATTERN. Glob by default "
+            "(e.g. 'safety-*'); prefix with 're:' for a Python regex "
+            "(e.g. 're:^tool-'). Repeatable — any match wins."
+        ),
+    )
+    run.add_argument(
+        "--exclude",
+        action="append",
+        default=[],
+        metavar="PATTERN",
+        help="drop cases whose name matches PATTERN (same syntax as --filter).",
     )
     run.add_argument(
         "--capture-baseline",

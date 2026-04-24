@@ -2,6 +2,18 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.14.0] — 2026-04-23
+### Added
+- `frok run --filter <PATTERN>` / `--exclude <PATTERN>` — keep/drop
+  cases by name. Fnmatch glob by default; `re:` prefix for regex;
+  both flags repeatable. Zero matches is a `CliError` that lists
+  every available case. Composes with `--capture-baseline` (only
+  filtered cases produce capture files) and `--use-baseline`.
+- `frok.cli.run.filter_cases(cases, *, includes, excludes)` —
+  library-level helper exposing the same matcher.
+- Tests: 16 new (matcher unit tests + CLI end-to-end + capture
+  interop); 263 total.
+
 ## [0.13.0] — 2026-04-23
 ### Added
 - `frok run --capture-baseline <DIR>` — writes per-case

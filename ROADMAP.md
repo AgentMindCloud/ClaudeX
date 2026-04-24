@@ -81,5 +81,11 @@ builds on these three.
    writes per-case `<slug>.jsonl` captures; `--use-baseline <dir>`
    auto-attaches them to cases without a baseline so the next
    run diffs via §2 #8 automatically. *Shipped 2026-04-23.*
-5. *Sketch:* `frok serve` (long-running agent), distributed
+5. **case-filter** — `frok run --filter <pattern>` / `--exclude
+   <pattern>` (glob by default; `re:` prefix for regex;
+   repeatable). Zero matches is an explicit `CliError` that lists
+   the available case names. Composes with `--capture-baseline` so
+   CI can re-record only the cases being iterated on.
+   *Shipped 2026-04-23.*
+6. *Sketch:* `frok serve` (long-running agent), distributed
    inference, X-native production agents, alignment red-teaming.

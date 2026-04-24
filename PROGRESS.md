@@ -2,6 +2,60 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 3 §5: case-filter
+
+**Shipped** ``frok run --filter <pattern>`` / ``--exclude <pattern>``
+so CI and local iteration can re-run a subset of cases without
+editing the case file to comment cases out.
+
+* **`frok.cli.run.filter_cases(cases, *, includes, excludes)`** —
+  pure-function helper. A case is kept when (includes empty OR any
+  include matches) AND no exclude matches.
+* **Pattern syntax**: fnmatch glob by default (``safety-*``),
+  `re:` prefix for a Python regex (``re:^tool-``). Glob comparison
+  is case-sensitive (`fnmatchcase`); regex uses `re.search` so
+  partial matches work the same way people expect from `grep`.
+* **Flags** (repeatable, union semantics):
+  * `--filter PATTERN` — keep matches.
+  * `--exclude PATTERN` — drop matches. Exclude wins over filter.
+* **Error paths**:
+  * Invalid regex → ``frok: error: invalid regex in pattern
+    're:[': …``, exit 2.
+  * Zero matches → ``frok: error: no cases matched the filters
+    (filter=…, exclude=…); available: [names…]``, exit 2. Surfacing
+    the full case-name list makes typos self-diagnosing.
+* **Interop.** Filters compose with `--capture-baseline` so only the
+  filtered cases produce capture files; with `--use-baseline` so
+  selective re-runs still regress against the recorded baseline.
+
+**Verification.** `python3 -m pytest -q` → 263 passed in 0.58s (16
+new). Tests cover: every library-level matcher (no filters, glob,
+multi-glob union, case-sensitivity, `re:` prefix, partial regex
+via search, exclude-only, filter+exclude intersect, invalid
+regex); CLI paths (single glob, regex prefix, exclude, filter +
+exclude, zero-match error with case list surfaced, invalid regex
+error); and a `--filter` + `--capture-baseline` interop test
+confirming only filtered cases produce capture files.
+
+**Decisions / trade-offs.**
+* Prefix-based syntax (`re:`) rather than a second flag. Keeps one
+  consistent knob for both `--filter` and `--exclude`, matches the
+  user's example syntax, and `re:` collisions with real case names
+  are implausible.
+* Glob is the default because most filter invocations are "give me
+  every safety-* case"; regex is the escape hatch for anchoring
+  (`re:^tool-`) or boundary-sensitive matches.
+* Zero matches is a hard error rather than a silent pass. A filter
+  that accidentally removes every case almost always means a typo;
+  we'd rather flag it than emit an empty report.
+
+**Next suggested action:** `Extend Phase 3 with \`frok run --list\`:
+print the resolved case names (after config + filter application)
+and exit, so operators can preview what a given invocation would
+run before committing to the full execution. Completes the
+discoverability loop alongside \`config show\` and \`trace
+inspect\`.`
+
 ## 2026-04-23 — Phase 3 §4: baseline-capture
 
 **Shipped** the missing piece of the baseline-regression loop:
