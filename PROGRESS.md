@@ -2,6 +2,66 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — §2 #6 agent-team-runtime
+
+**Shipped** `frok.team`: a deliberately small multi-agent scheduler
+that composes every Phase-2 wrapper (`MemoryAgent`,
+`MultimodalAdapter`, `ToolOrchestrator`, bare `GrokClient`) as a
+named `Role` inside one transcript-driven loop.
+
+* **`TeamMessage`** — frozen `(from_, to, content, meta, step)`; the
+  only data type that flows through the system.
+* **`Role`** — name + an async `respond(transcript) -> str`. The
+  runtime passes each role only the messages addressed to it (or
+  `to="all"`) so roles don't have to filter.
+* **`TeamRuntime.run(initial)`** — loops until the router returns
+  `None` (clean termination → `to="user"` on the final message) or
+  `max_hops` trips (raises `TeamError`). Each hop is wrapped in a
+  `team.hop` span nested under a `team.run` span; both share a
+  `trace_id` and carry `hops` / `terminated` so evals can regress on
+  the team tree alongside `grok.chat` / `tool.invoke` children.
+* **Routers** — three built-ins:
+  * `pipeline_router(["researcher", "writer", "editor"])` — fixed
+    linear pipeline, terminates after the last role.
+  * `callback_router(fn)` — identity passthrough for hand-written
+    supervisors.
+  * `loop_until(predicate, next_=..., max_rounds=...)` — keep
+    dispatching to `next_` until either the predicate matches on the
+    reply or the per-sender round cap is hit.
+* **Role adapters** — `chat_role_from_client(name, client, system=...)`
+  flattens the transcript into alternating `assistant` / `user`
+  turns with `[sender->recipient]` prefixes so the model can see the
+  hand-off. `echo_role(name)` is the deterministic test fixture.
+
+**Verification.** `python3 -m pytest -q` → 148 passed in 0.31s (12
+new). Tests cover single-role termination, unknown-role guard,
+pipeline walking, supervisor-style branching, `loop_until` predicate
+and round-cap paths, `max_hops` error + span metadata, per-role
+transcript filtering, and a composition test that runs two
+`GrokClient`-backed roles and asserts the telemetry tree
+(`team.run` → `team.hop` → `grok.chat`) reconstructs under one
+`trace_id`.
+
+**Decisions / trade-offs.**
+* Replies are routed **directly** to the next role (not via a
+  supervisor indirection) so every role's filtered transcript
+  includes its predecessor's hand-off. A terminal reply is addressed
+  to `"user"` — the caller.
+* The probe `TeamMessage` passed to the router has `to=""`; it's the
+  router's job to decide. This keeps the router signature from
+  depending on prior routing state.
+* No DSL for inter-role protocols. Roles are async callables,
+  routers are async callables, transcripts are lists. If a team
+  needs custom protocol logic it lives in user code, not the
+  runtime.
+
+**Next suggested action:** `Continue Phase 2 with §2 #9 config-loader:
+a layered config loader (env vars -> file -> CLI overrides) that
+produces a single typed \`FrokConfig\` object, wires the default
+\`GrokClient\` / \`MemoryStore\` / \`MultimodalAdapter\` / tracer
+instances from it, and makes it trivial to swap dev vs production
+profiles without touching call sites.`
+
 ## 2026-04-23 — §2 #5 multimodal-adapter
 
 **Shipped** `frok.multimodal`: a typed image + audio IO surface that

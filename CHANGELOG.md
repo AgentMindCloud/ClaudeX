@@ -2,6 +2,16 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.8.0] — 2026-04-23
+### Added
+- `frok.team` — `TeamRuntime` multi-agent scheduler with `Role` +
+  `Router` primitives, three built-in routers (`pipeline_router`,
+  `callback_router`, `loop_until`), and a `chat_role_from_client`
+  helper that wraps any `GrokClient` as a role. Emits nested
+  `team.run` / `team.hop` telemetry spans. (§2 #6)
+- Tests: 12 new (routing, telemetry nesting, max-hops, role
+  filtering, `GrokClient` composition); 148 total.
+
 ## [0.7.0] — 2026-04-23
 ### Added
 - `frok.multimodal` — `ImageRef` + `AudioRef` with `from_path` /

@@ -35,6 +35,12 @@ builds on these three.
    `GrokMessage.parts` threaded through safety pre-flight;
    `GrokClient.request_json` for non-chat endpoints.
 6. **agent-team-runtime** — Lightweight multi-agent scheduler.
+   *Shipped 2026-04-23:* `frok.team` (TeamRuntime + Role + Router +
+   `pipeline_router` / `callback_router` / `loop_until`).
+   `chat_role_from_client` wraps any `GrokClient` as a role; memory,
+   tools, and multimodal wrappers compose by construction. Emits
+   nested `team.run` / `team.hop` spans so §2 #8 evals can regress on
+   team behaviour through the same `InMemorySink`.
 7. **telemetry** — Structured logs, traces, and evals hook.
    *Shipped 2026-04-23:* `frok.telemetry` (Event + Null / InMemory /
    Jsonl / Multi sinks, `Tracer` with contextvar-scoped spans). Wired
