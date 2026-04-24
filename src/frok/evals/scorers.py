@@ -171,3 +171,32 @@ class NoErrors:
             details = ", ".join(f"{e.name}:{e.error}" for e in bad[:3])
             return Score.fail(sname, f"{len(bad)} span errors: {details}")
         return Score.ok(sname)
+
+
+@dataclass(frozen=True)
+class ResponseModelIs:
+    """Fails unless the assembled ``GrokResponse.model`` matches exactly.
+
+    Complements ``EvalCase.model=...`` — the case pins the request; this
+    scorer proves the *response* came from the expected model. Catches
+    silent mid-flight model swaps on the provider side that a request-
+    only pin can't detect.
+    """
+
+    expected: str
+
+    def __call__(self, case: EvalCase, obs: Observation) -> Score:
+        sname = f"response_model_is[{self.expected!r}]"
+        if obs.final_response is None:
+            return Score.fail(
+                sname,
+                "no final response — run failed before a model could be reported",
+            )
+        actual = obs.final_response.model
+        if actual == self.expected:
+            return Score.ok(sname, measure=actual)
+        return Score.fail(
+            sname,
+            f"expected model {self.expected!r}, got {actual!r}",
+            measure=actual,
+        )

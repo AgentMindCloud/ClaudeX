@@ -2,6 +2,17 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.33.0] — 2026-04-23
+### Added
+- `frok.evals.ResponseModelIs(expected)` scorer — asserts
+  `GrokResponse.model == expected`. Complements
+  `EvalCase.model=…` (which pins the request) by pinning the
+  response, catching silent provider-side model swaps. Missing
+  final response / empty-string model / mismatch all fail with
+  a triage-friendly detail; measure carries the actual model
+  string.
+- Tests: 7 new (unit + runner-integration); 534 total.
+
 ## [0.32.0] — 2026-04-23
 ### Added
 - `GrokClient.chat(..., model=)` and

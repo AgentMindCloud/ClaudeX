@@ -2,6 +2,66 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 5 §7: response-model-scorer
+
+**Shipped** ``ResponseModelIs(expected)`` — completes the
+model-regression loop. ``EvalCase.model`` (§6) pins the
+*request*; this scorer pins the *response*. Together they catch
+silent provider-side swaps that a request-only assertion would
+miss.
+
+* **`ResponseModelIs`** (`frok/evals/scorers.py`) — frozen
+  dataclass mirroring every other scorer shape.
+  `obs.final_response` None → clean ``Score.fail`` ("no final
+  response — run failed before a model could be reported");
+  mismatch → fail with both expected + actual in the detail;
+  empty-string model is treated as a mismatch, not a pass.
+  `measure` carries the actual model string so aggregated
+  reports can surface which model actually served.
+* **Export** — added to `frok.evals` public `__all__` so
+  case-file authors can ``from frok.evals import
+  ResponseModelIs``.
+
+**Verification.** `python3 -m pytest -q` → 534 passed in 1.48s (7
+new). Unit tests cover match (passes, measure carries value),
+mismatch surfaces both values in detail + measure, missing
+final-response fails cleanly, empty-string model is a
+mismatch, and the generated scorer name includes the expected
+value (grepped by aggregated reports). Integration tests run
+the scorer through ``EvalRunner`` end-to-end: a case with
+``model="grok-4-fast"`` + ``ResponseModelIs("grok-4-fast")``
+passes when the server honours the pin, fails when the server
+silently echoes ``grok-4-STALE`` — exactly the silent-swap
+scenario the scorer was written for.
+
+**Decisions / trade-offs.**
+* Named `ResponseModelIs`, not `AnswerMatchesModel`. The
+  suggestion in the prior §'s "next action" used the looser
+  phrasing; renaming here for parity with `ToolCalled` /
+  `NoErrors` / `ResponseModelIs` reads as "predicate about
+  the response's model". Scorer names are API; getting them
+  right matters.
+* Strict string equality, no fuzzy matching. A "starts-with"
+  or regex variant can layer on later if operators need to
+  pin a model family (e.g. ``grok-4*``); today's need is
+  exact-version regression.
+* Empty-string model fails rather than passing on string
+  equality with ``""`` (if expected happened to be empty).
+  A server that returned no model isn't honouring the pin
+  by accident — fail loudly.
+* No special-case for no-tools vs tools paths. The scorer
+  reads ``obs.final_response.model``; both paths populate
+  that identically, so one implementation handles both.
+
+**Next suggested action:** `Extend Phase 5 §8 with a
+\`ToolArgsMatch(name, regex=...)\` scorer: assert that at
+least one invocation of tool \`name\` has arguments matching
+a regex (or a JSON-schema predicate). The existing
+\`ToolArgsSubset\` only checks exact key/value matches;
+regex / schema unlocks fuzzier assertions like "the query
+string contains the user's question verbatim" without the
+operator hand-writing a scorer per case.`
+
 ## 2026-04-23 — Phase 5 §6: model-override
 
 **Shipped** per-call model overrides. Case authors can now pin a

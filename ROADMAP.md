@@ -108,6 +108,12 @@ builds on these three.
    both no-tools and tools paths; `grok.chat` /
    `grok.chat_stream` spans report the effective model.
    *Shipped 2026-04-23.*
+7. **response-model-scorer** — `ResponseModelIs(expected)`
+   asserts the assembled `GrokResponse.model` equals the
+   expected string. Complements `EvalCase.model=…` (which
+   pins the *request*) by proving the *response* came from
+   the expected model — catches silent mid-flight provider
+   swaps. *Shipped 2026-04-23.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable
