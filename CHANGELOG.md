@@ -2,6 +2,18 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.37.0] — 2026-04-23
+### Added
+- `frok.evals.AnswerLength(min_chars=None, max_chars=None)`
+  scorer — shape gate complementing content-based scorers.
+  At least one bound required; construction validates
+  non-negative bounds and `min <= max`. Scorer name reflects
+  the active bounds (`>=N`, `<=M`, or `>=N,<=M`); measure
+  carries the observed length.
+- Tests: 17 new (4 construction errors + all three bound
+  modes + bounds edges + no-final-response + name formatting
+  + measure); 579 total.
+
 ## [0.36.0] — 2026-04-23
 ### Added
 - `frok.evals.InvocationsWithin(max_count)` scorer — asserts

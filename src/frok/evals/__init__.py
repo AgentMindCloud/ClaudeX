@@ -20,6 +20,7 @@ from .runner import ClientFactory, EvalRunner
 from .scorers import (
     AnswerAbsent,
     AnswerContains,
+    AnswerLength,
     AnswerMatches,
     InvocationsWithin,
     LatencyWithin,
@@ -37,6 +38,7 @@ from .scorers import (
 __all__ = [
     "AnswerAbsent",
     "AnswerContains",
+    "AnswerLength",
     "AnswerMatches",
     "ClientFactory",
     "EvalCase",

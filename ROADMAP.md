@@ -132,6 +132,13 @@ builds on these three.
     `ToolCalled(..., times=N)`'s per-tool exact count. Catches
     prompt regressions that start over-calling tools without
     needing one scorer per tool. *Shipped 2026-04-23.*
+11. **answer-length** — `AnswerLength(min_chars=None,
+    max_chars=None)` asserts the assembled response length
+    falls within a range. Complements `AnswerContains` /
+    `AnswerMatches` (content) with a shape gate. At least one
+    bound required; inclusive comparisons; construction
+    validates `min <= max` and non-negative bounds.
+    *Shipped 2026-04-23.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable

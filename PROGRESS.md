@@ -2,6 +2,70 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 5 §11: answer-length
+
+**Shipped** ``AnswerLength(min_chars=None, max_chars=None)`` —
+the shape gate complementing ``AnswerContains`` / ``AnswerMatches``
+(content). Catches prompt regressions that start producing
+one-word replies (set ``min_chars``) or runaway prompts that
+emit long preambles before the actual answer (set ``max_chars``).
+
+* **`AnswerLength`** (`frok/evals/scorers.py`) — frozen
+  dataclass. Reads ``len(obs.answer)`` (which returns "" when
+  no final response, so length 0 — consistent with the rest of
+  the scorer family).
+* **Construction validation** — ``__post_init__`` raises
+  `ValueError` for the four malformed cases:
+    * both bounds None (nothing to assert)
+    * negative ``min_chars``
+    * negative ``max_chars``
+    * ``min_chars > max_chars`` (contradictory)
+  ``min_chars == max_chars`` is allowed as "exact length".
+* **Scorer name** dynamically reflects active bounds:
+  ``answer_length[>=5]`` for min-only, ``answer_length[<=100]``
+  for max-only, ``answer_length[>=3,<=10]`` for both. Aggregate
+  reports can grep on exact / asymmetric / two-sided variants.
+* **Measure** carries the observed length whether pass or
+  fail — useful when post-hoc scanning runs to spot trends
+  (e.g. "the 95p answer length crept from 80 to 150 chars
+  over the last 20 baselines").
+
+**Verification.** `python3 -m pytest -q` → 579 passed in 1.75s
+(17 new). Tests cover: all four construction-error branches,
+``min == max`` allowed as exact-length, min-only passes at/above
++ fails below, max-only passes at/below + fails above, both
+bounds' closed-range pass + below-min + above-max fail paths,
+empty answer (``obs.final_response is None``) correctly reports
+length 0, scorer name formatting for min-only / max-only /
+both, and measure always carries the observed length.
+
+**Decisions / trade-offs.**
+* Character-based, not token-based. Operators who need token
+  ceilings layer ``TokensWithin`` alongside; a character
+  gate doesn't need a tokenizer dependency and works
+  identically across models.
+* At-least-one-bound required at construction, not at call
+  time. Fails fast when the case file loads, not on every
+  invocation that silently asserts nothing.
+* Empty answer (no final response) has length 0 — same
+  contract the rest of the scorer family uses. Cases that
+  need to fail on "no response at all" pair this with
+  ``NoErrors``.
+* ``min_chars == max_chars`` is allowed. An operator asserting
+  a specific-length response (e.g. "yes/no answer") is a
+  legitimate use; rejecting equality would force them to
+  write two inequality scorers.
+
+**Next suggested action:** `Extend Phase 5 §12 with a
+\`TokenDeltaWithin(max_tokens, baseline=None)\` scorer: when a
+baseline capture is attached (via \`case.baseline\`), assert
+the token delta between observed and baseline runs stays
+within a threshold. The existing baseline differ reports the
+delta but never gates CI on it; this scorer lets operators
+catch a prompt change that quietly doubled tokens without
+diverging tool order (which would trip the existing
+regressed=True flag).`
+
 ## 2026-04-23 — Phase 5 §10: invocations-ceiling
 
 **Shipped** ``InvocationsWithin(max_count)`` — the aggregate

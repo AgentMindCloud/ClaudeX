@@ -63,6 +63,64 @@ class AnswerAbsent:
 
 
 @dataclass(frozen=True)
+class AnswerLength:
+    """Assert the assembled response length stays within a range.
+
+    Complements `AnswerContains` / `AnswerMatches` (content) with a
+    *shape* check. Catches prompt regressions that start producing one-
+    word replies (set ``min_chars``) or runaway prompts that emit long
+    preambles before the actual answer (set ``max_chars``). At least one
+    bound is required; both can be set for a closed range. Character-
+    based (not tokens); operators who need token-level gating layer
+    ``TokensWithin`` alongside.
+    """
+
+    min_chars: int | None = None
+    max_chars: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.min_chars is None and self.max_chars is None:
+            raise ValueError(
+                "AnswerLength requires at least one of min_chars or max_chars"
+            )
+        if self.min_chars is not None and self.min_chars < 0:
+            raise ValueError(f"min_chars must be >= 0, got {self.min_chars}")
+        if self.max_chars is not None and self.max_chars < 0:
+            raise ValueError(f"max_chars must be >= 0, got {self.max_chars}")
+        if (
+            self.min_chars is not None
+            and self.max_chars is not None
+            and self.min_chars > self.max_chars
+        ):
+            raise ValueError(
+                f"min_chars ({self.min_chars}) > max_chars ({self.max_chars})"
+            )
+
+    def __call__(self, case: EvalCase, obs: Observation) -> Score:
+        bounds: list[str] = []
+        if self.min_chars is not None:
+            bounds.append(f">={self.min_chars}")
+        if self.max_chars is not None:
+            bounds.append(f"<={self.max_chars}")
+        sname = f"answer_length[{','.join(bounds)}]"
+
+        length = len(obs.answer)
+        if self.min_chars is not None and length < self.min_chars:
+            return Score.fail(
+                sname,
+                f"length {length} < min {self.min_chars}",
+                measure=length,
+            )
+        if self.max_chars is not None and length > self.max_chars:
+            return Score.fail(
+                sname,
+                f"length {length} > max {self.max_chars}",
+                measure=length,
+            )
+        return Score.ok(sname, measure=length)
+
+
+@dataclass(frozen=True)
 class NoSafetyBlocks:
     def __call__(self, case: EvalCase, obs: Observation) -> Score:
         name = "no_safety_blocks"
