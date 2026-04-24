@@ -2,6 +2,19 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.24.0] — 2026-04-23
+### Added
+- `frok doctor` preflight health check. Loads the resolved config
+  and runs one Check per Phase-2 subsystem (config, safety,
+  telemetry, memory, multimodal, live client.chat). Flags:
+  `-c/--config`, `-p/--profile`, `-o/--output`, `--json`,
+  `--no-live`, `--fail-on-skip`. Exit 1 on any FAIL (or any SKIP
+  under `--fail-on-skip`).
+- `frok.cli.doctor.Check` dataclass, `PASS`/`FAIL`/`SKIP`
+  constants, library-level `check_*` helpers, `render_markdown` /
+  `render_json` renderers.
+- Tests: 26 new (library + CLI paths); 431 total.
+
 ## [0.23.0] — 2026-04-23
 ### Added
 - `frok init --list-examples` — print the available `--example`

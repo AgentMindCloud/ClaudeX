@@ -2,6 +2,79 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 4 §4: doctor
+
+**Shipped** ``frok doctor`` — the "does my setup actually work?"
+preflight. Loads the resolved `FrokConfig` (same env + file +
+profile merging the real run uses), runs one check per Phase-2
+subsystem, and reports a PASS / FAIL / SKIP line for each.
+
+* **`Check(name, status, detail)`** dataclass; ``PASS`` / ``FAIL`` /
+  ``SKIP`` constants used everywhere for consistent filtering.
+* **Library-level checks** (`frok/cli/doctor.py`)
+  * ``check_config`` — reports the resolved profile + source.
+  * ``check_safety`` — builds the ruleset and reports active /
+    disabled rule counts.
+  * ``check_telemetry`` — builds the configured sink, then closes
+    it. `jsonl` without a path fails here.
+  * ``check_memory`` — SKIP when disabled; otherwise builds the
+    store, does a `remember → recall → forget` round-trip, and
+    reports ok. Fails loudly on unsupported embedders or I/O
+    errors.
+  * ``check_multimodal`` — reports vision/voice toggle state.
+  * ``check_client_live`` — skipped without ``client.api_key`` or
+    with ``--no-live``; otherwise fires a real
+    ``client.chat([GrokMessage("user", "ping")])`` through
+    ``urllib_transport`` and reports token usage + model.
+    Transport is injectable for tests.
+* **`frok doctor` CLI** — wraps `_collect_checks` + `render_markdown`
+  (default) / `render_json` (``--json``). Flags: ``-c/--config``,
+  ``-p/--profile``, ``-o/--output``, ``--json``, ``--no-live``,
+  ``--fail-on-skip``. Exit codes: 1 on any FAIL, 1 on any SKIP
+  under ``--fail-on-skip``, else 0. Config load failure surfaces
+  as ``CliError`` (exit 2) — same shape as the rest of the
+  Phase-3 family.
+
+**Verification.** `python3 -m pytest -q` → 431 passed in 1.32s (26
+new). Library tests cover each check (config source reporting,
+safety rule counting + disabled-rule surfacing, telemetry null /
+jsonl-missing-path / jsonl-valid-path, memory skip / round-trip /
+unsupported embedder, multimodal toggle reflection, client-live
+skip-without-api-key / skip-under-no-live / pass-with-stub /
+fail-on-500) and the renderers (markdown section presence + total
+line, JSON shape + round-trip). CLI tests cover argparse shape +
+defaults, happy-path markdown, ``--json`` parseability, ``-o``
+file write, ``--fail-on-skip`` exit 1 when anything skips,
+telemetry-failure producing exit 1, ``--no-live`` skipping
+client-live even with an api_key present, config-load failure
+surfacing as CliError, and an explicit ``-c`` flag reaching the
+config check.
+
+**Decisions / trade-offs.**
+* Live chat hits the real API by default when an api_key is
+  present. The alternative — opt-in with `--live` — would
+  silently SKIP the check that most operators actually want
+  when they run doctor. ``--no-live`` is the escape hatch for
+  offline / CI-without-secret cases.
+* Memory check does a full remember → recall → forget cycle
+  rather than just opening the DB. Catches embedder
+  misconfigurations and WAL-mode surprises that a pure
+  open-and-close wouldn't.
+* ``--fail-on-skip`` opt-in. A SKIP almost always means "not
+  configured yet, but not broken" — the default exit code
+  should keep that honest. Operators enforcing a fully
+  configured stack in CI get the strict mode with one flag.
+* Transport is injectable on ``check_client_live`` but not on
+  the other checks. Memory and telemetry are covered by the
+  Phase-2 tests; what we need to isolate here is the network
+  call.
+
+**Next suggested action:** `Extend Phase 4 with \`frok version\`:
+print the installed package version (from \`frok.__version__\`) and
+the Python runtime it's running on (platform.python_version()).
+Small but essential for bug reports — the first thing any triage
+asks is "what version?"`
+
 ## 2026-04-23 — Phase 4 §3: init-list-examples
 
 **Shipped** ``frok init --list-examples`` — a discoverability flag

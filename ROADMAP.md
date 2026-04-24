@@ -81,6 +81,12 @@ builds on these three.
    docstring via `ast.get_docstring`). Early-exits before any I/O;
    short-circuits every other `init` flag.
    *Shipped 2026-04-23.*
+4. **doctor** — `frok doctor` preflight health check. Runs one
+   `Check` per major Phase-2 subsystem (config, safety, telemetry,
+   memory, multimodal, live client.chat) and prints PASS / FAIL /
+   SKIP. Live chat ping honours `client.api_key` + `--no-live`.
+   Flags: `-c`, `-p`, `-o`, `--json`, `--no-live`, `--fail-on-skip`.
+   *Shipped 2026-04-23.*
 
 ## Phase 3 — Wiring + operations
 1. **cli-runner** — `frok run <case-file>` entry point wiring

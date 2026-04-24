@@ -10,6 +10,8 @@ from ..config import ConfigError
 from .common import CliError
 from .config import register as _register_config
 from .config import show_cmd
+from .doctor import doctor_cmd
+from .doctor import register as _register_doctor
 from .eval import diff_cmd, summarize_cmd
 from .eval import register as _register_eval
 from .init import init_cmd
@@ -30,6 +32,7 @@ __all__ = [
     "LoadedCaseFile",
     "build_parser",
     "diff_cmd",
+    "doctor_cmd",
     "init_cmd",
     "inspect_cmd",
     "load_case_file",
@@ -48,6 +51,7 @@ def build_parser() -> argparse.ArgumentParser:
     _register_config(sub)
     _register_eval(sub)
     _register_init(sub)
+    _register_doctor(sub)
     return p
 
 
