@@ -37,7 +37,18 @@ You operate with Grok's personality: maximally truthful, helpful, witty, curious
 - For Super AI Frok specifically: Focus on agent teams, persistent memory, X-native features, and scalable super-intelligence architectures.
 
 ## Current Active Phase
-[Update this section with your current big goal, e.g. "Phase 1: Full codebase audit + 5 high-impact Grok/X integrations for Frok v0.1"]
+**Phase 0: Bootstrap** (started 2026-04-23 — awaiting user confirmation of scope)
+
+Goal: Turn this empty repository into a navigable skeleton so later phases have something to build on. No product code yet — just scaffolding that subsequent autonomous runs will assume exists.
+
+Acceptance criteria:
+- `README.md` exists with project pitch, repo layout, and how to contribute.
+- `ROADMAP.md` exists with proposed Phase 1..N (user to approve/edit).
+- `CLAUDE.md` "Primary Repos & Focus Areas" (lines 8–15) is filled with real targets (still needs user input).
+- `PROGRESS.md` / `CHANGELOG.md` conventions established.
+- Zero fabricated code or capability claims.
+
+Exit condition: User approves Phase 1 scope in `ROADMAP.md`, or edits it to their own.
 
 ## Useful Commands / Patterns I Like
 - Use subagents for parallel research.

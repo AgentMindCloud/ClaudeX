@@ -1,0 +1,438 @@
+# Add minimum CI to x-platform-toolkit (html-validate + stylelint + link-check + Live-vs-Spec consistency)
+
+<!-- phase-1b metadata (do not paste into the GitHub issue body) -->
+- **§2 rec**: #19 (`audits/99-recommendations.md`)
+- **Target repo (primary + only)**: AgentMindCloud/x-platform-toolkit
+- **Risks closed**: SUP-5 (S3) outright — from `audits/98-risk-register.md`.
+- **Source audits**: `[→ 11 §9 row 1]`. Supporting: `audits/11-x-platform-toolkit.md §5, §7, §11 row 1` (no workflows directory; `.editorconfig` only; weakest CI posture in the ecosystem).
+- **Effort (§2)**: M — four jobs (html-validate + stylelint + lychee link-check + Live-vs-Spec consistency) in one workflow file plus per-tool config where needed. S-adjacent in pure engineering; M because the 20-tool monorepo shape means iterating the workflow's matrix / per-tool handling takes a pass or two.
+- **Blocked by (§2)**: none — non-speculative, independent of every other §2 rec.
+- **Suggested labels**: `ci`, `supply-chain`, `quality`, `phase-1b`
+
+---
+
+## Context
+
+`x-platform-toolkit` is the only repo in the Grok ecosystem
+with **zero CI**. No `.github/workflows/` directory, no
+linter config beyond `.editorconfig`, no test runner (by
+design — the 8 Live tools are single-file HTMLs meant to be
+opened directly). Every supply-chain or quality regression
+that would be caught elsewhere — a broken link in a
+per-tool README, a malformed HTML attribute on a Live
+tool, a `style.css` rule using an undefined token,
+adding an `index.html` while forgetting to re-label the
+tool's status to Live in the top-level README — lands on
+`main` unobserved.
+
+The fix is not a full CI pipeline. It's a minimum four-job
+workflow that catches the classes of regression the repo
+is most likely to ship:
+
+1. **`html-validate` on the 8 Live `index.html` files** —
+   catches malformed tags, missing required attributes,
+   broken `<script>` or `<link>` references, accessibility
+   basics (alt text, labelled inputs).
+2. **`stylelint` on `shared/ui-kit/*.css`** — the inlined
+   tokens and components CSS is the one shared asset the
+   Live tools consume by copy. Linting it once prevents
+   20-downstream propagation of the same rule-ordering or
+   token-naming error.
+3. **`lychee` link-check on all `*.md` files** — the repo
+   has 20 per-tool READMEs + a top-level README + SPEC.md
+   files in 12 tool directories. External link rot is the
+   most visible quality regression on a "plans" artefact.
+4. **Live-vs-Spec consistency check** (repo-specific;
+   small Bash or Python script) — asserts the invariant
+   that each tool's status in the top-level README matches
+   whether its directory contains `index.html`. A tool
+   listed as "Live" with no `index.html` is a lie; a tool
+   listed as "Spec'd" with an `index.html` is drift the
+   next contributor won't notice.
+
+This is the single highest-leverage CI addition in the
+ecosystem because the floor is zero. Every other CI-enabled
+repo can debate whether to add a new lint layer; this repo
+debates whether to lint at all. M-effort is honest — four
+jobs, some per-tool matrix, one repo-specific consistency
+script — but every job is independently useful and
+incremental landing works.
+
+Closes SUP-5 outright. This is the last §2 rec undrafted
+after six passes; drafting it completes the §2 top-20.
+
+## Evidence
+
+From `main` snapshot on 2026-04-23 (WebFetch; paths stable).
+
+**Repo shape** — `audits/11-x-platform-toolkit.md §1, §2, §11`:
+- 20 tools under `tools/NN-<slug>/`. 8 Live (directory
+  contains `README.md` + `index.html`); 12 Spec'd
+  (directory contains `README.md` + `SPEC.md`).
+- `shared/grok-client/`, `shared/x-api-client/`,
+  `shared/ui-kit/` (tokens.css, components.css, shell.html,
+  README.md). Live tools inline `tokens.css` +
+  `components.css` per the `ui-kit` README.
+- Top-level files: `.editorconfig`, `.gitignore`,
+  `CHANGELOG.md`, `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`,
+  `LICENSE`, `README.md`. `.github/ISSUE_TEMPLATE/` present;
+  **no `.github/workflows/` directory**.
+- Language mix: HTML 93.4%, CSS 4.7%, JS 1.9% — concentrated
+  in the 8 Live tools' inline bundles.
+- Maturity: 1★, 0 forks, 0 issues, 0 PRs, 4 commits total.
+
+**Verified Live tool** — `audits/11-x-platform-toolkit.md §11 row 6`:
+- `tools/05-pinned-post-ab-rotator/` contains `README.md` +
+  `index.html`. This is the Live-shape archetype.
+
+**Verified Spec'd tools** — `audits/11-x-platform-toolkit.md §11 rows 3–5`:
+- `tools/01-thread-decay-tracker/` — `README.md` + `SPEC.md`.
+- `tools/19-grok-thread-composer/` — `README.md` + `SPEC.md`.
+- `tools/06-digital-product-storefront/` — `README.md` +
+  `SPEC.md`.
+- The Spec'd-shape archetype is `README.md` + `SPEC.md`.
+
+**Full 8-Live list not yet enumerated** — `audits/11 §10` flags
+"Which 8 tools are exactly Live? Audit sampled 4 of 20; inferred
+from file listings". Part B's consistency check is the
+mechanism that enumerates them authoritatively.
+
+**Risk register** — `audits/98-risk-register.md`:
+- **SUP-5** (S3, L-high, `open`): "`x-platform-toolkit` has
+  no CI of any kind — no dependency scanning, no lint, no
+  build verification; supply-chain regressions are
+  invisible."
+
+**Why reach is 2, not 1** —
+`audits/99-recommendations.md §2` (footnote under §2 #19):
+
+> "The toolkit hosts 8 of 20 advertised user-facing tools
+> that *read live spec versions*, so a CI consistency check
+> there protects every downstream user against silent
+> spec-drift. Scored reach=2 on that argument. If a Phase
+> 1B reviewer disagrees, demote it to §3."
+
+This draft agrees with the reach=2 argument — the
+Live-vs-Spec consistency check (Part B) is what makes this
+rec ecosystem-relevant rather than purely local hygiene.
+The 8 Live tools that read live spec versions are the
+surface where the toolkit's claims can silently become
+untrue.
+
+**Related §2 cross-refs**:
+- §2 #3 (SHA-pin actions + Renovate) — this repo is in §2
+  #3's 8-repo checklist. Landing §2 #19 here first creates
+  the `.github/workflows/` directory §2 #3 then adds
+  SHA-pinning to. No hard dependency either way.
+- §2 #2 (shared Grok API client) — §2 #2's JS consumer path
+  is explicitly out of scope. This rec does not coordinate
+  with §2 #2.
+- No other §2 cross-refs.
+
+**What this rec does NOT close**:
+- `shared/grok-client/` consolidation (audit 11 §9 row 2,
+  L-effort, separate row).
+- Token-handling architecture documentation (audit 11 §9
+  row 3, S-effort, separate row).
+- Moving Live tools above the 50% threshold by shipping
+  more (audit 11 §9 row 4, author time).
+- Hosted demo index page (audit 11 §9 row 5, S-effort,
+  separate row).
+
+## Acceptance criteria
+
+Two parts. Part A ships the three ecosystem-standard lint /
+link jobs (html-validate + stylelint + lychee). Part B ships
+the repo-specific Live-vs-Spec consistency check. The issue
+closes when CI is green on `main` after all four jobs land
+(three in Part A, one in Part B), and a PR that deliberately
+introduces a regression (malformed HTML, unknown CSS token,
+broken link, mis-labelled tool status) fails CI cleanly.
+
+### Part A — Lint + link-check jobs
+
+Create `.github/workflows/validate.yml` (name matches the
+ecosystem convention already used by `grok-install` and
+`grok-yaml-standards`). Single workflow, three jobs, runs
+on `push` + `pull_request`.
+
+- [ ] **Job 1 — `html-validate`**:
+      - Scope: every `tools/*/index.html` (the 8 Live
+        tools). Spec'd tools have no HTML to validate.
+      - Config: `.html-validate.json` at repo root with
+        `extends: ["html-validate:recommended"]`. The
+        `recommended` preset covers: required attributes
+        (`alt` on `img`, `label` on `input`), closing tags,
+        attribute quoting, duplicate `id`, invalid
+        nesting, etc.
+      - Install: `npm install --no-save html-validate@<pinned>`
+        in the workflow step (no `package.json` at repo
+        root needed — single dep, no lockfile to maintain).
+      - Fail on **error**, warn on **warning** (configurable
+        later; default posture is "any error blocks merge").
+      - Output: on failure, the GitHub annotation shows
+        line numbers in the failing `index.html`.
+- [ ] **Job 2 — `stylelint`**:
+      - Scope: `shared/ui-kit/*.css` — the two files
+        (`tokens.css`, `components.css`) that Live tools
+        inline. Per-tool CSS is inside `index.html` and
+        covered by the html-validate job's CSS parsing.
+      - Config: `.stylelintrc.json` at repo root with
+        `extends: ["stylelint-config-standard"]`. The
+        `standard` preset covers: no-invalid-hex-colors,
+        no-duplicate-selectors, declaration-block-no-shorthand-
+        property-overrides, etc.
+      - Custom rule: `custom-property-pattern` enforcing
+        `tokens.css`'s naming convention (confirm the
+        pattern with the maintainer; `^--[a-z][a-z0-9-]+$`
+        is the typical starting point).
+      - Install: `npm install --no-save stylelint@<pinned>
+        stylelint-config-standard@<pinned>` inline in the
+        step.
+      - Fail on any violation.
+- [ ] **Job 3 — `lychee` link-check**:
+      - Scope: every `*.md` in the repo — top-level
+        `README.md`, 20 × `tools/*/README.md`, 12 ×
+        `tools/*/SPEC.md`, `shared/ui-kit/README.md`,
+        `CHANGELOG.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`.
+      - Use the ecosystem-standard `lycheeverse/lychee-action`
+        (matches `grok-docs` + `awesome-grok-agents` usage).
+      - Accept HTTP 200, 204, 206; tolerant on 403 and 429
+        (X / social links rate-limit unauthenticated fetches —
+        matches `awesome-grok-agents` pattern per audit 06
+        §5).
+      - Offline mode OFF (this repo's external-link check
+        is the whole point; an offline-only check misses
+        X / X-article / SPEC-referenced URLs).
+      - Fail on broken links; allow a `.lycheeignore`
+        regex file at repo root for known-flaky URLs.
+- [ ] **Action pinning**: every action (actions/checkout,
+      actions/setup-node, lycheeverse/lychee-action, etc.)
+      pinned by 40-char SHA with trailing `# v<tag>`
+      comment — matches §2 #3 ecosystem discipline from
+      day one. This repo is in §2 #3's checklist; doing
+      the pinning here at CI-landing time avoids a later
+      SHA-pin-only PR.
+- [ ] **Concurrency**: `cancel-in-progress: true` on the
+      same ref, to match the ecosystem convention.
+- [ ] **Permissions**: workflow-level `contents: read`
+      only. No write scopes needed for this lint-only
+      workflow.
+- [ ] **Install versions exact-pinned**: `html-validate`,
+      `stylelint`, `stylelint-config-standard` all at
+      specific tagged versions in the workflow step.
+      Matches `grok-yaml-standards`' exact-pin discipline
+      for `ajv-cli` / `js-yaml` / `yamllint`.
+
+### Part B — Live-vs-Spec consistency check
+
+Repo-specific invariant: a tool listed as **Live** in the
+top-level `README.md` MUST have an `index.html` in its
+directory; a tool listed as **Spec'd** MUST have a `SPEC.md`
+and MUST NOT have an `index.html`. The fourth job enforces
+this invariant in CI so Live/Spec drift is caught the
+moment it lands rather than on audit-time sampling.
+
+- [ ] **Write the consistency script**
+      (`scripts/check-live-vs-spec.py` or a small Node
+      equivalent — Python recommended for parity with
+      `grok-docs` / `awesome-grok-agents` tooling):
+
+      ```python
+      #!/usr/bin/env python3
+      """
+      Verify every tool's Live/Spec status matches its file shape.
+      Exit 0 on pass; exit 1 on any drift with a readable report.
+      """
+      from pathlib import Path
+      import re
+      import sys
+
+      ROOT = Path(__file__).resolve().parent.parent
+      README = (ROOT / "README.md").read_text(encoding="utf-8")
+      TOOLS = ROOT / "tools"
+
+      # Parse the top-level README's Live/Spec table.
+      # Convention: each tool row matches a pattern like
+      #   "| 05 | pinned-post-ab-rotator | Live |"
+      # Adjust the regex below to match whatever the README uses;
+      # the first version of the script is likely to need
+      # iteration against the actual README shape.
+      declared = {}
+      for line in README.splitlines():
+          m = re.match(
+              r"^\|\s*(\d{2})\s*\|\s*([a-z0-9-]+)\s*\|\s*(Live|Spec'd)\s*\|",
+              line,
+          )
+          if m:
+              num, slug, status = m.groups()
+              declared[f"{num}-{slug}"] = status
+
+      errors = []
+      for tool_dir in sorted(TOOLS.iterdir()):
+          if not tool_dir.is_dir():
+              continue
+          name = tool_dir.name
+          has_html = (tool_dir / "index.html").exists()
+          has_spec = (tool_dir / "SPEC.md").exists()
+          has_readme = (tool_dir / "README.md").exists()
+
+          status = declared.get(name)
+          if status is None:
+              errors.append(f"{name}: not declared in README")
+              continue
+          if not has_readme:
+              errors.append(f"{name}: README.md missing")
+          if status == "Live":
+              if not has_html:
+                  errors.append(f"{name}: declared Live but index.html missing")
+              if has_spec:
+                  errors.append(f"{name}: declared Live but SPEC.md present (stale?)")
+          elif status == "Spec'd":
+              if not has_spec:
+                  errors.append(f"{name}: declared Spec'd but SPEC.md missing")
+              if has_html:
+                  errors.append(f"{name}: declared Spec'd but index.html present (undeclared Live?)")
+
+      # Also check the reverse: tools in README but missing on disk
+      for name in declared:
+          if not (TOOLS / name).is_dir():
+              errors.append(f"{name}: declared in README but directory missing")
+
+      if errors:
+          print("Live-vs-Spec consistency check FAILED:")
+          for e in errors:
+              print(f"  - {e}")
+          sys.exit(1)
+      print(f"OK — {len(declared)} tools consistent with README.")
+      sys.exit(0)
+      ```
+
+      First version of the script will need one iteration
+      against the actual README shape (the regex pattern
+      assumes the maintainer's convention; adjust as
+      needed).
+
+- [ ] **Job 4 — `live-vs-spec`** in `validate.yml`:
+
+      ```yaml
+      live-vs-spec:
+        name: Live-vs-Spec consistency
+        runs-on: ubuntu-latest
+        steps:
+          - uses: actions/checkout@<SHA>  # v4
+          - uses: actions/setup-python@<SHA>  # v5
+            with: { python-version: '3.12' }
+          - run: python scripts/check-live-vs-spec.py
+      ```
+
+      No Python deps needed — stdlib only. Fast job; runs
+      under 5 seconds.
+
+- [ ] **Derivative — top-level README generation**:
+      once the consistency check is green, optionally
+      auto-generate the Live/Spec table in the top-level
+      README from the same source (tools directory +
+      file shapes). Out of scope for v1 of this rec;
+      document as a follow-up in the workflow's comments.
+
+- [ ] **Close SUP-5 in the risk register**: once the
+      workflow lands green on `main`, `98-risk-register.md`
+      row SUP-5 flips from `open` to `mitigated`. The
+      Phase-1B review layer (not this repo) owns that
+      flip; flag in the filed issue so reviewers remember
+      to update the audit trail.
+
+- [ ] **First-run expected behaviour**: on the PR that
+      introduces `validate.yml`, all four jobs should
+      pass against the current `main`. If any fail, the
+      failures are **pre-existing drift** this rec surfaces
+      — fix in the same PR (adjust the README's Live/Spec
+      table to match reality, or fix the `index.html` /
+      `SPEC.md` asymmetry — whichever matches the
+      maintainer's intent).
+      Document the initial discrepancy list in the PR
+      description so the audit trail of the first-run
+      is explicit.
+
+## Notes
+
+- **Why M-effort, not S.** Part A is close to S-effort —
+  three standard lint jobs with well-known configs. Part
+  B's consistency script is the weight. The regex against
+  the README shape will need one iteration; the script
+  needs test coverage (a small `tests/fixtures/` with
+  intentionally-broken README + tool-directory fixtures
+  so the script's own correctness is checked in CI). M
+  captures that iteration cost honestly.
+
+- **Why `.github/workflows/validate.yml` (not `ci.yml`).**
+  Matches the existing ecosystem naming in `grok-install/
+  validate.yml` and `grok-yaml-standards/validate-schemas.yml`.
+  A future `ci.yml` with build/deploy semantics (if the
+  toolkit ever gains a build step) stays separable from
+  the always-on linting.
+
+- **What this rec does NOT add**:
+  - A full dependency-review / `npm audit` step.
+    Justification: the toolkit has no `package.json`;
+    `npm install --no-save <pin>` inline in the workflow
+    steps above pulls tools for the run, not as
+    declared runtime deps. If a `package.json` emerges
+    (e.g. for a build step), add dependency-review at
+    that time.
+  - `gitleaks` / secret scanning. §2 #13 covers
+    secret-scanning as an ecosystem-wide concern and
+    recommends GitHub's native secret-scanning for
+    ecosystem-wide coverage. The toolkit inherits that
+    once it is enabled org-wide. This workflow does not
+    duplicate.
+  - JavaScript linting of inlined `<script>` blocks in
+    Live `index.html` files. Worth doing long-term
+    (ESLint configured to parse HTML via the appropriate
+    plugin), but out of scope for v1 — Part A's
+    html-validate catches the most common mistakes
+    (missing closing tags, invalid nesting) and the
+    explicit "each Live tool re-implements its logic"
+    finding in audit 11 §7 is a design constraint, not a
+    defect.
+  - Live-tool behaviour tests (Playwright / Puppeteer).
+    Each Live tool is a self-contained HTML opened in
+    a browser; end-to-end testing requires infrastructure
+    this rec isn't building. Out of scope.
+
+- **Relationship to §2 #3 (SHA-pin actions).** Part A
+  pins every action by SHA from day one. This repo is in
+  §2 #3's 8-repo checklist; landing §2 #19 first means
+  §2 #3's work here is already done.
+
+- **Relationship to §2 #18 (CI template adoption).**
+  §2 #18 promotes `grok-build-bridge`'s Python-centric CI
+  workflow. The toolkit's workflow here is HTML/CSS/link-
+  focused — the §2 #18 template doesn't apply 1:1. Flag
+  this workflow as a candidate for a future "JS/HTML-
+  flavour sibling template" extraction if §2 #18 grows
+  a multi-language form. Out of scope for this rec.
+
+- **Relationship to §2 #2 (shared Grok API client).**
+  §2 #2 is Python-first; this repo's `shared/grok-client/`
+  is JS. Not a consumer of §2 #2 in v0.1.0.
+
+- **SUP-5 closure mechanics.** On PR merge:
+  `audits/98-risk-register.md` row SUP-5 flips from
+  `open` to `mitigated`. Flag explicitly in the filed
+  issue body and in a final sub-bullet of Part B's
+  acceptance list — the audit-trail bump is the user's
+  responsibility post-merge, not the upstream maintainer's.
+
+- **§2 top-20 drafting complete.** This is the last §2
+  rec drafted in Phase 1B. 20 of 20 §2 recs now have
+  ready-to-file issue bodies under `phase-1b/drafts/`
+  once this rec merges into the repo. Flag in PROGRESS.md
+  + ROADMAP.md at session close.
+
+- **Filing strategy.** Single primary issue in
+  `x-platform-toolkit`. No cross-refs — this rec is
+  local to one repo. Independent of every other §2 rec's
+  filing timing.
+
