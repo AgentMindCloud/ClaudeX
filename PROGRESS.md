@@ -2,6 +2,60 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 3 §3: config-show
+
+**Shipped** ``frok config show [--format=toml|json|env]`` — renders
+the resolved `FrokConfig` after file + env + CLI + profile merging,
+so operators can sanity-check which settings actually got applied
+before running anything. Closes the config <-> runtime loop the
+same way `trace inspect` closes the telemetry <-> eval loop.
+
+* **`frok.config.render`** — three pure functions producing
+  strings: `to_toml`, `to_json`, `to_env`. All three serialise the
+  same `_as_plain_dict` so the three formats agree on content.
+  `SENSITIVE_FIELDS = {("client", "api_key")}` drives masking; last
+  four characters preserved, rest replaced with ``****``. Unset
+  (``None``) values survive the round-trip:
+    * JSON: native `null`
+    * TOML: commented-out key with `(unset)` marker (TOML has no null)
+    * env: `# FROK_<SECTION>_<FIELD>=` comment line
+* **`frok config show`** (`frok/cli/config.py`)
+  * Loads config via `load_default_config(file=args.config,
+    profile=args.profile)`, applies the selected renderer, writes
+    stdout or `-o/--output`.
+  * `--reveal` flips sensitive values plain; default is masked.
+  * Config load failures surface as `CliError` → ``frok: error:
+    config load failed: …`` → exit 2, same as `run` and
+    `trace inspect`.
+
+**Verification.** `python3 -m pytest -q` → 234 passed in 0.48s (18
+new). Tests cover every renderer (shape + masking + reveal + short-
+key handling + special-char escaping in TOML + dotenv-shape env
+keys), TOML round-trip through stdlib `tomllib`, and the CLI paths
+(default toml, `--format=json` parsability, env matches loader
+keys, `-c/-p` pickup including profile merging, `-o` writes file +
+suppresses stdout, missing-config-file error).
+
+**Decisions / trade-offs.**
+* Minimal in-house TOML emitter rather than a third-party dep —
+  the schema is fixed and flat, no heroics needed. Round-trip via
+  `tomllib` is asserted in the test suite.
+* No `--set key=val` on `config show` — if operators want to try
+  overrides they can prepend env vars or pass `-c` to a tweaked
+  file. The command's job is *showing* what's resolved, not
+  mutating it.
+* Masking is opt-out (`--reveal`) rather than opt-in. Accidental
+  copy-paste of an api_key into a paste buffer is worse than the
+  mild annoyance of re-running with `--reveal`.
+
+**Next suggested action:** `Extend Phase 3 with \`frok run
+--capture-baseline <path>\`: run a case set and write the captured
+telemetry to \`<path>\` as a JsonlSink, so the next run can diff
+against it via EvalCase.baseline automatically. Closes the
+baseline-capture loop — today operators have to set
+\`telemetry.sink=jsonl\` + \`telemetry.path=...\` by hand to feed
+§2 #8's baseline differ.`
+
 ## 2026-04-23 — Phase 3 §2: trace-inspect
 
 **Shipped** a library-level trace analysis surface plus the

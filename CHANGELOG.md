@@ -2,6 +2,16 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.12.0] — 2026-04-23
+### Added
+- `frok.config.render` — `to_toml`, `to_json`, `to_env` renderers with
+  sensitive-field masking (default) + `reveal=True` escape hatch.
+- `frok config show [--format=toml|json|env] [-c FILE] [-p PROFILE]
+  [-o PATH] [--reveal]` subcommand. Prints the resolved `FrokConfig`
+  after file + env + CLI + profile merging.
+- Tests: 18 new (renderers across all three formats + CLI paths);
+  234 total.
+
 ## [0.11.0] — 2026-04-23
 ### Added
 - `frok.telemetry.analysis` — `build_tree(events)`, `summarize(events)`

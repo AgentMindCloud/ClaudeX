@@ -8,6 +8,8 @@ import sys
 
 from ..config import ConfigError
 from .common import CliError
+from .config import register as _register_config
+from .config import show_cmd
 from .run import (
     ClientFactory,
     LoadedCaseFile,
@@ -27,6 +29,7 @@ __all__ = [
     "load_case_file",
     "main",
     "run_cmd",
+    "show_cmd",
 ]
 
 
@@ -35,6 +38,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="command", required=True)
     _register_run(sub)
     _register_trace(sub)
+    _register_config(sub)
     return p
 
 

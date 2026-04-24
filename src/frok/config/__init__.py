@@ -7,6 +7,7 @@ from .builders import (
     build_tracer,
 )
 from .loader import ConfigError, load_config, load_default_config
+from .render import SENSITIVE_FIELDS, to_env, to_json, to_toml
 from .schema import (
     ClientConfig,
     FrokConfig,
@@ -24,6 +25,7 @@ __all__ = [
     "MemoryConfig",
     "MultimodalConfig",
     "SECTIONS",
+    "SENSITIVE_FIELDS",
     "SafetyConfig",
     "TelemetryConfig",
     "build_client",
@@ -34,4 +36,7 @@ __all__ = [
     "build_tracer",
     "load_config",
     "load_default_config",
+    "to_env",
+    "to_json",
+    "to_toml",
 ]

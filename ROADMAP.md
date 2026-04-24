@@ -72,6 +72,10 @@ builds on these three.
    `JsonlSink` capture, reconstructs the trace tree, and prints a
    summary of per-span durations, errors, and top tool invocations.
    *Shipped 2026-04-23.*
-3. *Sketch:* `frok config show`, `frok serve` (long-running agent),
-   distributed inference, X-native production agents, alignment
-   red-teaming.
+3. **config-show** — `frok config show [--format=toml|json|env]`
+   renders the resolved `FrokConfig` (after file + env + CLI +
+   profile merging) so operators can sanity-check what got applied
+   before running anything. `client.api_key` masked by default;
+   `--reveal` shows plain. *Shipped 2026-04-23.*
+4. *Sketch:* `frok serve` (long-running agent), distributed
+   inference, X-native production agents, alignment red-teaming.
