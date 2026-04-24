@@ -2,6 +2,62 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 5 §9: latency-ceiling
+
+**Shipped** ``LatencyWithin(max_ms)`` — the wall-clock gate that
+pairs with ``TokensWithin`` (cost). CI runs now have a cheap way
+to catch a prompt or tool-use pattern that quietly doubled
+latency after a model swap.
+
+* **`LatencyWithin`** (`frok/evals/scorers.py`) — frozen
+  dataclass mirroring ``TokensWithin``'s shape. Reads
+  ``obs.total_latency_ms`` (the root span's ``duration_ms``).
+  Inclusive comparison: at-limit passes, strictly-over fails.
+  Failure detail surfaces both the actual and the ceiling;
+  ``measure`` carries the observed duration for aggregate
+  reports.
+* **Zero-latency fallback** — a run that errors before a root
+  span closes reports 0.0 ms from the underlying `Observation`
+  helper. The scorer passes any non-negative threshold in that
+  case: the right signal for a failed run is ``NoErrors``, not
+  a latency assertion. Documented in the scorer docstring.
+* **Exports** — added to `frok.evals.__all__` so case-file
+  authors can ``from frok.evals import LatencyWithin``.
+
+**Verification.** `python3 -m pytest -q` → 555 passed in 1.68s
+(7 new). Tests cover: pass under the ceiling with measure
+populated, inclusive at-limit passes, over-limit fails with
+both values in detail, missing root span → zero latency →
+passes a non-negative threshold, missing root span + a
+negative ceiling (pathological, but documents the compare),
+run-error observation still passes (not the scorer's job),
+and the scorer name includes the configured ``max_ms`` for
+aggregated reports to grep on.
+
+**Decisions / trade-offs.**
+* Read from the observation's ``total_latency_ms``, not
+  wall-clock time measured by the scorer. Cases run under
+  repeats / parallel jobs / streaming — the only honest
+  duration is what the root span recorded.
+* Inclusive at-limit. An operator setting ``max_ms=500``
+  usually means "at most 500 ms", not "strictly less than
+  500 ms". Mirrors ``TokensWithin``.
+* Zero-latency fallback passes by default. Failed runs
+  already fail through the scorer stack (no final response,
+  ``NoErrors`` trips, etc.); having latency-ceiling double-
+  tap would bury the real failure under a misleading one.
+* No separate ``min_ms`` (latency floor). We haven't seen a
+  real need for "assert the model took at least N ms"; add
+  if and when it comes up. YAGNI.
+
+**Next suggested action:** `Extend Phase 5 §10 with an
+\`InvocationsWithin(max_count)\` scorer: assert the total
+number of tool invocations on a case stays below a threshold.
+Complements \`ToolCalled(..., times=N)\` (per-tool exact count)
+with an aggregate "don't loop forever" cap. Catches a prompt
+regression that starts over-calling tools without having to
+enumerate them in a scorer per tool.`
+
 ## 2026-04-23 — Phase 5 §8: tool-args-regex
 
 **Shipped** ``ToolArgsMatch(name, regex, field=None, flags=0)`` —

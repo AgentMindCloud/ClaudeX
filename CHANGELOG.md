@@ -2,6 +2,16 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.35.0] — 2026-04-23
+### Added
+- `frok.evals.LatencyWithin(max_ms)` scorer — asserts the
+  case's root-span `duration_ms` stays within a threshold.
+  Complements `TokensWithin` (cost ceiling) with a wall-clock
+  ceiling. Inclusive at-limit comparison; zero-latency fallback
+  when a run errors before a root span closes.
+- Tests: 7 new (pass / fail / edge paths + scorer-name format);
+  555 total.
+
 ## [0.34.0] — 2026-04-23
 ### Added
 - `frok.evals.ToolArgsMatch(name, regex, field=None, flags=0)` —

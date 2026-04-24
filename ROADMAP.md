@@ -120,6 +120,12 @@ builds on these three.
    argument's string form. `re.search` semantics; invalid
    regex fails cleanly; scorer name includes both tool + field
    for aggregate reports. *Shipped 2026-04-23.*
+9. **latency-ceiling** — `LatencyWithin(max_ms)` asserts the
+   case's root-span `duration_ms` stays within a threshold.
+   Complements `TokensWithin` (cost ceiling) with a wall-clock
+   ceiling for CI. Inclusive at-limit comparison; zero-latency
+   fallback when a run errors before a root span closes.
+   *Shipped 2026-04-23.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable

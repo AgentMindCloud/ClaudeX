@@ -212,6 +212,34 @@ class TokensWithin:
 
 
 @dataclass(frozen=True)
+class LatencyWithin:
+    """Wall-clock ceiling: fail unless the case's root-span duration stays
+    within ``max_ms``. Complements ``TokensWithin`` (cost) with a latency
+    gate — cheap way to catch a prompt / tool-use pattern that quietly
+    doubled wall-clock time on a model swap.
+
+    Reads ``obs.total_latency_ms``, which is the duration of the case's
+    root span (e.g. ``tool.run`` for tools cases, ``grok.chat`` for
+    no-tools cases). A case whose run errored before a root span closed
+    reports 0.0 ms and passes any non-negative threshold — the right
+    signal is ``NoErrors``, not a latency assertion.
+    """
+
+    max_ms: float
+
+    def __call__(self, case: EvalCase, obs: Observation) -> Score:
+        sname = f"latency_within[{self.max_ms}]"
+        actual = obs.total_latency_ms
+        if actual <= self.max_ms:
+            return Score.ok(sname, measure=actual)
+        return Score.fail(
+            sname,
+            f"latency {actual:.1f} ms > max {self.max_ms} ms",
+            measure=actual,
+        )
+
+
+@dataclass(frozen=True)
 class NoErrors:
     """Fails if any span recorded an error OR the run itself raised."""
 
