@@ -167,6 +167,15 @@ builds on these three.
     cases. Mirrors the `--use-baseline` "fill from CLI"
     pattern so operators get suite-wide defaults without
     editing every case file. *Shipped 2026-04-23.*
+16. **cli-retry** — `frok run --retry N` re-runs a failing
+    case up to N times and marks it PASS if any attempt wins.
+    Timeouts short-circuit the loop (case-level caps are by
+    design, not flakiness). Contrasts with `--repeat` which
+    runs every attempt and reports each outcome. Rejects
+    `--retry < 0` and `--retry > 0` + `--capture-baseline`
+    (retries would overwrite the previous attempt's JSONL).
+    Shakes genuinely flaky cases out of regression runs
+    without masking hard failures. *Shipped 2026-04-24.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable

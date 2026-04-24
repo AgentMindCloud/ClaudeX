@@ -2,6 +2,24 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.42.0] — 2026-04-24
+### Added
+- `frok run --retry N` — per-case retry loop. Re-runs a
+  failing case up to N times and marks it PASS if any attempt
+  succeeds. Default 0 (no retry). Timeouts short-circuit the
+  loop — a `TimeoutError` observation.error is respected as an
+  operator-set cap, not flakiness.
+- Rejects `--retry < 0` and `--retry > 0 + --capture-baseline`
+  (retries would overwrite the captured JSONL; mirrors the
+  existing `--repeat > 1` guard). Composes with `--repeat`,
+  `--jobs`, `--fail-on-regression`, and `--timeout-s`.
+- Tests: 12 new (parser default 0, accepts int, default runs
+  once, pass-first no-retry, fail-then-succeed flips, always-
+  fail exhausts retry+1 attempts, timeout not retried,
+  fail-on-regression interop both directions, negative
+  rejected, capture-baseline + retry>0 rejected, capture-
+  baseline + retry=0 fine); 645 total.
+
 ## [0.41.0] — 2026-04-23
 ### Added
 - `frok run --timeout-s SECONDS` — suite-wide default for

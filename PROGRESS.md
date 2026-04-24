@@ -2,6 +2,86 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-24 — Phase 5 §16: cli-retry
+
+**Shipped** ``frok run --retry N`` — a per-case retry loop that
+re-runs failing cases up to N times and accepts the case if
+*any* attempt wins. The mirror opposite of `--repeat` in intent:
+`--repeat` surfaces flake, `--retry` absorbs it.
+
+* **CLI flag** (`frok/cli/run.py`) — int, default 0,
+  `metavar="N"`. `args.retry < 0` → `CliError`. `args.retry > 0`
+  combined with `--capture-baseline` → `CliError` (retries
+  would overwrite the previous attempt's captured JSONL, same
+  shape of failure as the `--repeat > 1 + --capture-baseline`
+  guard).
+* **Retry loop** — wrapped inside `_run_unit` right around the
+  existing `runner.run_case` call. A `for _ in range(args.retry
+  + 1):` loop retains `retry=0`'s "run once" baseline. Breaks
+  at the first `result.passed`. Also breaks when the
+  observation error starts with `"TimeoutError"` — timeouts are
+  a case-level cap (§14), not flakiness, and retrying them
+  would undo the operator's explicit budget.
+* **Composes with `--repeat`** by contrast. `--repeat N` runs
+  every attempt and reports each as its own result (pass-rate
+  aggregation surfaces flake). `--retry N` collapses the
+  attempts into one verdict (pass-on-any, no new EvalResult per
+  attempt). Both flags together work: each repeat gets its own
+  retry budget.
+* **Composes with `--fail-on-regression`** too — exhausted
+  retries still leave the case FAIL, so CI gates exactly as
+  you'd expect.
+
+**Verification.** `python3 -m pytest -q` → 645 passed in 2.69s
+(12 new). Tests cover: parser default 0, parser accepts int,
+retry=0 runs once, pass-first-attempt consumes no retry,
+fail-then-succeed flips verdict to PASS, always-fail exhausts
+`retry+1` attempts, `--timeout-s` + `--retry 5` runs exactly
+once (timeout short-circuit), `--fail-on-regression` returns 1
+when retries exhaust and 0 on eventual pass, `--retry -1`
+errors with "`--retry must be >= 0`", `--retry 1 +
+--capture-baseline` errors, `--retry 0 + --capture-baseline` is
+fine (explicit-zero doesn't trigger the guard).
+
+**Decisions / trade-offs.**
+* Kept retries out of `EvalRunner` itself — the runner's
+  contract is "one case → one EvalResult". Retry is a
+  higher-level operator knob, identical to `--repeat`, which
+  also lives in the CLI. Keeping it in the CLI means library
+  users get a stable `run_case` without retry semantics leaking
+  through.
+* Chose pass-on-any over "all-must-pass". Opposite semantics
+  exist (`--repeat` + manual aggregation) and a scorer can
+  always assert `InvocationsWithin` / `LatencyWithin` on the
+  winning run. The common operator need here is flake
+  absorption, not quorum.
+* Timeouts skip the retry loop. `TimeoutError` is semantically
+  "operator's explicit cap was exceeded" — retrying it silently
+  turns a 30s cap into a 90s cap without the operator asking.
+  Flakiness is a property of the network/model/seed; case-level
+  timeout is a property of the operator's intent.
+* `--capture-baseline` conflict follows the exact shape of the
+  existing `--repeat > 1` guard: both would overwrite per-case
+  `<slug>.jsonl` files. Explicit `--retry 0` is allowed through
+  (mirrors "no retry requested, no conflict").
+* `--retry` is orthogonal to `--jobs`. The retry loop runs
+  within a unit's semaphore hold, so concurrency bounds still
+  apply and parallel retries don't oversubscribe CPU.
+* No exponential backoff / sleep between retries. Cases run
+  against user-controlled transports (stubs, memoised clients,
+  live xAI). A fixed-sleep retry is wrong for all three; if a
+  case wants its own backoff it can layer it in the transport.
+  Keeping the loop tight also makes `--retry` cheap for pure-
+  stub CI suites.
+
+**Next suggested action:** `Extend Phase 5 §17 with an
+\`EvalResult.attempts\` field surfacing how many retry attempts
+each case consumed, plumbing it through \`to_summary()\` and
+the report markdown so flaky cases are visible in the verdict
+doc even when \`--retry\` successfully masks their failure.
+Catches \"this case passes in CI but only on attempt 3/3\"
+regressions before they become full failures.`
+
 ## 2026-04-23 — Phase 5 §15: cli-timeout-default
 
 **Shipped** ``frok run --timeout-s SECONDS`` — a suite-wide

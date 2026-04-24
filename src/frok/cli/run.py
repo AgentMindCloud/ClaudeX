@@ -288,6 +288,8 @@ async def run_cmd(args: argparse.Namespace) -> int:
         raise CliError(f"--repeat must be >= 1, got {args.repeat}")
     if args.jobs < 1:
         raise CliError(f"--jobs must be >= 1, got {args.jobs}")
+    if args.retry < 0:
+        raise CliError(f"--retry must be >= 0, got {args.retry}")
     if args.seed is not None and args.jobs > 1:
         raise CliError(
             "--seed cannot be combined with --jobs > 1 "
@@ -311,6 +313,13 @@ async def run_cmd(args: argparse.Namespace) -> int:
                 "--capture-baseline is incompatible with --repeat > 1 "
                 "(would overwrite per-case JSONL files); capture once "
                 "with --repeat 1, then --use-baseline on subsequent runs"
+            )
+        if args.retry > 0:
+            raise CliError(
+                "--capture-baseline is incompatible with --retry > 0 "
+                "(each retry would overwrite the captured JSONL with the "
+                "next attempt's trace); capture with --retry 0, then "
+                "--use-baseline on retry-enabled runs"
             )
         capture_dir.mkdir(parents=True, exist_ok=True)
         slugs = _check_unique_slugs(loaded.cases)
@@ -346,12 +355,24 @@ async def run_cmd(args: argparse.Namespace) -> int:
                     apply_seed(args.seed, repeat_idx)
                 runner = EvalRunner(client_factory=factory)
                 sink = _stream_sink_for(case)
-                result = await runner.run_case(
-                    case,
-                    repeat=repeat_idx,
-                    repeats=args.repeat,
-                    stream_sink=sink,
-                )
+                # Retry loop: stop at the first pass. Timeouts are by
+                # design (a hard case-level cap), so don't retry them —
+                # flaky cases are what we're shaking out here, not
+                # intentional aborts.
+                result: EvalResult | None = None
+                for _ in range(args.retry + 1):
+                    result = await runner.run_case(
+                        case,
+                        repeat=repeat_idx,
+                        repeats=args.repeat,
+                        stream_sink=sink,
+                    )
+                    if result.passed:
+                        break
+                    err = result.observation.error or ""
+                    if err.startswith("TimeoutError"):
+                        break
+                assert result is not None  # retry+1 >= 1
                 if sink is not None:
                     # Newline after the last delta so the report doesn't run
                     # onto the same line as the streamed answer.
@@ -530,6 +551,20 @@ def register(sub: "argparse._SubParsersAction") -> None:
             "whose own EvalCase.timeout_s is None. Per-case overrides "
             "always win. SECONDS=0 short-circuits every unconfigured "
             "case (asyncio.wait_for(0) fires before the coroutine runs)."
+        ),
+    )
+    run.add_argument(
+        "--retry",
+        type=int,
+        default=0,
+        metavar="N",
+        help=(
+            "re-run a failing case up to N times; the case passes if any "
+            "attempt succeeds (default 0 = no retry). Timeouts are NOT "
+            "retried (by design — a case-level cap). Contrast with "
+            "--repeat, which runs every attempt and reports each outcome. "
+            "Incompatible with --capture-baseline (retries would overwrite "
+            "the previous attempt's captured JSONL)."
         ),
     )
     run.set_defaults(fn=run_cmd)
