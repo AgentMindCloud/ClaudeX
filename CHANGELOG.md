@@ -2,6 +2,21 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.10.0] — 2026-04-23
+### Added
+- `frok.cli` — `frok run <case-file>` entry point. Wires
+  `load_default_config` → full-stack build → `EvalRunner` → prints
+  `EvalReport.to_markdown()`. Flags: `-c/--config`, `-p/--profile`,
+  `-o/--output`, `--summary-json`, `--fail-on-regression`.
+- Case-file conventions: `CASES: list[EvalCase]` or
+  `build_cases(config) -> list[EvalCase]`, plus optional
+  `make_client(config, sink) -> GrokClient`.
+- `frok.clients.transports.urllib_transport` — stdlib-only default
+  `Transport` (urllib + asyncio.to_thread).
+- Console script (`frok`) and `python -m frok` entry points.
+- Tests: 12 new (CLI loader, exit codes, output paths, parser).
+  193 total.
+
 ## [0.9.0] — 2026-04-23
 ### Added
 - `frok.config` — typed `FrokConfig` with client / safety / telemetry

@@ -62,6 +62,12 @@ builds on these three.
     reason over. (Interpretation chosen on this branch; see PROGRESS.md.
     Narrow to rename if a different #10 was intended.)
 
-## Phase 3+ (sketch)
-Super-intelligence scaffolding, X-native production agents, alignment red-
-teaming, distributed inference — detailed once Phase 2 #1/#2/#10 are green.
+## Phase 3 — Wiring + operations
+1. **cli-runner** — `frok run <case-file>` entry point wiring
+   `load_default_config` → full-stack build → `EvalRunner` →
+   `EvalReport.to_markdown()`, with `--fail-on-regression` for CI.
+   *Shipped 2026-04-23.* (stdlib-only `urllib_transport` as the
+   default production transport.)
+2. *Sketch:* `frok config show`, `frok trace inspect <jsonl>`,
+   `frok serve` (long-running agent), distributed inference,
+   X-native production agents, alignment red-teaming.

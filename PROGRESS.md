@@ -2,6 +2,63 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 3 §1: cli-runner
+
+**Shipped** a single-invocation entry point that turns a Python case
+file into a verdict doc, closing the loop between Phase-2 config /
+evals / telemetry and a CI-runnable command.
+
+* **`frok.cli.run`** — `frok run <case-file>` wires
+  `load_default_config(file=…, profile=…)` → builds the full stack
+  via the Phase-2 builders → executes the case set through
+  `EvalRunner` → prints (or writes) `EvalReport.to_markdown()`.
+  Flags: `-c/--config`, `-p/--profile`, `-o/--output`,
+  `--summary-json`, `--fail-on-regression`.
+* **Case-file conventions.** A `.py` file must expose either
+  `CASES: list[EvalCase]` (plain list) or
+  `build_cases(config) -> list[EvalCase]` (parameterised by the
+  resolved `FrokConfig`). Optional `make_client(config, sink) ->
+  GrokClient` lets CI wire a stub transport; without it the default
+  factory uses `frok.clients.transports.urllib_transport` + the
+  config's `telemetry.sink` fan-out (`MultiSink(in_memory,
+  config_sink)` so scorers keep their per-case InMemorySink while
+  operators still get JsonlSink captures when configured).
+* **`frok.clients.transports.urllib_transport`** — a stdlib-only
+  `Transport` that runs `urllib.request` under `asyncio.to_thread`.
+  Zero deps, modest throughput, good enough for a CLI and CI. Swap
+  in httpx/aiohttp behind the Protocol when volume arrives.
+* **Entry points** — `python -m frok` via `src/frok/__main__.py`
+  and a console script (`[project.scripts] frok = "frok.cli:main"`).
+
+**Verification.** `python3 -m pytest -q` → 193 passed in 0.41s (12
+new). Tests cover: CASES-list + `build_cases(config)` paths,
+`make_client` override, missing case-file / missing CASES / empty
+CASES errors, `--fail-on-regression` exit-code behaviour on pass +
+fail, `-o` writing Markdown to a nested path (and suppressing
+stdout), `--summary-json` shape, default factory raising when
+`client.api_key` is unconfigured, and the argparse shape.
+
+**Decisions / trade-offs.**
+* Case files are Python, not YAML/TOML. Python gives direct access
+  to `EvalCase`, `Scorer`, and `GrokMessage` without a mini-DSL;
+  `build_cases(config)` is the escape hatch when cases need to
+  parameterise themselves.
+* `ConfigError` and `CliError` are both caught at `main()` boundary
+  and printed as ``frok: error: <msg>`` so operators get a single
+  consistent failure surface regardless of whether the problem is
+  config shape, missing case file, or api-key.
+* The default factory fans out per-case InMemorySink ⊕
+  ``telemetry.sink`` via `MultiSink`. Scorers still get their
+  hermetic in-memory view; operators still get persistent capture
+  when they want it. One flag, two observers.
+
+**Next suggested action:** `Extend Phase 3 with \`frok trace
+inspect <jsonl>\`: a sibling subcommand that loads a JsonlSink
+capture via \`read_jsonl\`, reconstructs the trace tree, and prints
+a summary (per-span durations, error hot-spots, top tool
+invocations). Closes the telemetry <-> eval loop for post-hoc
+regression triage.`
+
 ## 2026-04-23 — §2 #9 config-loader
 
 **Shipped** `frok.config`: a typed, layered config surface that's the
