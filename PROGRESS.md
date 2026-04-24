@@ -2,6 +2,54 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 3 §6: list-preview
+
+**Shipped** ``frok run --list`` — an early-exit preview that prints
+the resolved case names (after ``--filter`` / ``--exclude``) one per
+line and returns without constructing a client or running any
+case. Completes the discoverability loop alongside ``config show``
+and ``trace inspect``.
+
+* **`run_cmd` short-circuit**: after filter application, if
+  ``--list`` is set, print names and ``return 0`` — before any
+  ``build_client`` / ``JsonlSink`` / ``runner.run_case`` work. No
+  api_key is required, no capture files are written.
+* **Output format**: one case name per line with a trailing
+  newline. Pipe-friendly by construction
+  (``frok run cases.py --list | grep safety``).
+* **Flags reused**: ``-o/--output`` writes to a file (parents are
+  `mkdir -p`-ed) and suppresses stdout; ``--filter`` / ``--exclude``
+  apply normally.
+
+**Verification.** `python3 -m pytest -q` → 273 passed in 0.62s (10
+new). Tests cover: basic output + ordering, filter / exclude /
+regex-prefix interop, zero-match still errors (filters apply
+before the list branch), ``-o`` writes file + blanks stdout, the
+empty stub transport is NOT called under ``--list``, api-key-free
+case files still list fine, and ``--list --capture-baseline``
+writes nothing since the loop never runs.
+
+**Decisions / trade-offs.**
+* Minimal format: just names. Richer previews (scorer / tool
+  counts, baseline status) can be bolted on via a future
+  ``--list --format=table`` without breaking the simple
+  lines-on-stdout contract.
+* ``--list`` runs AFTER filter application but BEFORE client
+  construction — so the printed list is exactly what a non-list
+  invocation would execute, giving operators a faithful preview.
+* Zero-match still errors (exit 2) under ``--list``. Operators
+  using ``--list`` to sanity-check filters should get the same
+  feedback they'd get on a real run; silent empty output would be
+  a worse experience than the "no cases matched" message that
+  lists available names.
+
+**Next suggested action:** `Extend Phase 3 with \`frok eval diff
+<a.jsonl> <b.jsonl>\`: diff two JsonlSink captures side-by-side
+(tool-call order, token delta, new errors, span count) and print
+a compact report. Complements \`trace inspect\` (single capture)
+and \`--use-baseline\` (per-case diff) with a general two-capture
+comparison for A/B testing prompt / model / config changes.`
+
 ## 2026-04-23 — Phase 3 §5: case-filter
 
 **Shipped** ``frok run --filter <pattern>`` / ``--exclude <pattern>``

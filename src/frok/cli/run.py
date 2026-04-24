@@ -241,6 +241,17 @@ async def run_cmd(args: argparse.Namespace) -> int:
                 f"available: {[c.name for c in original]!r}"
             )
 
+    if args.list:
+        # Preview-only: print resolved case names (after --filter/--exclude)
+        # and exit. No client is constructed, no case runs.
+        out_text = "\n".join(case.name for case in loaded.cases) + "\n"
+        if args.output is not None:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(out_text, encoding="utf-8")
+        else:
+            sys.stdout.write(out_text)
+        return 0
+
     if args.use_baseline is not None:
         if not args.use_baseline.is_dir():
             raise CliError(
@@ -325,6 +336,14 @@ def register(sub: "argparse._SubParsersAction") -> None:
         "--fail-on-regression",
         action="store_true",
         help="exit non-zero when any case fails; default: always 0",
+    )
+    run.add_argument(
+        "--list",
+        action="store_true",
+        help=(
+            "print resolved case names (after --filter/--exclude) and exit; "
+            "no client is constructed and no cases run"
+        ),
     )
     run.add_argument(
         "--filter",

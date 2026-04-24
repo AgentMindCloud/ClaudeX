@@ -87,5 +87,9 @@ builds on these three.
    the available case names. Composes with `--capture-baseline` so
    CI can re-record only the cases being iterated on.
    *Shipped 2026-04-23.*
-6. *Sketch:* `frok serve` (long-running agent), distributed
+6. **list-preview** — `frok run --list` prints resolved case names
+   (post-filter) one per line and exits without building a client
+   or running any case. Short-circuits before api-key / capture /
+   baseline logic. *Shipped 2026-04-23.*
+7. *Sketch:* `frok serve` (long-running agent), distributed
    inference, X-native production agents, alignment red-teaming.

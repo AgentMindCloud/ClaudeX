@@ -2,6 +2,15 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.15.0] — 2026-04-23
+### Added
+- `frok run --list` — preview-only mode. Prints resolved case names
+  (after `--filter`/`--exclude`) one per line and exits without
+  constructing a client or running any case. Honours `-o/--output`.
+  No `client.api_key` required; no `--capture-baseline` files written.
+- Tests: 10 new (basic output, filter interop, output flag,
+  no-run contract, no-api-key path, capture interop); 273 total.
+
 ## [0.14.0] — 2026-04-23
 ### Added
 - `frok run --filter <PATTERN>` / `--exclude <PATTERN>` — keep/drop
