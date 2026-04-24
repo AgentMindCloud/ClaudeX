@@ -1,4 +1,4 @@
-from .baseline import diff_against_baseline
+from .baseline import diff_against_baseline, diff_event_streams, diff_to_markdown
 from .case import (
     EvalCase,
     EvalReport,
@@ -41,4 +41,6 @@ __all__ = [
     "ToolNotCalled",
     "ToolSequence",
     "diff_against_baseline",
+    "diff_event_streams",
+    "diff_to_markdown",
 ]

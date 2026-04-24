@@ -2,6 +2,70 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 3 §7: eval-diff
+
+**Shipped** ``frok eval diff <a.jsonl> <b.jsonl>`` — symmetric
+two-capture comparison for A/B testing prompt / model / config
+changes. Complements the single-capture ``trace inspect`` and the
+per-case ``--use-baseline`` with a general two-sided diff that
+lives outside a live run.
+
+* **Library refactor** (`frok/evals/baseline.py`)
+  * Extracted the comparison core into
+    ``diff_event_streams(a_events, b_events, *, a_label, b_label)``.
+    Returns tool-order match, per-side tools / tokens / errors /
+    span counts, deltas (`token_delta`, `span_delta`), and a
+    ``regressed`` verdict (tool-order divergence or new errors in
+    ``b``). Labels parameterise the dict keys.
+  * ``diff_against_baseline(obs, path)`` now delegates to the
+    above with legacy labels ``"baseline"``/``"observed"`` —
+    existing `EvalRunner` consumers and every previously-shipped
+    assertion key are preserved.
+  * Added ``diff_to_markdown(diff, *, a_label, b_label, a_path,
+    b_path)`` for a compact verdict rendering with tool-order /
+    tokens / errors sections.
+* **`frok eval diff` CLI** (`frok/cli/eval.py`)
+  * `a` is the reference ("before"), `b` is the candidate
+    ("after"). Missing / empty / malformed captures raise
+    `CliError` (exit 2), matching `trace inspect`'s semantics.
+  * Flags: `-o/--output`, `--json`, `--fail-on-regression`.
+    JSON output includes `a_path` / `b_path` so downstream
+    tooling has everything it needs in one payload.
+
+**Verification.** `python3 -m pytest -q` → 292 passed in 0.73s (19
+new). Tests cover: `diff_event_streams` across identical, tool-
+order divergence, token-delta-only (no regression), new errors in
+``b`` (regression), fewer errors in ``b`` (floor at zero), custom
+label key-rename, span-count delta; `diff_to_markdown` sections +
+signed token delta; CLI argparse shape, identical captures clean
+exit, divergence regresses under `--fail-on-regression`, clean
+diff stays 0, `--json` parseable with paths, `-o` writes file and
+suppresses stdout, and all three error paths (missing / empty /
+malformed).
+
+**Decisions / trade-offs.**
+* One pure-function helper shared between "live vs captured" and
+  "captured vs captured" paths — same matcher, same semantics, so
+  the two tools can't drift on what counts as a regression.
+* `a` and `b` labels in the general helper, `baseline` /
+  `observed` in the back-compat wrapper. Downstream code reading
+  either set of keys keeps working.
+* Token deltas reported but don't flip ``regressed``. Longer
+  correct answers shouldn't fail CI; tool-order and errors are
+  the trust-relevant signals.
+* The CLI preserves exit-code semantics across the Phase-3
+  family: ``--fail-on-regression`` → 1 on divergence; CliError
+  → 2 on operator mistakes; 0 otherwise.
+
+**Next suggested action:** `Extend Phase 3 with \`frok eval
+summarize <dir>\`: walk a baseline directory, run \`trace
+inspect\` across every \`<slug>.jsonl\` in it, and emit an
+aggregated Markdown (or JSON) report — per-case span-count /
+token / error rollups plus cross-case leaders (slowest cases,
+most-errored tools). Closes the last gap: today operators can
+inspect one capture or diff two, but there's no "scan my whole
+baseline folder" command.`
+
 ## 2026-04-23 — Phase 3 §6: list-preview
 
 **Shipped** ``frok run --list`` — an early-exit preview that prints

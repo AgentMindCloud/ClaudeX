@@ -10,6 +10,8 @@ from ..config import ConfigError
 from .common import CliError
 from .config import register as _register_config
 from .config import show_cmd
+from .eval import diff_cmd
+from .eval import register as _register_eval
 from .run import (
     ClientFactory,
     LoadedCaseFile,
@@ -25,6 +27,7 @@ __all__ = [
     "ClientFactory",
     "LoadedCaseFile",
     "build_parser",
+    "diff_cmd",
     "inspect_cmd",
     "load_case_file",
     "main",
@@ -39,6 +42,7 @@ def build_parser() -> argparse.ArgumentParser:
     _register_run(sub)
     _register_trace(sub)
     _register_config(sub)
+    _register_eval(sub)
     return p
 
 

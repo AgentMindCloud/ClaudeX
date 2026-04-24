@@ -2,6 +2,24 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.16.0] — 2026-04-23
+### Added
+- `frok eval diff <a.jsonl> <b.jsonl>` — diff two JsonlSink
+  captures. Markdown or JSON output; `--fail-on-regression` flips
+  exit code on tool-order divergence or new errors in `b`.
+- `frok.evals.diff_event_streams(a, b, *, a_label, b_label)` —
+  the shared comparison core (now also powers
+  `diff_against_baseline`).
+- `frok.evals.diff_to_markdown(diff, …)` — compact verdict render.
+- Both helpers report `span_delta` alongside existing fields.
+- Tests: 19 new (library + CLI paths); 292 total.
+
+### Changed
+- `diff_against_baseline` now delegates to
+  `diff_event_streams`. Dict shape preserved (legacy keys
+  `baseline_tools`, `observed_tools`, `token_delta`, etc.) plus
+  two new: `baseline_spans`, `observed_spans`, `span_delta`.
+
 ## [0.15.0] — 2026-04-23
 ### Added
 - `frok run --list` — preview-only mode. Prints resolved case names

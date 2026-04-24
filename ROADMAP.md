@@ -91,5 +91,10 @@ builds on these three.
    (post-filter) one per line and exits without building a client
    or running any case. Short-circuits before api-key / capture /
    baseline logic. *Shipped 2026-04-23.*
-7. *Sketch:* `frok serve` (long-running agent), distributed
+7. **eval-diff** — `frok eval diff <a.jsonl> <b.jsonl>` diffs two
+   captures (tool-order, token delta, new errors, span delta)
+   with Markdown or JSON output. Symmetric two-file A/B
+   comparison complementing `trace inspect` (single capture) and
+   `--use-baseline` (per-case). *Shipped 2026-04-23.*
+8. *Sketch:* `frok serve` (long-running agent), distributed
    inference, X-native production agents, alignment red-teaming.
