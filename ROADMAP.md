@@ -53,6 +53,10 @@ builds on these three.
    verdict doc. `SpanHandle.fail()` added so caught tool-handler
    errors still regress the run.
 9. **config-loader** — Layered config (env → file → CLI overrides).
+   *Shipped 2026-04-23:* `frok.config` — typed `FrokConfig` with
+   client / safety / telemetry / memory / multimodal sections; JSON +
+   TOML files; profile sections merged on top; builders for every
+   Phase-2 component keyed off the single config object.
 10. **content** — X-platform content ingestion: normalises posts, threads,
     and media references into a canonical record the other modules can
     reason over. (Interpretation chosen on this branch; see PROGRESS.md.

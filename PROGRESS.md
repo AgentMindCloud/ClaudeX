@@ -2,6 +2,68 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — §2 #9 config-loader
+
+**Shipped** `frok.config`: a typed, layered config surface that's the
+single place the rest of the stack reads runtime settings from.
+
+* **`FrokConfig`** (`schema.py`) — one top-level dataclass with
+  sub-dataclasses per concern: `ClientConfig`, `SafetyConfig`,
+  `TelemetryConfig`, `MemoryConfig`, `MultimodalConfig`. No logic,
+  just shape. A `SECTIONS` map is exposed so the loader can
+  enumerate fields programmatically.
+* **`load_config(file=, env=, cli=, profile=)`** (`loader.py`) —
+  deterministic precedence: defaults < file < env < CLI. File is
+  JSON (always) or TOML (stdlib `tomllib`, 3.11+) detected by
+  extension. Env vars are `FROK_<SECTION>_<FIELD>` with per-field
+  type coercion (including `tuple[str, ...]` from comma lists). CLI
+  accepts either a nested dict or a flat dict keyed by
+  ``"section.field"``; `None` values are ignored so forwarding
+  `vars(argparse.Namespace())` Just Works.
+* **Profiles** — a config file may declare `[profiles.NAME]` blocks;
+  when a profile is selected (explicit arg → CLI → env
+  `FROK_PROFILE` → file's own `profile = "..."`), that section is
+  deep-merged on top of the base. Dev / prod swap is one flag.
+* **Builders** (`builders.py`) — `build_safety_ruleset`,
+  `build_telemetry_sink`, `build_tracer`, `build_client`,
+  `build_memory_store`, `build_multimodal_adapter`. Each consumes
+  `FrokConfig` + optional overrides, validates required fields
+  (e.g. `client.api_key`, `telemetry.path` for jsonl), and returns
+  the live component. Downstream code keeps taking narrow types —
+  nothing else needs to know `FrokConfig` exists.
+* **`load_default_config(**overrides)`** — the ergonomic wrapper that
+  sources `os.environ` + optional `FROK_CONFIG_FILE` + explicit
+  overrides. `load_config()` with all `None` args stays hermetic for
+  tests.
+
+**Verification.** `python3 -m pytest -q` → 181 passed in 0.38s (33
+new). Tests cover defaults, env coercion across every type, JSON +
+TOML file loading, nested + flat CLI overrides, file-vs-env-vs-CLI
+precedence, profile merging via arg and env, unknown-section /
+unknown-field / bad-shape errors, and per-builder wiring (safety
+rule exclusion, sink construction, memory disabled-by-default,
+explicit tracer override, end-to-end full-stack build from one
+config).
+
+**Decisions / trade-offs.**
+* Opted against auto-reading `~/.frok/config.toml`. `load_config()`
+  is inert without explicit args; `load_default_config()` is the
+  "do the thing" entry point. Splitting them keeps tests hermetic
+  without an env-scrubbing harness.
+* Memory defaults to `enabled=False`. Forcing opt-in keeps
+  first-time callers from accidentally writing a SQLite file into
+  their working directory.
+* Unknown sections / fields *fail loudly* at load time rather than
+  being silently ignored — typos in config are the single biggest
+  "huh, why isn't X working" time-sink I've seen, and we have the
+  schema so we may as well police it.
+
+**Next suggested action:** `Continue Phase 3 with a CLI runner that
+wires load_default_config into a \`frok run <case-file>\` entry
+point driving the §2 #8 eval harness, so a single invocation loads
+config -> builds client/memory/adapter -> runs a case set -> prints
+the markdown verdict doc.`
+
 ## 2026-04-23 — §2 #6 agent-team-runtime
 
 **Shipped** `frok.team`: a deliberately small multi-agent scheduler

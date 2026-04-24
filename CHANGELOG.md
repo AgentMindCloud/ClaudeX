@@ -2,6 +2,20 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.9.0] — 2026-04-23
+### Added
+- `frok.config` — typed `FrokConfig` with client / safety / telemetry
+  / memory / multimodal sections; `load_config(file=, env=, cli=,
+  profile=)` with deterministic layered precedence; JSON + TOML file
+  support; `FROK_<SECTION>_<FIELD>` env mapping; nested + flat-dotted
+  CLI overrides; profile-section merging; `load_default_config()`
+  ergonomic wrapper. (§2 #9)
+- Builders: `build_safety_ruleset`, `build_telemetry_sink`,
+  `build_tracer`, `build_client`, `build_memory_store`,
+  `build_multimodal_adapter` — one per component, each keyed off the
+  single `FrokConfig`.
+- Tests: 33 new (loader + builders); 181 total.
+
 ## [0.8.0] — 2026-04-23
 ### Added
 - `frok.team` — `TeamRuntime` multi-agent scheduler with `Role` +
