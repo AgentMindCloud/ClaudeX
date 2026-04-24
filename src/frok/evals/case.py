@@ -45,6 +45,11 @@ class EvalCase:
     name: str
     messages: list[GrokMessage]
     tools: list[Tool] = field(default_factory=list)
+    # Pins the model's tool-selection behaviour when `tools` is set.
+    # ``None`` leaves the decision to the orchestrator's default
+    # ("auto"); ``"none"`` / ``"required"`` / a specific function dict
+    # force the model. Ignored on cases with no tools.
+    tool_choice: str | dict[str, Any] | None = None
     system: str | None = None
     scorers: list[Scorer] = field(default_factory=list)
     max_steps: int = 8

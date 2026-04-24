@@ -2,6 +2,30 @@
 
 All notable changes. Format loosely follows Keep a Changelog.
 
+## [0.31.0] — 2026-04-23
+### Added
+- `GrokClient.chat(..., tool_choice=)` and
+  `chat_stream(..., tool_choice=)` — first-class kwargs for
+  the OpenAI/xAI tool-choice field. Accepts strings
+  (`"auto"` / `"none"` / `"required"`) or a dict
+  (`{"type": "function", "function": {"name": "X"}}`).
+- `GrokClient.tool_choice` — client-level default. Precedence:
+  explicit kwarg > client default > omit.
+- `ClientConfig.tool_choice` config knob, env
+  `FROK_CLIENT_TOOL_CHOICE`; flows through `build_client`.
+- `EvalCase.tool_choice` — runner forwards into
+  `ToolOrchestrator(tool_choice=…)`.
+- Render layer handles dict-shaped `tool_choice`: TOML inline
+  tables (round-trips through `tomllib`) and JSON-encoded env
+  values.
+- Tests: 21 new (GrokClient + chat_stream + orchestrator +
+  EvalCase + config + render); 514 total.
+
+### Changed
+- `ToolOrchestrator` now passes `tool_choice` via the explicit
+  `chat()` / `chat_stream()` kwarg instead of folding it into
+  `extra`. Request body shape unchanged.
+
 ## [0.30.0] — 2026-04-23
 ### Added
 - `ToolOrchestrator.run(stream_sink=callable)` — streams chat

@@ -105,6 +105,9 @@ async def _execute(
                 registry=reg,
                 max_steps=case.max_steps,
                 dry_run=case.dry_run,
+                tool_choice=(
+                    case.tool_choice if case.tool_choice is not None else "auto"
+                ),
             )
             # The orchestrator honours stream_sink when the client has a
             # streaming_transport; otherwise it silently falls back to the

@@ -74,6 +74,7 @@ def build_client(
         max_retries=c.max_retries,
         transport=transport,
         streaming_transport=streaming_transport,
+        tool_choice=c.tool_choice,
         safety=build_safety_ruleset(config),
         tracer=tracer or build_tracer(config),
     )

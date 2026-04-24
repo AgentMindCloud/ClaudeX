@@ -14,6 +14,7 @@ uses it.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass
@@ -23,6 +24,12 @@ class ClientConfig:
     base_url: str = "https://api.x.ai/v1"
     timeout_s: float = 60.0
     max_retries: int = 4
+    # Default tool_choice passed to every chat / chat_stream call that
+    # doesn't supply its own. ``None`` omits the key entirely (server
+    # default); string values ``"auto"`` / ``"none"`` / ``"required"`` or
+    # a dict ``{"type": "function", "function": {"name": "X"}}`` force
+    # specific behaviour.
+    tool_choice: "str | dict[str, Any] | None" = None
 
 
 @dataclass

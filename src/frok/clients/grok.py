@@ -180,6 +180,11 @@ class GrokClient:
     safety: SafetyRuleSet = field(default_factory=default_ruleset)
     sleep: RetrySleep = asyncio.sleep
     tracer: Tracer = field(default_factory=Tracer)
+    # Default tool_choice applied when a chat / chat_stream call does not
+    # pass an explicit value. ``None`` means "omit the key entirely" so the
+    # server uses its own default; ``"auto"`` / ``"none"`` / ``"required"``
+    # / ``{"type": "function", "function": {"name": "X"}}`` all supported.
+    tool_choice: "str | dict[str, Any] | None" = None
 
     # Aggregate cost accounting across the client lifetime.
     prompt_tokens_total: int = 0
@@ -190,6 +195,7 @@ class GrokClient:
         messages: list[GrokMessage],
         *,
         tools: list[dict[str, Any]] | None = None,
+        tool_choice: "str | dict[str, Any] | None" = None,
         temperature: float | None = None,
         max_tokens: int | None = None,
         extra: dict[str, Any] | None = None,
@@ -265,6 +271,9 @@ class GrokClient:
             }
             if tools is not None:
                 payload["tools"] = tools
+            effective_tc = tool_choice if tool_choice is not None else self.tool_choice
+            if effective_tc is not None:
+                payload["tool_choice"] = effective_tc
             if temperature is not None:
                 payload["temperature"] = temperature
             if max_tokens is not None:
@@ -318,6 +327,7 @@ class GrokClient:
         messages: list[GrokMessage],
         *,
         tools: list[dict[str, Any]] | None = None,
+        tool_choice: "str | dict[str, Any] | None" = None,
         temperature: float | None = None,
         max_tokens: int | None = None,
         extra: dict[str, Any] | None = None,
@@ -355,6 +365,9 @@ class GrokClient:
             }
             if tools is not None:
                 payload["tools"] = tools
+            effective_tc = tool_choice if tool_choice is not None else self.tool_choice
+            if effective_tc is not None:
+                payload["tool_choice"] = effective_tc
             if temperature is not None:
                 payload["temperature"] = temperature
             if max_tokens is not None:

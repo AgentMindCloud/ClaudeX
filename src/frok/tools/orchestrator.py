@@ -83,24 +83,21 @@ class ToolOrchestrator:
 
             invocations: list[ToolInvocation] = []
             tools_spec = self.registry.spec()
-            extra: dict[str, Any] = {}
-            if self.tool_choice is not None:
-                extra["tool_choice"] = self.tool_choice
 
             for step in range(1, self.max_steps + 1):
                 if use_stream:
                     assert stream_sink is not None
                     stream_sink(f"\n>>> turn {step}\n")
                     resp = await self._streamed_turn(
-                        convo, tools_spec, extra, stream_sink
+                        convo, tools_spec, stream_sink
                     )
                 else:
                     resp = await self.client.chat(
                         convo,
                         tools=tools_spec,
+                        tool_choice=self.tool_choice,
                         temperature=self.temperature,
                         max_tokens=self.max_tokens,
-                        extra=extra or None,
                     )
                 if not resp.has_tool_calls:
                     run_span.set(
@@ -149,16 +146,15 @@ class ToolOrchestrator:
         self,
         convo: Sequence[GrokMessage],
         tools_spec: list[dict[str, Any]],
-        extra: dict[str, Any],
         stream_sink: StreamSink,
     ) -> GrokResponse:
         final: GrokResponse | None = None
         async for chunk in self.client.chat_stream(
             list(convo),
             tools=tools_spec,
+            tool_choice=self.tool_choice,
             temperature=self.temperature,
             max_tokens=self.max_tokens,
-            extra=extra or None,
         ):
             if chunk.delta:
                 stream_sink(chunk.delta)

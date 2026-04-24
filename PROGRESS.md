@@ -2,6 +2,92 @@
 
 Living log of what shipped and why. Most recent entries first.
 
+## 2026-04-23 — Phase 5 §5: tool-choice
+
+**Shipped** a first-class ``tool_choice`` surface so cases can
+assert the model *will* / *won't* / *must use tool X* rather than
+hoping `"auto"` does the right thing. The orchestrator
+hard-coded ``"auto"`` until today; lifting it to an explicit
+kwarg unlocks pinned-behaviour tests.
+
+* **`GrokClient`**
+  * New ``tool_choice: str | dict | None = None`` field — the
+    client-level default; ``None`` omits the key from the
+    payload entirely.
+  * ``chat(..., tool_choice=...)`` and
+    ``chat_stream(..., tool_choice=...)`` accept an explicit
+    kwarg. Precedence: explicit kwarg > client-level default >
+    omit. Value flows to the top-level ``tool_choice`` field of
+    the request body (same JSON shape xAI/OpenAI already
+    consumes).
+* **Config**
+  * ``ClientConfig.tool_choice: str | dict | None`` plumbs
+    through ``build_client`` → ``GrokClient.tool_choice``. Env
+    ``FROK_CLIENT_TOOL_CHOICE=required`` works; dict-shaped
+    values come through file (JSON / TOML) or CLI overrides.
+  * ``to_toml`` emits dicts as TOML inline tables
+    (``tool_choice = {type = "function", function = {name =
+    "add"}}``) which ``tomllib`` round-trips cleanly.
+  * ``to_env`` JSON-encodes dict values so the output is
+    shell-injectable: ``FROK_CLIENT_TOOL_CHOICE={"type":...}``.
+  * ``to_json`` was already dict-friendly; no change needed.
+  * The unset-value render path still prints
+    ``# tool_choice  (unset)`` in TOML.
+* **`ToolOrchestrator`**
+  * Switched to passing ``tool_choice`` via the new explicit
+    kwarg instead of stuffing it into ``extra``. Cleaner;
+    ``_streamed_turn`` also uses the explicit kwarg.
+  * Default remains ``"auto"``.
+* **`EvalCase.tool_choice`** — cases can pin behaviour without
+  a custom client. The runner forwards
+  ``case.tool_choice`` into ``ToolOrchestrator(tool_choice=…)``;
+  ``None`` falls back to the orchestrator's ``"auto"``. No-tools
+  cases ignore it (the orchestrator isn't engaged).
+
+**Verification.** `python3 -m pytest -q` → 514 passed in 1.56s (21
+new). Tests cover: ``chat`` omits the key by default, explicit
+kwarg passes through, client-default applies when kwarg absent,
+explicit wins over client default (including dict-shaped), same
+three paths for ``chat_stream``, orchestrator forwards its
+``tool_choice`` on *every* turn (not just the first), the default
+is ``"auto"``, EvalCase string + dict values reach the wire via
+the runner, config defaults to ``None``, env sets a string,
+file accepts a dict, ``build_client`` propagates, render for all
+three formats + inline-table TOML + JSON-in-env + the unset
+comment.
+
+**Decisions / trade-offs.**
+* Three-level precedence (explicit > client > omit). "Omit"
+  means the server picks, which is the right default for
+  free-form chats; the client-level override is a convenient
+  middle ground for config profiles (e.g. "force no tools in
+  prod"), and the explicit kwarg is per-call surgery.
+* Dropped the "stuff into extra" trick. Two paths to the same
+  field are a smell; one typed kwarg makes the intent visible
+  in every call site and in the spans.
+* `EvalCase.tool_choice` defaults to ``None`` (fall back to
+  orchestrator's ``"auto"``), not ``"auto"`` directly. Keeps
+  the runner aware of "user didn't opt in"; a future global
+  eval-harness config could apply a different default without
+  having to parse out ``"auto"``.
+* Render layer now handles dicts natively. We committed to
+  supporting non-string `tool_choice` values; the
+  ``config show`` output would otherwise stringify them into
+  garbage. Inline-table TOML is the cleanest representation
+  for our shallow nested schemas.
+* Env-var JSON encoding is a compromise. Operators who want a
+  dict via env need ``FROK_CLIENT_TOOL_CHOICE='{"type":...}'``,
+  which is ugly but unambiguous; string values like
+  ``"none"`` / ``"required"`` stay plain.
+
+**Next suggested action:** `Extend Phase 5 §6 with
+GrokClient.chat(..., model=...): allow per-call model overrides
+so EvalCase authors can pin a specific model for a case
+(regression-testing a model upgrade without scaffolding two
+whole clients). Same precedence ladder as tool_choice —
+explicit kwarg > client.model > no override — and surface on
+EvalCase.model.`
+
 ## 2026-04-23 — Phase 5 §4: stream-tools
 
 **Shipped** streaming through the `ToolOrchestrator` loop. `frok

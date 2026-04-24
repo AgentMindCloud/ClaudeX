@@ -91,6 +91,15 @@ builds on these three.
    streaming-capable clients; it survives for clients without a
    streaming transport so callers can pass `stream_sink`
    unconditionally. *Shipped 2026-04-23.*
+5. **tool-choice** — `GrokClient.chat(..., tool_choice=)` +
+   `chat_stream(..., tool_choice=)` now accept an explicit
+   kwarg, with `GrokClient.tool_choice` as the client-level
+   default. Explicit > client default > omit. `ClientConfig`
+   grew a matching knob that flows through `build_client`;
+   `EvalCase.tool_choice` plumbs through to the orchestrator so
+   cases can assert forced / forbidden / specific-function
+   selection. Render layer handles dict-shaped values via TOML
+   inline tables and JSON-in-env. *Shipped 2026-04-23.*
 
 ## Phase 4 — Onboarding
 1. **init-scaffold** — `frok init [PATH]` writes a minimal runnable

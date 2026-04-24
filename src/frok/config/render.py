@@ -70,6 +70,12 @@ def _toml_literal(value: Any) -> str:
         return f'"{escaped}"'
     if isinstance(value, (list, tuple)):
         return "[" + ", ".join(_toml_literal(x) for x in value) + "]"
+    if isinstance(value, dict):
+        # Inline-table syntax. Fine for our shallow nested values.
+        items = ", ".join(
+            f"{k} = {_toml_literal(v)}" for k, v in value.items()
+        )
+        return "{" + items + "}"
     return f'"{str(value)}"'
 
 
@@ -97,6 +103,9 @@ def _env_literal(value: Any) -> str:
         return "true" if value else "false"
     if isinstance(value, (list, tuple)):
         return ",".join(str(x) for x in value)
+    if isinstance(value, dict):
+        # JSON-encode so the value is shell-injectable and round-trippable.
+        return json.dumps(value, sort_keys=True)
     return str(value)
 
 
